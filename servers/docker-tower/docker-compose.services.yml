@@ -1,0 +1,169 @@
+version: '3.8'
+
+# Note: Tower API is now running as a host service (systemd), not as a container.
+# API is available on port 8000 on the host machine.
+# Source: /opt/homestack/services/tower/docker-compose.yml
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    ports:
+      - "8096:8096"
+    volumes:
+      - /media:/media:ro
+      - /opt/docker-configs/shared/jellyfin:/config
+      - /tmp:/tmp/cache
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - /media:/srv
+      - /opt/docker-configs/shared/filebrowser:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - media
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/qbittorrent:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - WEBUI_PORT=8080
+    networks:
+      - media
+
+  prowlarr:
+    network_mode: host
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    volumes:
+      - /opt/docker-configs/shared/prowlarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/sonarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    ports:
+      - "7878:7878"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/radarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/lidarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    ports:
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: dockerproxy
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "2375:2375"
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - INFO=1
+      - POST=1
+      - BUILD=0
+      - SECRETS=0
+      - PRIVILEGED=0
+    restart: unless-stopped
+    networks:
+      - media
+      - homestack
+
+  personal-page:
+    image: nginx:alpine
+    container_name: personal-page
+    restart: unless-stopped
+    ports:
+      - "8085:80"
+    volumes:
+      - ./personal-page:/usr/share/nginx/html:ro
+    networks:
+      - homestack
+
+networks:
+  media:
+    driver: bridge
+
+  homestack:
+    driver: bridge
+    external: true

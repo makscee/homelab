@@ -1,0 +1,16 @@
+[Unit]
+Description=Voidnet Overseer
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voidnet
+ExecStart=/usr/local/bin/voidnet-overseer
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

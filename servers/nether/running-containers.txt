@@ -1,0 +1,15 @@
+# docker ps output from nether (pulled 2026-04-10)
+# Format: container_name image ports
+
+spacetimedb clockworklabs/spacetime:latest 0.0.0.0:3000->3000/tcp
+amnezia-awg2 amnezia-awg2 0.0.0.0:46476->46476/udp
+grafana grafana/grafana:latest 0.0.0.0:3001->3000/tcp
+prometheus prom/prometheus:latest
+docker-exporter prom/blackbox-exporter:latest 9115/tcp
+node-exporter-nether quay.io/prometheus/node-exporter:latest 9100/tcp
+node-exporter-docker-tower quay.io/prometheus/node-exporter:latest 9100/tcp
+caddy caddy:latest 0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp, 0.0.0.0:2053->2053/tcp
+couchdb couchdb:latest 127.0.0.1:5984->5984/tcp
+n8n n8nio/n8n:latest 127.0.0.1:5678->5678/tcp
+portainer_agent portainer/agent:2.19.4
+portainer portainer/portainer-ce:latest 100.101.0.3:8000->8000/tcp, 100.101.0.3:9443->9443/tcp

@@ -1,0 +1,38 @@
+# Source: /var/opt/homestack/docker-compose.yml on docker-tower
+# Homestack workspace and opencode containers
+
+services:
+  workspace:
+    image: node:22-bookworm
+    container_name: workspace-homestack
+    restart: unless-stopped
+    hostname: homestack
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    command: ["/bin/bash", "-c", "apt-get update -qq && apt-get install -y -qq git tmux 2>/dev/null && if [ ! -d /workspace/.git ]; then git clone https://github.com/makscee/homestack.git /workspace; else cd /workspace && git pull; fi && exec /bin/bash"]
+    volumes:
+      - /var/opt/homestack/workspace:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - homestack
+
+  opencode:
+    image: codeyhj/opencode-docker:latest
+    container_name: opencode-homestack
+    init: true
+    user: root
+    working_dir: /workspace
+    restart: unless-stopped
+    command: /bin/bash -c "opencode serve"
+    volumes:
+      - /var/opt/homestack/workspace:/workspace:cached
+      - /opt/homestack/workspaces/opencode-config:/root/.config/opencode
+      - /var/opt/homestack/opencode/share:/root/.local/share/opencode:cached
+      - /var/opt/homestack/opencode/state:/root/.local/state/opencode
+    networks:
+      - homestack
+
+networks:
+  homestack:
+    external: true

@@ -1,0 +1,18 @@
+[Unit]
+Description=Voidnet Satellite
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voidnet
+Environment="OVERSEER_URL=http://localhost:8000"
+Environment="VOIDNET_SATELLITE_NAME=mcow-sat"
+ExecStart=/usr/local/bin/voidnet-satellite
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

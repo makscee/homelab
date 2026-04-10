@@ -1,0 +1,15 @@
+[Unit]
+Description=VoidNet Config API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/voidnet
+EnvironmentFile=/opt/voidnet/.env
+ExecStart=/opt/voidnet/voidnet-api
+Restart=always
+RestartSec=5
+WatchdogSec=0
+
+[Install]
+WantedBy=multi-user.target

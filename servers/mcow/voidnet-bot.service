@@ -1,0 +1,15 @@
+[Unit]
+Description=VoidNet Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/voidnet
+EnvironmentFile=/opt/voidnet/.env
+ExecStart=/opt/voidnet/voidnet-bot
+Restart=always
+RestartSec=5
+WatchdogSec=0
+
+[Install]
+WantedBy=multi-user.target
