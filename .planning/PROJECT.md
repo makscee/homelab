@@ -12,11 +12,12 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Complete server inventory with hardware specs, roles, IPs, and hosted services — Validated in Phase 1: Foundations
+- [x] Secrets management (SOPS + age) — Validated in Phase 1: Foundations
 
 ### Active
 
-- [ ] Complete server inventory with hardware specs, roles, IPs, and hosted services
+- [ ] Complete server inventory with hardware specs, roles, IPs, and hosted services (inventory docs created in Phase 1; hardware specs pending SSH query)
 - [ ] Docker Compose files for every containerized service (Jellyfin, Navidrome, *arr stack, qBittorrent, etc.)
 - [ ] Proxmox LXC configuration and provisioning scripts for tower's containers
 - [ ] Tailscale mesh networking setup and configuration for all nodes
@@ -60,6 +61,8 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 | Secrets at hub level | Span multiple projects (animaya, voidnet, homelab) — single source of truth | — Pending |
 | Document-first, automate-second | Can't automate what isn't understood — track everything before scripting | — Pending |
 | Repo structure TBD | Need to evaluate per-server vs per-service vs hybrid after inventory | — Pending |
+| Per-server directory layout | servers/{hostname}/ with inventory.md per server — established in Phase 1 | Validated |
+| SOPS naming convention | *.sops.yaml = encrypted (committed), *.yaml = plaintext (blocked) | Validated |
 
 ## Evolution
 
@@ -79,4 +82,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after initialization*
+*Last updated: 2026-04-13 after Phase 1 completion*
