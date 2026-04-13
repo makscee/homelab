@@ -18,3 +18,14 @@ Thumbs.db
 
 # Playwright
 .playwright-mcp/
+
+# SOPS decrypted outputs (never commit plaintext)
+secrets/*.yaml
+!secrets/*.sops.yaml
+
+# age key material
+*.age
+keys.txt
+
+# SOPS temp files
+*.sops.yaml.tmp
