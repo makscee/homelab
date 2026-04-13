@@ -28,7 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Every one of the 6 servers has an inventory document with hardware specs, Tailscale IP, role, and hosted services
   3. A service dependency map shows which services on which servers depend on others
   4. A network topology document describes the Tailscale mesh, Proxmox LXC relationships, and nether VPN paths
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — SOPS+age secrets pattern, repo scaffold, .gitignore hardening
+- [ ] 01-02-PLAN.md — Server inventory documents for all 6 servers
+- [ ] 01-03-PLAN.md — Cross-server dependency map and network topology diagrams
 
 ### Phase 2: Service Documentation
 **Goal**: Every containerized and LXC service has a reproducible config file committed to the repo
@@ -70,7 +75,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations | 0/TBD | Not started | - |
+| 1. Foundations | 0/3 | Planning complete | - |
 | 2. Service Documentation | 0/TBD | Not started | - |
 | 3. Disaster Recovery | 0/TBD | Not started | - |
 | 4. Monitoring | 0/TBD | Not started | - |
