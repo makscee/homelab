@@ -31,9 +31,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — SOPS+age secrets pattern, repo scaffold, .gitignore hardening
-- [ ] 01-02-PLAN.md — Server inventory documents for all 6 servers
-- [ ] 01-03-PLAN.md — Cross-server dependency map and network topology diagrams
+- [x] 01-01-PLAN.md — SOPS+age secrets pattern, repo scaffold, .gitignore hardening
+- [x] 01-02-PLAN.md — Server inventory documents for all 6 servers
+- [x] 01-03-PLAN.md — Cross-server dependency map and network topology diagrams
 
 ### Phase 2: Service Documentation
 **Goal**: Every containerized and LXC service has a reproducible config file committed to the repo
