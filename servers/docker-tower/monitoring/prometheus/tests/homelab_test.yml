@@ -1,0 +1,111 @@
+# promtool rule unit tests for homelab alert rules.
+# Run with:
+#   promtool test rules servers/docker-tower/monitoring/prometheus/tests/homelab_test.yml
+#
+# Rule file under test: ../alerts/homelab.yml (committed in Plan 03-01)
+# Covered alerts: HostDown, DiskUsageCritical, MemoryPressure,
+#                 ContainerRestartLoop, PrometheusSelfScrapeFailure.
+rule_files:
+  - ../alerts/homelab.yml
+
+tests:
+  # ─── HostDown — up==0 for 5m ────────────────────────────────────────────────
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node",instance="100.101.0.8:9100"}'
+        values: '1 1 1 1 1 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HostDown
+        exp_alerts:
+          - exp_labels:
+              alertname: HostDown
+              severity: critical
+              job: node
+              instance: "100.101.0.8:9100"
+            exp_annotations:
+              summary: "Host 100.101.0.8:9100 is down"
+              description: "node-exporter on 100.101.0.8:9100 has been unreachable for 5 minutes."
+              runbook: "servers/100.101.0.8:9100/inventory.md"
+
+  # ─── DiskUsageCritical — (size-avail)/size > 0.90 for 5m ──────────────────
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_size_bytes{fstype="ext4",instance="100.101.0.9:9100",mountpoint="/",job="node"}'
+        values: '100 100 100 100 100 100 100 100'
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",instance="100.101.0.9:9100",mountpoint="/",job="node"}'
+        values: '5 5 5 5 5 5 5 5'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: DiskUsageCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: DiskUsageCritical
+              severity: critical
+              instance: "100.101.0.9:9100"
+              mountpoint: "/"
+              fstype: "ext4"
+              job: "node"
+            exp_annotations:
+              summary: "Disk >90% on 100.101.0.9:9100 (/)"
+              description: "Disk / is 95% full."
+
+  # ─── PrometheusSelfScrapeFailure — up{job=prometheus}==0 for 2m ───────────
+  - interval: 1m
+    input_series:
+      - series: 'up{job="prometheus",instance="localhost:9090"}'
+        values: '1 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: PrometheusSelfScrapeFailure
+        exp_alerts:
+          - exp_labels:
+              alertname: PrometheusSelfScrapeFailure
+              severity: critical
+              job: prometheus
+              instance: "localhost:9090"
+            exp_annotations:
+              summary: "Prometheus cannot scrape itself"
+              description: "Prometheus self-scrape has been failing for 2 minutes — monitoring is broken."
+
+  # ─── ContainerRestartLoop — changes(container_start_time)[15m] > 3 ────────
+  # Four distinct start-time values in first 4 minutes → changes()==3 initially;
+  # add one more change at minute 4 so changes()==4 > 3 triggers at eval 5m.
+  - interval: 1m
+    input_series:
+      - series: 'container_start_time_seconds{name="void-bot",container="void-bot",instance="100.101.0.9:8080",job="cadvisor"}'
+        values: '100 200 300 400 500 500 500 500 500 500 500 500 500 500 500 500'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerRestartLoop
+        exp_alerts:
+          - exp_labels:
+              alertname: ContainerRestartLoop
+              severity: warning
+              name: "void-bot"
+              container: "void-bot"
+              instance: "100.101.0.9:8080"
+              job: "cadvisor"
+            exp_annotations:
+              summary: "Container void-bot restarting on 100.101.0.9:8080"
+              description: "Container void-bot has restarted 4 times in 15 minutes."
+
+  # ─── MemoryPressure — MemAvailable/MemTotal < 0.10 for 10m ────────────────
+  - interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="100.101.0.9:9100",job="node"}'
+        values: '5 5 5 5 5 5 5 5 5 5 5 5 5'
+      - series: 'node_memory_MemTotal_bytes{instance="100.101.0.9:9100",job="node"}'
+        values: '100 100 100 100 100 100 100 100 100 100 100 100 100'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: MemoryPressure
+        exp_alerts:
+          - exp_labels:
+              alertname: MemoryPressure
+              severity: warning
+              instance: "100.101.0.9:9100"
+              job: "node"
+            exp_annotations:
+              summary: "Low memory on 100.101.0.9:9100"
+              description: "Available memory below 10% for 10m."

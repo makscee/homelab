@@ -27,6 +27,12 @@ for snippet in "${SCRIPT_DIR}"/[0-9][0-9]-*.sh; do
     continue
   fi
 
+  # Skip 99-*.sh — phase-final gates invoke suite.sh which invokes smoke.sh;
+  # discovering 99-*.sh here would cause unbounded recursion.
+  case "$name" in
+    99-*) continue ;;
+  esac
+
   TOTAL=$(( TOTAL + 1 ))
   echo "--- ${name} ---"
 
