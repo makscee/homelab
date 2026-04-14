@@ -1,26 +1,25 @@
-# docker ps output from docker-tower (pulled 2026-04-10)
-# Format: container_name image ports
+# docker ps output from docker-tower (pulled 2026-04-14)
+# Format: container_name image ports status
 
-navidrome deluan/navidrome:latest 0.0.0.0:4533->4533/tcp
-slskd slskd/slskd:latest 0.0.0.0:5030->5030/tcp, 0.0.0.0:50300->50300/tcp
-prowlarr lscr.io/linuxserver/prowlarr:latest 0.0.0.0:9696->9696/tcp
-grafana grafana/grafana:latest 0.0.0.0:3000->3000/tcp
-prometheus prom/prometheus:latest
-node-exporter-nether quay.io/prometheus/node-exporter:latest 9100/tcp
-node-exporter-docker-tower quay.io/prometheus/node-exporter:latest 9100/tcp
-docker-exporter prom/blackbox-exporter:latest 9115/tcp
-lidarr lscr.io/linuxserver/lidarr:latest 0.0.0.0:8686->8686/tcp
-dockerproxy tecnativa/docker-socket-proxy:latest
-jellyfin jellyfin/jellyfin:latest 0.0.0.0:8096->8096/tcp
-filebrowser filebrowser/filebrowser:latest 0.0.0.0:8081->80/tcp
-qbittorrent lscr.io/linuxserver/qbittorrent:latest 0.0.0.0:6881->6881/tcp, 0.0.0.0:8080->8080/tcp
-sonarr lscr.io/linuxserver/sonarr:latest 0.0.0.0:8989->8989/tcp
-radarr lscr.io/linuxserver/radarr:latest 0.0.0.0:7878->7878/tcp
-personal-page nginx:alpine 0.0.0.0:8085->80/tcp
-docker-tower-api python:3.12-slim
-workspace-vault-of-mine node:22-bookworm
-opencode-vault-of-mine codeyhj/opencode-docker:latest
-opencode-arena-game codeyhj/opencode-docker:latest
-workspace-arena-game arena-game-workspace
-flaresolverr flaresolverr/flaresolverr:latest 0.0.0.0:8191->8191/tcp
-portainer_agent portainer/agent 0.0.0.0:9001->9001/tcp
+jellyfin                     jellyfin/jellyfin:latest                  Up 3 days (healthy)   0.0.0.0:8096->8096/tcp, [::]:8096->8096/tcp
+navidrome                    deluan/navidrome:latest                   Up 3 days             0.0.0.0:4533->4533/tcp, [::]:4533->4533/tcp
+slskd                        slskd/slskd:latest                        Up 3 days (healthy)   0.0.0.0:5030->5030/tcp, [::]:5030->5030/tcp, 0.0.0.0:50300->50300/tcp, [::]:50300->50300/tcp
+prowlarr                     lscr.io/linuxserver/prowlarr:latest       Up 3 days             0.0.0.0:9696->9696/tcp, [::]:9696->9696/tcp
+grafana                      grafana/grafana:latest                    Up 3 days             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+prometheus                   prom/prometheus:latest                    Up 3 days             
+node-exporter-nether         quay.io/prometheus/node-exporter:latest   Up 3 days             9100/tcp
+node-exporter-docker-tower   quay.io/prometheus/node-exporter:latest   Up 3 days             9100/tcp
+docker-exporter              prom/blackbox-exporter:latest             Up 3 days             9115/tcp
+lidarr                       lscr.io/linuxserver/lidarr:latest         Up 3 days             0.0.0.0:8686->8686/tcp, [::]:8686->8686/tcp
+dockerproxy                  tecnativa/docker-socket-proxy:latest      Up 3 days             
+filebrowser                  filebrowser/filebrowser:latest            Up 3 days (healthy)   0.0.0.0:8081->80/tcp, [::]:8081->80/tcp
+sonarr                       lscr.io/linuxserver/sonarr:latest         Up 3 days             0.0.0.0:8989->8989/tcp, [::]:8989->8989/tcp
+radarr                       lscr.io/linuxserver/radarr:latest         Up 3 days             0.0.0.0:7878->7878/tcp, [::]:7878->7878/tcp
+personal-page                nginx:alpine                              Up 3 days             0.0.0.0:8085->80/tcp, [::]:8085->80/tcp
+docker-tower-api             python:3.12-slim                          Up 3 days             
+workspace-vault-of-mine      node:22-bookworm                          Up 3 days             
+opencode-vault-of-mine       codeyhj/opencode-docker:latest            Up 3 days             
+opencode-arena-game          codeyhj/opencode-docker:latest            Up 3 days             
+workspace-arena-game         arena-game-workspace                      Up 3 days             
+flaresolverr                 flaresolverr/flaresolverr:latest          Up 3 days             0.0.0.0:8191->8191/tcp, [::]:8191->8191/tcp, 8192/tcp
+portainer_agent              portainer/agent                           Up 3 days             0.0.0.0:9001->9001/tcp, [::]:9001->9001/tcp
