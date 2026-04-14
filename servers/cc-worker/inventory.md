@@ -8,6 +8,10 @@
 | Hardware | LXC 204 on tower; resource allocation pending SSH query: `nproc && free -h && df -h` |
 | Access | `ssh root@cc-worker` via Tailnet (or local shell — this is the operator machine) |
 
+## LXC config
+
+See [../tower/lxc-204-cc-worker.conf](../tower/lxc-204-cc-worker.conf) for fresh Proxmox config pulled 2026-04-14.
+
 ## History
 
 2026-04-14: Renamed from cc-vk; new Tailscale IP 100.99.133.9 (was 100.91.54.83). VMID 204 on tower.
