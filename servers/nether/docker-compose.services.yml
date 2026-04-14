@@ -1,0 +1,132 @@
+# nether services: Caddy reverse proxy, SpacetimeDB, CouchDB, n8n, AmneziaWG, Portainer.
+# Captured from live state 2026-04-14 via `docker inspect`.
+#
+# Deployment notes:
+#   - Secrets come from ../../secrets/nether.sops.yaml (Grafana+CouchDB) and
+#     ../../secrets/nether-awg.sops.yaml (AmneziaWG keys). Decrypt via SOPS before `docker compose up`
+#     and populate .env (see .env.example) + render amnezia-awg.conf.template.
+#   - Caddyfile is bind-mounted from this repo (authoritative). Upstream live deployment had the
+#     Caddyfile inlined in the caddy container command; the repo version IS the source of truth.
+#   - AmneziaWG image `amnezia-awg2` is built externally (not pulled from a registry). Build context
+#     lives on nether under /opt/amnezia; digest {sha256:62e3e460...} pins the currently deployed build.
+#   - Networks `spacetimedb_default` and `amnezia-dns-net` exist on the host; declared as external.
+#   - Portainer listens on Tailscale IP 100.101.0.3 only (not public).
+
+services:
+  caddy:
+    image: caddy@sha256:dedfbbeb703b2ce9ff4a98fc06aa9c7c7d9a42f0b7d778738c1dd3ef11dcc767  # caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2053:2053"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    command: caddy run --config /etc/caddy/Caddyfile
+    networks:
+      - spacetimedb_default
+
+  spacetimedb:
+    image: clockworklabs/spacetime@sha256:b18c80cf3e3f317ee563eff921b1af37934035d64af2376d7868789bd7808e44  # clockworklabs/spacetime:latest
+    container_name: spacetimedb
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - spacetimedb_default
+
+  couchdb:
+    image: couchdb@sha256:a2c8839c86304962ae60df41c9aa51907925b7ca022b69acfcd45663a89daa77  # couchdb:latest (3.5.1)
+    container_name: couchdb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5984:5984"
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    networks:
+      - spacetimedb_default
+
+  n8n:
+    image: n8nio/n8n@sha256:85214df20cd7bc020f8e4b0f60f87ea87f0a754ca7ba3d1ccdfc503ccd6e7f9c  # n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - N8N_HOST=n8n.makscee.ru
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.makscee.ru/
+      - NODE_ENV=production
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - spacetimedb_default
+
+  amnezia-awg2:
+    # Image built locally on nether from /opt/amnezia. Digest pins the currently deployed build.
+    # Before `docker compose up`, render `amnezia-awg.conf.template` with secrets from
+    # secrets/nether-awg.sops.yaml and place at /opt/amnezia/awg/awg0.conf on host.
+    image: amnezia-awg2@sha256:62e3e460b6243fe261d513c6f86262002033782f7c178bb165827644ab373cba
+    container_name: amnezia-awg2
+    restart: always
+    ports:
+      - "46476:46476/udp"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    privileged: true
+    sysctls:
+      net.ipv4.conf.all.src_valid_mark: "1"
+    volumes:
+      - /lib/modules:/lib/modules
+    entrypoint: ["dumb-init", "/opt/amnezia/start.sh"]
+    networks:
+      - amnezia-dns-net
+      - spacetimedb_default
+
+  portainer:
+    image: portainer/portainer-ce@sha256:4786931dc7c588ff1c242696fe1eb3f7f9c5dafb136b6c713aff7745dd5bd407  # portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "100.101.0.3:8000:8000"
+      - "100.101.0.3:9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  portainer_agent:
+    # Currently restart-looping on live nether; kept in compose for reproducibility.
+    image: portainer/agent@sha256:558676e1e8a019023ec2d9fe10644e82c5ee12405694841098e2f429552a5e48  # portainer/agent:2.19.4
+    container_name: portainer_agent
+    restart: always
+    volumes:
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  caddy_data:
+    name: spacetimedb_caddy_data
+    external: true
+  couchdb_data:
+    name: spacetimedb_couchdb_data
+    external: true
+  n8n_data:
+    name: spacetimedb_n8n_data
+    external: true
+  portainer_data:
+    name: portainer_data
+    external: true
+
+networks:
+  spacetimedb_default:
+    external: true
+  amnezia-dns-net:
+    external: true

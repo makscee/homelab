@@ -1,11 +1,11 @@
 # Source: /opt/homestack/monitoring/docker-compose.yml on nether
 # Same monitoring stack as docker-tower but with Grafana on port 3001
-
-version: '3.8'
+# Tags pinned to digests from live 2026-04-14 inspect.
+# Grafana admin credentials live in ../../secrets/nether.sops.yaml — decrypt to .env before `docker compose up`.
 
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702  # prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
     network_mode: host
@@ -27,14 +27,16 @@ services:
       - "nether=100.101.0.4"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=REDACTED
+      # GF_SECURITY_ADMIN_USER and GF_SECURITY_ADMIN_PASSWORD come from .env (decrypted
+      # from ../../secrets/nether.sops.yaml) — do not inline the literal password here.
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://localhost:3000
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
@@ -49,7 +51,7 @@ services:
       - prometheus
 
   node-exporter-docker-tower:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # quay.io/prometheus/node-exporter:latest
     container_name: node-exporter-docker-tower
     restart: unless-stopped
     command:
@@ -65,7 +67,7 @@ services:
       - monitoring
 
   node-exporter-nether:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # quay.io/prometheus/node-exporter:latest
     container_name: node-exporter-nether
     restart: unless-stopped
     command:
@@ -81,7 +83,7 @@ services:
       - monitoring
 
   docker-exporter:
-    image: prom/blackbox-exporter:latest
+    image: prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc  # prom/blackbox-exporter:latest
     container_name: docker-exporter
     restart: unless-stopped
     volumes:

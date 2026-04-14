@@ -1,3 +1,8 @@
+# ARCHIVED 2026-04-14 — references old VoidNet overseer/uplink architecture that is no
+# longer deployed on nether. Kept for historical reference only. Do NOT `docker compose up` this file.
+# Per Pitfall 2 in .planning/phases/02-service-documentation/02-RESEARCH.md.
+# Confirmed absent from live containers: see servers/nether/running-containers.txt.
+#
 # Source: /opt/void/docker-compose.yml on nether
 # Void overseer/uplink infrastructure
 
