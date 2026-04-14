@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A comprehensive infrastructure-as-code repository that tracks, documents, and automates everything running across a 6-server homelab. The repo serves as the single source of truth — if a server dies or needs migration, Claude Code can use this repo to rebuild the entire stack without losing anything.
+A comprehensive infrastructure-as-code repository that tracks, documents, and automates everything running across the homelab (4 Tailnet hosts + Proxmox LXCs). The repo serves as the single source of truth — if a server dies or needs migration, Claude Code can use this repo to rebuild the entire stack without losing anything.
 
 ## Core Value
 

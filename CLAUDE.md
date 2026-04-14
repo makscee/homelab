@@ -6,8 +6,11 @@
 |--------|----------|--------------|------|
 | tower | Moscow | 100.101.0.7 | Proxmox host (i7-8700 12C, 16GB RAM) |
 | docker-tower | Moscow (LXC 100) | 100.101.0.8 | Media stack: Jellyfin, Navidrome, *arr |
-| tower-sat | Moscow (LXC 101) | 100.101.0.10 | Satellite services |
-| cc-vk | Moscow (LXC 204) | 100.91.54.83 | Vibe Kanban host: Claude Code runner |
+| cc-worker | Moscow (LXC 204) | 100.99.133.9 | Claude Code runner (renamed from cc-vk 2026-04-14) |
+| cc-andrey | Moscow (LXC 200) | — | Developer worker (SSH via tower:2201 → 10.10.20.200:22) |
+| cc-dan | Moscow (LXC 202) | — | Developer worker |
+| cc-yuri | Moscow (LXC 203) | — | Developer worker |
+| animaya-dev | Moscow (LXC 205) | 100.119.15.122 | Animaya development LXC |
 | mcow | Moscow | 100.101.0.9 | VoidNet bot, API, portal, SQLite DB |
 | nether | Netherlands | 100.101.0.3 | VPN entry/exit: AmneziaWG, XRay/VLESS |
 
@@ -29,7 +32,7 @@
 
 - Monitoring (Grafana + Prometheus + node-exporter)
 - NAS on tower
-- ~~Self-hosted vibe-kanban~~ → cc-vk (LXC 204) deployed
+- ~~Self-hosted vibe-kanban~~ → cc-worker (LXC 204) deployed (renamed from cc-vk 2026-04-14)
 - Whisper speech-to-text API
 
 <!-- GSD:project-start source:PROJECT.md -->
@@ -37,7 +40,7 @@
 
 **Homelab Infrastructure**
 
-A comprehensive infrastructure-as-code repository that tracks, documents, and automates everything running across a 6-server homelab. The repo serves as the single source of truth — if a server dies or needs migration, Claude Code can use this repo to rebuild the entire stack without losing anything.
+A comprehensive infrastructure-as-code repository that tracks, documents, and automates everything running across the homelab (4 Tailnet hosts + Proxmox LXCs). The repo serves as the single source of truth — if a server dies or needs migration, Claude Code can use this repo to rebuild the entire stack without losing anything.
 
 **Core Value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
 
