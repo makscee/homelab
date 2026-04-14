@@ -1,100 +1,92 @@
-# Source: /opt/homestack/monitoring/docker-compose.yml on docker-tower
+# Source: /opt/homestack/docker-compose.monitoring.yml on docker-tower
 #
-# Secrets: before `docker compose up`, decrypt the SOPS-encrypted env file:
+# Secrets: before `docker compose up`, decrypt the SOPS-encrypted env file AND install the bot token:
 #   mkdir -p /run/secrets
-#   sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/grafana.env
-#   chmod 600 /run/secrets/grafana.env
+#   sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
+#   chmod 600 /run/secrets/docker-tower.env
+#   source /run/secrets/docker-tower.env
+#   install -m 600 -o root -g root /dev/stdin /run/secrets/grafana.env <<EOF
+#   GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER
+#   GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD
+#   EOF
+#   install -m 600 -o root -g root /dev/stdin /run/secrets/telegram_token <<<"$TELEGRAM_BOT_TOKEN"
+#
 # /run/secrets/ is gitignored — never commit the decrypted output.
+# See monitoring/alertmanager/README.md for full alertmanager deploy notes.
 
 services:
-  # Prometheus - Metrics Collection
+
+  # ── Prometheus — Metrics Collection ─────────────────────────────────────────
   prometheus:
-    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702  # was latest, pinned 2026-04-14
+    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702  # prom/prometheus:latest, pinned 2026-04-14
     container_name: prometheus
     restart: unless-stopped
     network_mode: host
-    ports:
-      - "9090:9090"
     volumes:
-      - ./prometheus/${PROMETHEUS_CONFIG:-prometheus.yml}:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
+      - '--storage.tsdb.retention.time=720h'
       - '--web.enable-lifecycle'
-    extra_hosts:
-      - "docker-tower=100.101.0.2"
-      - "nether=100.101.0.4"
 
-  # Grafana - Visualization Dashboard
+  # ── Grafana — Visualization Dashboard ────────────────────────────────────────
   grafana:
-    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # was latest, pinned 2026-04-14
+    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # grafana/grafana:latest, pinned 2026-04-14
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "100.101.0.8:3000:3000"
     env_file:
       - path: /run/secrets/grafana.env  # decrypt from secrets/docker-tower.sops.yaml — see header comment
-        required: false  # allow `docker compose config` to validate without the decrypted file
+        required: false                  # allows `docker compose config` to validate without the decrypted file
     environment:
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SERVER_ROOT_URL=http://100.101.0.8:3000
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    extra_hosts:
-      - "prometheus:172.17.0.2"
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
       - monitoring
     depends_on:
       - prometheus
 
-  # Node Exporter - Host Metrics for docker-tower
-  node-exporter-docker-tower:
-    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # was latest, pinned 2026-04-14
-    container_name: node-exporter-docker-tower
+  # ── Alertmanager — Alert Routing (Telegram) ───────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5  # prom/alertmanager:v0.27.0, pinned 2026-04-14
+    container_name: alertmanager
     restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /run/secrets/telegram_token:/etc/alertmanager/telegram_token:ro
+      - alertmanager-data:/alertmanager
     command:
-      - '--path.rootfs=/host'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/.*)*'
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    networks:
-      - monitoring
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
 
-  # Node Exporter - Host Metrics for nether
-  node-exporter-nether:
-    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # was latest, pinned 2026-04-14
-    container_name: node-exporter-nether
+  # ── cAdvisor — Container Metrics ─────────────────────────────────────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor@sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388  # cadvisor:v0.49.1, pinned 2026-04-14
+    container_name: cadvisor
     restart: unless-stopped
-    command:
-      - '--path.rootfs=/host'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/.*)*'
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
       - /:/rootfs:ro
-    networks:
-      - monitoring
-
-  # Docker Metrics Exporter
-  docker-exporter:
-    image: prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc  # was latest, pinned 2026-04-14
-    container_name: docker-exporter
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "100.101.0.8:8080:8080"
     networks:
       - monitoring
 
@@ -105,3 +97,4 @@ networks:
 volumes:
   prometheus-data:
   grafana-data:
+  alertmanager-data:
