@@ -1,0 +1,36 @@
+---
+# Deploy native systemd node_exporter on all monitored hosts.
+# Uses prometheus.prometheus.node_exporter role.
+#
+# PVE firewall note: tower's PVE firewall is DISABLED (verified 2026-04-14).
+# No firewall rule needed. If re-enabled, add:
+#   IN ACCEPT -source 100.64.0.0/10 -p tcp -dport 9100 -log nolog
+# to /etc/pve/firewall/cluster.fw under [RULES].
+
+- name: Install and configure node_exporter on all monitored hosts
+  hosts: monitored_hosts
+  become: true
+  pre_tasks:
+    - name: Ensure Python3 is present (required for Ansible modules)
+      ansible.builtin.raw: test -x /usr/bin/python3 || (apt-get update && apt-get install -y python3)
+      changed_when: false
+  roles:
+    - role: prometheus.prometheus.node_exporter
+  post_tasks:
+    - name: Verify node_exporter systemd service is active
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: started
+        enabled: true
+
+    - name: Probe :9100/metrics locally from each host
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:9100/metrics"
+        return_content: false
+        status_code: 200
+      register: ne_probe
+
+    - name: Fail fast if metrics endpoint returns non-200
+      ansible.builtin.fail:
+        msg: "node_exporter on {{ inventory_hostname }} returned {{ ne_probe.status }}"
+      when: ne_probe.status != 200

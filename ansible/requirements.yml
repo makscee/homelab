@@ -1,0 +1,4 @@
+---
+collections:
+  - name: prometheus.prometheus
+    version: "0.29.1"   # latest stable as of 2026-04-14 (operator machine has this version installed globally)

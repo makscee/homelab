@@ -33,3 +33,7 @@ keys.txt
 # Decrypted secrets at runtime — never commit plaintext outputs of sops --decrypt
 /run/secrets/
 **/run/secrets/
+
+# Ansible
+ansible/collections/
+ansible/*.retry
