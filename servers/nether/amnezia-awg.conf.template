@@ -1,0 +1,180 @@
+# AmneziaWG template. Server config for nether AWG VPN entry/exit (UDP 46476).
+# Substitute __SOPS:*__ tokens from secrets/nether-awg.sops.yaml on deploy.
+# Public obfuscation params (Jc/Jmin/Jmax, S1-S4, H1-H4, I1-I5) are safe to commit.
+# Private keys, peer pubkeys, and per-peer PSKs are redacted.
+[Interface]
+PrivateKey = __SOPS:server_private_key__
+Address = 10.8.1.0/24
+ListenPort = 46476
+Jc = 6
+Jmin = 10
+Jmax = 50
+S1 = 82
+S2 = 52
+S3 = 23
+S4 = 19
+H1 = 1487780029-1732984712
+H2 = 1813768834-1905157766
+H3 = 1998963580-2137799359
+H4 = 2145547183-2147218598
+# I1 = <r 2><b 0x858000010001000000000669636c6f756403636f6d0000010001c00c000100010000105a00044d583737>
+# I2 = 
+# I3 = 
+# I4 = 
+# I5 = 
+
+[Peer]
+PublicKey = __SOPS:peer_1_pubkey__
+PresharedKey = __SOPS:peer_1_psk__
+AllowedIPs = 10.8.1.1/32
+
+
+
+[Peer]
+PublicKey = __SOPS:peer_2_pubkey__
+PresharedKey = __SOPS:peer_2_psk__
+AllowedIPs = 10.8.1.3/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_3_pubkey__
+PresharedKey = __SOPS:peer_3_psk__
+AllowedIPs = 10.8.1.3/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_4_pubkey__
+PresharedKey = __SOPS:peer_4_psk__
+AllowedIPs = 10.8.1.3/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_5_pubkey__
+PresharedKey = __SOPS:peer_5_psk__
+AllowedIPs = 10.8.1.3/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_6_pubkey__
+PresharedKey = __SOPS:peer_6_psk__
+AllowedIPs = 10.8.1.4/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_7_pubkey__
+PresharedKey = __SOPS:peer_7_psk__
+AllowedIPs = 10.8.1.5/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_8_pubkey__
+PresharedKey = __SOPS:peer_8_psk__
+AllowedIPs = 10.8.1.6/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_9_pubkey__
+PresharedKey = __SOPS:peer_9_psk__
+AllowedIPs = 10.8.1.7/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_10_pubkey__
+PresharedKey = __SOPS:peer_10_psk__
+AllowedIPs = 10.8.1.8/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_11_pubkey__
+PresharedKey = __SOPS:peer_11_psk__
+AllowedIPs = 10.8.1.9/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_12_pubkey__
+PresharedKey = __SOPS:peer_12_psk__
+AllowedIPs = 10.8.1.10/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_13_pubkey__
+PresharedKey = __SOPS:peer_13_psk__
+AllowedIPs = 10.8.1.11/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_14_pubkey__
+PresharedKey = __SOPS:peer_14_psk__
+AllowedIPs = 10.8.1.12/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_15_pubkey__
+PresharedKey = __SOPS:peer_15_psk__
+AllowedIPs = 10.8.1.13/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_16_pubkey__
+PresharedKey = __SOPS:peer_16_psk__
+AllowedIPs = 10.8.1.14/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_17_pubkey__
+PresharedKey = __SOPS:peer_17_psk__
+AllowedIPs = 10.8.1.15/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_18_pubkey__
+PresharedKey = __SOPS:peer_18_psk__
+AllowedIPs = 10.8.1.16/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_19_pubkey__
+PresharedKey = __SOPS:peer_19_psk__
+AllowedIPs = 10.8.1.17/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_20_pubkey__
+PresharedKey = __SOPS:peer_20_psk__
+AllowedIPs = 10.8.1.18/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_21_pubkey__
+PresharedKey = __SOPS:peer_21_psk__
+AllowedIPs = 10.8.1.19/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_22_pubkey__
+PresharedKey = __SOPS:peer_22_psk__
+AllowedIPs = 10.8.1.20/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_23_pubkey__
+PresharedKey = __SOPS:peer_23_psk__
+AllowedIPs = 10.8.1.21/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_24_pubkey__
+PresharedKey = __SOPS:peer_24_psk__
+AllowedIPs = 10.8.1.22/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_25_pubkey__
+PresharedKey = __SOPS:peer_25_psk__
+AllowedIPs = 10.8.1.23/32
+
+
+[Peer]
+PublicKey = __SOPS:peer_26_pubkey__
+PresharedKey = __SOPS:peer_26_psk__
+AllowedIPs = 10.8.1.24/32
