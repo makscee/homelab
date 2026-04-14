@@ -46,7 +46,15 @@ Plans:
   4. AmneziaVPN configuration for nether is documented with enough detail to reproduce it on a fresh VPS
   5. A Tailscale provisioning script exists that can add any of the 6 servers to the mesh
   6. Tower-sat services are documented with Compose files or equivalent configs
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0 bootstrap: SSH verify + LIVE-AUDIT.md + verify-phase02.sh
+- [ ] 02-02-PLAN.md — docker-tower compose files pinned + extras + SOPS monitoring + README
+- [ ] 02-03-PLAN.md — nether services compose + AWG SOPS + Caddyfile verify + archive void.yml
+- [ ] 02-04-PLAN.md — mcow systemd audit + stale flagging + README (Pitfall 3 — no compose)
+- [ ] 02-05-PLAN.md — Proxmox LXC 100/101/204 fresh configs + tower-sat + cc-vk READMEs
+- [ ] 02-06-PLAN.md — Tailscale provisioning script + scripts/README + final verify checkpoint
 
 ### Phase 3: Disaster Recovery
 **Goal**: Claude Code can rebuild any server's services from scratch using only this repo
@@ -76,6 +84,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 0/3 | Planning complete | - |
-| 2. Service Documentation | 0/TBD | Not started | - |
+| 2. Service Documentation | 0/6 | Planning complete | - |
 | 3. Disaster Recovery | 0/TBD | Not started | - |
 | 4. Monitoring | 0/TBD | Not started | - |
