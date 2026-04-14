@@ -23,6 +23,19 @@ Current snippets:
 - `06-tailscale.sh` — SVC-05 (Plan 06, this plan)
 - `99-final.sh` — Phase-wide sweep: secret scan + all-requirements coverage (Plan 06)
 
+## tests/phase-03/
+
+Phase 3 monitoring validation harness. Scripts are standalone; `smoke.sh` auto-discovers all `NN-*.sh` snippets in lexical order (excluding `00-env-check.sh`).
+
+| Script | Purpose | Runtime |
+|--------|---------|---------|
+| `smoke.sh` | Config-only probes (`promtool`/`yamllint`/file checks) | <30s, offline |
+| `suite.sh` | Config + live Tailnet probes against deployed stack | <90s |
+| `lib.sh` | Shared helpers (`ok`, `fail`, `info`, `assert_file`, `assert_cmd`, `prom_query_must_succeed`) | sourced only |
+| `00-env-check.sh` | Wave 0 gate: verify operator tooling + PVE firewall + animaya-dev Python3 | run before Phase 03 |
+
+Add new `NN-<name>.sh` snippets as later plans land — `smoke.sh` picks them up automatically.
+
 ## Conventions
 
 - Use `set -euo pipefail` at top of every script.
