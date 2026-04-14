@@ -57,7 +57,7 @@ flowchart TD
     node-exp-n[node-exporter :9100]
   end
 
-  subgraph cc-vk["cc-vk (100.91.54.83) — Operator"]
+  subgraph cc-worker["cc-worker (100.99.133.9) — Operator"]
     claude-code[Claude Code]
     sops-age[SOPS + age]
     vibe-kanban[Vibe Kanban]
@@ -65,7 +65,7 @@ flowchart TD
 
   %% Proxmox hosts LXCs
   proxmox -.->|hosts LXC 100| docker-tower
-  proxmox -.->|hosts LXC 204| cc-vk
+  proxmox -.->|hosts LXC 204| cc-worker
 
   %% mcow -> docker-tower cross-server dependencies
   voidnet-bot -->|JELLYFIN_API_KEY| jellyfin

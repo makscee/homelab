@@ -1,12 +1,16 @@
-# cc-vk
+# cc-worker
 
 | Field | Value |
 |-------|-------|
-| Hostname | cc-vk |
-| Tailscale IP | 100.91.54.83 |
+| Hostname | cc-worker |
+| Tailscale IP | 100.99.133.9 |
 | Role | Vibe Kanban host, Claude Code runner (operator machine) |
 | Hardware | LXC 204 on tower; resource allocation pending SSH query: `nproc && free -h && df -h` |
-| Access | `ssh root@cc-vk` via Tailnet (or local shell — this is the operator machine) |
+| Access | `ssh root@cc-worker` via Tailnet (or local shell — this is the operator machine) |
+
+## History
+
+2026-04-14: Renamed from cc-vk; new Tailscale IP 100.99.133.9 (was 100.91.54.83). VMID 204 on tower.
 
 ## Hosted Services
 

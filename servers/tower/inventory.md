@@ -14,8 +14,7 @@
 |---------|------|-------------|-------|
 | Proxmox VE | 8006 | proxmox-ve | Hypervisor management UI |
 | LXC 100 — docker-tower | — | Debian LXC | 8 cores, 12 GB RAM, IP 100.101.0.8 |
-| LXC 101 — tower-sat | — | Debian LXC | 2 cores, 2 GB RAM, IP 100.101.0.10 |
-| LXC 204 — cc-vk | — | Debian LXC | IP 100.91.54.83; Claude Code runner |
+| LXC 204 — cc-worker | — | Debian LXC | IP 100.99.133.9; Claude Code runner (renamed from cc-vk 2026-04-14) |
 
 ## Storage Layout
 
@@ -24,8 +23,7 @@
 | /mnt/pve/wdc | WDC HDD mount point (shared to docker-tower mp0) | Media library volume |
 | /mnt/pve/sea | Seagate HDD mount point (shared to docker-tower mp1) | Media library volume |
 | toshi:100/vm-100-disk-0.raw | LXC 100 root disk (100 GB) | docker-tower OS + configs |
-| toshi:101/vm-101-disk-0.raw | LXC 101 root disk (40 GB) | tower-sat OS + configs |
-| /etc/pve/lxc/ | Proxmox LXC config directory | LXC definitions (100.conf, 101.conf, 204.conf) |
+| /etc/pve/lxc/ | Proxmox LXC config directory | LXC definitions (see servers/tower/lxc-*.conf) |
 
 ## Notes
 
