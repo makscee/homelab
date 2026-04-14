@@ -22,6 +22,7 @@
         name: node_exporter
         state: started
         enabled: true
+      when: not ansible_check_mode
 
     - name: Probe :9100/metrics locally from each host
       ansible.builtin.uri:
@@ -29,8 +30,9 @@
         return_content: false
         status_code: 200
       register: ne_probe
+      when: not ansible_check_mode
 
     - name: Fail fast if metrics endpoint returns non-200
       ansible.builtin.fail:
         msg: "node_exporter on {{ inventory_hostname }} returned {{ ne_probe.status }}"
-      when: ne_probe.status != 200
+      when: not ansible_check_mode and ne_probe.status != 200
