@@ -1,0 +1,171 @@
+## is-active
+active
+active
+inactive
+inactive
+## is-enabled
+enabled
+enabled
+disabled
+disabled
+## list-unit-files
+UNIT FILE                 STATE    PRESET
+voidnet-api.service       enabled  enabled
+voidnet-bot.service       enabled  enabled
+voidnet-overseer.service  disabled enabled
+voidnet-satellite.service disabled enabled
+
+4 unit files listed.
+## ps
+root      264882  0.0  0.0   2800  1784 ?        Ss   01:18   0:00 /bin/sh -c /opt/voidnet/health-alert.sh
+root      264883  0.0  0.0   9940  3484 ?        S    01:18   0:00 /bin/bash /opt/voidnet/health-alert.sh
+root     3148029  0.0  0.2 1286168 21908 ?       Sl   Apr13   0:00 /usr/sbin/tailscaled be-child ssh --login-shell=/bin/bash --uid=0 --gid=0 --groups=0 --local-user=root --home-dir=/root --remote-user=makscee@github --remote-ip=100.101.0.1 --has-tty=false --tty-name= --force-v1-behavior --cmd=VOIDNET_DB_PATH=/opt/voidnet/voidnet.db /opt/voidnet/voidnet-mcp
+root     3148036  0.0  0.0  10724  5548 ?        S    Apr13   0:00 /opt/voidnet/voidnet-mcp
+root     3371143  0.0  0.2 1286168 21820 ?       Sl   Apr14   0:00 /usr/sbin/tailscaled be-child ssh --login-shell=/bin/bash --uid=0 --gid=0 --groups=0 --local-user=root --home-dir=/root --remote-user=makscee@github --remote-ip=100.101.0.1 --has-tty=false --tty-name= --force-v1-behavior --cmd=VOIDNET_DB_PATH=/opt/voidnet/voidnet.db /opt/voidnet/voidnet-mcp
+root     3371150  0.0  0.0  10724  5564 ?        S    Apr14   0:00 /opt/voidnet/voidnet-mcp
+root     3859575  0.0  0.1 625180 12484 ?        Ssl  Apr10   0:12 /opt/voidnet/voidnet-bot
+root     3859584  0.1  0.5 826204 58376 ?        Ssl  Apr10   6:30 /opt/voidnet/voidnet-api
+## cat-voidnet-bot
+[Unit]
+Description=VoidNet Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/voidnet
+EnvironmentFile=/opt/voidnet/.env
+ExecStart=/opt/voidnet/voidnet-bot
+Restart=always
+RestartSec=5
+WatchdogSec=0
+
+[Install]
+WantedBy=multi-user.target
+## cat-voidnet-api
+[Unit]
+Description=VoidNet Config API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/voidnet
+EnvironmentFile=/opt/voidnet/.env
+ExecStart=/opt/voidnet/voidnet-api
+Restart=always
+RestartSec=5
+WatchdogSec=0
+
+[Install]
+WantedBy=multi-user.target
+## cat-voidnet-overseer
+[Unit]
+Description=Voidnet Overseer
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voidnet
+ExecStart=/usr/local/bin/voidnet-overseer
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+## cat-voidnet-satellite
+[Unit]
+Description=Voidnet Satellite
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voidnet
+Environment="OVERSEER_URL=http://localhost:8000"
+Environment="VOIDNET_SATELLITE_NAME=mcow-sat"
+ExecStart=/usr/local/bin/voidnet-satellite
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+## portal-probe
+  voidnet-api.service         loaded active running VoidNet Config API
+  voidnet-bot.service         loaded active running VoidNet Telegram Bot
+---ls-opt-voidnet---
+total 40884
+drwxr-xr-x 14  501 staff     4096 Apr 10 22:14 .
+drwxr-xr-x  9 root root      4096 Apr 10 16:12 ..
+-rw-r--r--  1 root root     13724 Jan 20 06:31 AGENTS.md
+-rw-r--r--  1 root root       615 Jan 19 01:05 aoi.yaml
+drwxr-xr-x  2 root root      4096 Apr 15 01:00 backup
+-rwxr-xr-x  1 root root       194 Mar 27 14:53 backup.sh
+drwxr-xr-x  5 root root      4096 Jan 20 06:31 build
+-rw-r--r--  1 root root      3029 Jan 19 01:05 CAPSULE_QUICK_REFERENCE.md
+-rwxr-xr-x  1 root root       195 Apr  3 03:58 check-downloads.sh
+-rw-r--r--  1  501 staff      426 Jan 17 21:56 deploy_test.py
+-rw-r--r--  1 root root       264 Jan 19 01:05 dev.yaml
+drwxr-xr-x  2 root root      4096 Jan 20 06:32 dist
+drwxr-xr-x  3 root root      4096 Jan 19 01:05 docker
+drwxr-xr-x  2 root root      4096 Jan 20 05:17 docs
+-rw-r--r--  1 root root      1443 Apr  9 02:20 .env
+drwxr-xr-x  7  501 staff     4096 Jan 20 07:49 .git
+-rw-r--r--  1 root root       363 Jan 20 05:17 .gitignore
+-rwxr-xr-x  1 root root      1064 Mar 27 14:57 health-alert.sh
+-rwxr-xr-x  1  501 staff     4476 Jan 17 23:33 install.sh
+drwxr-xr-x  2 root root      4096 Jan 20 05:16 public
+drwxr-xr-x  2 root root      4096 Jan 19 01:05 __pycache__
+-rw-r--r--  1 root root      1598 Jan 20 05:17 pyproject.toml
+-rw-r--r--  1 root root      4275 Jan 19 23:49 README.md
+-rwxr-xr-x  1 root root       257 Mar 27 15:47 replicate-db.sh
+-rwxr-xr-x  1 root root       472 Mar 27 14:53 sample-bandwidth.sh
+drwxr-xr-x  2  501 staff     4096 Jan 20 05:17 scripts
+drwxr-xr-x  9  501 staff     4096 Mar 25 20:43 src
+-rwxr-xr-x  1 root root      1431 Mar 27 16:21 sync-boosty.sh
+drwxr-xr-x  5 root root      4096 Jan 20 05:07 .venv
+-rwxr-xr-x  1  501 staff 11294064 Apr 10 22:13 voidnet-api
+-rwxr-xr-x  1  501 staff 16208656 Apr 10 22:13 voidnet-bot
+-rw-r--r--  1 root root    143360 Apr 14 23:22 voidnet.db
+-rw-r--r--  1 root root     32768 Apr 15 01:18 voidnet.db-shm
+-rw-r--r--  1 root root   4120032 Apr 15 01:18 voidnet.db-wal
+-rwxr-xr-x  1  501 staff  8481224 Apr 10 22:13 voidnet-mcp
+-rw-r--r--  1  501 staff      432 Jan 17 09:04 voidnet-run
+drwxr-xr-x  6 root root      4096 Jan 20 05:17 voidnet-state
+-rwxr-xr-x  1  501 staff  1422576 Apr 10 22:13 xtask
+---file-opt-voidnet---
+/opt/voidnet/AGENTS.md:                  Python script, Unicode text, UTF-8 text executable
+/opt/voidnet/aoi.yaml:                   ASCII text
+/opt/voidnet/backup:                     directory
+/opt/voidnet/backup.sh:                  Bourne-Again shell script, ASCII text executable
+/opt/voidnet/build:                      directory
+/opt/voidnet/CAPSULE_QUICK_REFERENCE.md: Unicode text, UTF-8 text
+/opt/voidnet/check-downloads.sh:         Bourne-Again shell script, ASCII text executable
+/opt/voidnet/deploy_test.py:             Python script, ASCII text executable
+/opt/voidnet/dev.yaml:                   ASCII text
+/opt/voidnet/dist:                       directory
+/opt/voidnet/docker:                     directory
+/opt/voidnet/docs:                       directory
+/opt/voidnet/health-alert.sh:            Bourne-Again shell script, Unicode text, UTF-8 text executable
+/opt/voidnet/install.sh:                 Bourne-Again shell script, Unicode text, UTF-8 text executable
+/opt/voidnet/public:                     directory
+/opt/voidnet/__pycache__:                directory
+/opt/voidnet/pyproject.toml:             ASCII text
+/opt/voidnet/README.md:                  ASCII text
+/opt/voidnet/replicate-db.sh:            Bourne-Again shell script, ASCII text executable
+/opt/voidnet/sample-bandwidth.sh:        Bourne-Again shell script, ASCII text executable
+/opt/voidnet/scripts:                    directory
+/opt/voidnet/src:                        directory
+/opt/voidnet/sync-boosty.sh:             Bourne-Again shell script, ASCII text executable
+/opt/voidnet/voidnet-api:                ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=9f2c3511d1e95ce4d74c549c3ba709eb0779f0bc, not stripped
+/opt/voidnet/voidnet-bot:                ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=409fe227fb3911a9c0813c526d466d86cf2adb23, not stripped
+/opt/voidnet/voidnet.db:                 SQLite 3.x database, last written using SQLite version 3049001, writer version 2, read version 2, file counter 41494, database pages 35, cookie 0x35, schema 4, UTF-8, version-valid-for 41494
+/opt/voidnet/voidnet.db-shm:             SQLite Write-Ahead Log shared memory, counter 21294, page size 4096, 552 frames, 35 pages, frame checksum 0x895d7b7b, salt 0x8303acf96c690647, header checksum 0xe2b8ddd0, read-mark[1] 0x228
+/opt/voidnet/voidnet.db-wal:             SQLite Write-Ahead Log, version 3007000
+/opt/voidnet/voidnet-mcp:                ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=35ac66cc925013743aaf537d55a2ae84211b0858, not stripped
+/opt/voidnet/voidnet-run:                Python script, ASCII text executable
+/opt/voidnet/voidnet-state:              directory
+/opt/voidnet/xtask:                      ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=b19eb86fc11544d8adf23cfea7a2f6c23812ab8c, not stripped
