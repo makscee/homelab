@@ -6,8 +6,14 @@
 
 - **AmneziaWG VPN entry/exit** on UDP **46476** (container `amnezia-awg2`, 26 configured peers).
 - **Caddy reverse proxy** on TCP **80/443/2053** fronting `n8n`, `spacetimedb`, `couchdb`, and proxying VoidNet paths back to `docker-tower` (100.101.0.8) and `mcow` (100.101.0.9).
-- Secondary **monitoring** host (Grafana on :3001, Prometheus on host network, node-exporters for nether + docker-tower).
 - **Portainer** on 100.101.0.3:9443 (Tailscale-only binding, not public).
+
+> **Monitoring stack decommissioned 2026-04-14 (plan 03-03).** The secondary
+> Grafana/Prometheus/faux-node-exporter stack that ran on nether has been
+> retired. The single source of truth for monitoring is now
+> `docker-tower`. Native systemd `node_exporter` on nether (port `:9100`)
+> replaces the container version and is scraped by docker-tower Prometheus
+> over Tailnet.
 
 All inter-server traffic runs over Tailscale. Only AWG UDP 46476, Caddy TCP 80/443/2053, and (internally) Portainer on the Tailnet face the outside world.
 
@@ -16,7 +22,7 @@ All inter-server traffic runs over Tailscale. Only AWG UDP 46476, Caddy TCP 80/4
 | File | Purpose | Start command |
 | --- | --- | --- |
 | `docker-compose.services.yml` | Live services: `caddy`, `spacetimedb`, `couchdb`, `n8n`, `amnezia-awg2`, `portainer`, `portainer_agent` | `docker compose -f docker-compose.services.yml up -d` |
-| `docker-compose.monitoring.yml` | `prometheus`, `grafana`, `node-exporter-nether`, `node-exporter-docker-tower`, `docker-exporter` | `docker compose -f docker-compose.monitoring.yml up -d` |
+| ~~`docker-compose.monitoring.yml`~~ | **DECOMMISSIONED 2026-04-14 (plan 03-03)** — file removed; monitoring consolidated onto docker-tower. Historical capture preserved in git history. | — |
 | `docker-compose.void.yml` | **ARCHIVED** — legacy VoidNet overseer/uplink architecture. Do NOT deploy. | — |
 
 All image tags are pinned to `image@sha256:<digest>` per D-05. The `amnezia-awg2` image is built locally on nether from `/opt/amnezia`; its digest pins the currently deployed build.
@@ -66,7 +72,7 @@ Any port appearing in `docker ps` that is NOT in the table above should be treat
 
 | File | Fields | Used by |
 | --- | --- | --- |
-| `../../secrets/nether.sops.yaml` | `GF_SECURITY_ADMIN_USER`, `GF_SECURITY_ADMIN_PASSWORD`, `COUCHDB_USER`, `COUCHDB_PASSWORD` | `docker-compose.monitoring.yml` (Grafana), `docker-compose.services.yml` (CouchDB) |
+| `../../secrets/nether.sops.yaml` | `COUCHDB_USER`, `COUCHDB_PASSWORD` (+ historical `GF_SECURITY_ADMIN_*` — unused since 03-03 monitoring decommission; safe to prune in a follow-up cleanup plan) | `docker-compose.services.yml` (CouchDB) |
 | `../../secrets/nether-awg.sops.yaml` | `server_private_key`, `peer_1..26_pubkey`, `peer_1..26_psk` | Rendered into `/opt/amnezia/awg/awg0.conf` before `amnezia-awg2` starts |
 
 Decrypt workflow:
