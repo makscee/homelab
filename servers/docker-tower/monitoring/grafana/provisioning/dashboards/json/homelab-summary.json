@@ -1,0 +1,827 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Per-host summary: up/down, CPU%, RAM%, disk%, uptime. Targets: tower, docker-tower, cc-worker, mcow, nether.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "tower (100.101.0.7)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 101,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Up",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "up{job=\"node\",instance=~\"100\\.101\\.0\\.7.*\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 1 },
+      "id": 102,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "CPU%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"100\\.101\\.0\\.7.*\"}[5m])) * 100)",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 1 },
+      "id": 103,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "RAM%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"100\\.101\\.0\\.7.*\"} / node_memory_MemTotal_bytes{instance=~\"100\\.101\\.0\\.7.*\"})) * 100",
+          "legendFormat": "ram",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 1 },
+      "id": 104,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Disk%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "max by (instance) ((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.7.*\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.7.*\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.7.*\"} * 100)",
+          "legendFormat": "disk",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+      "id": 105,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Uptime",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_time_seconds{instance=~\"100\\.101\\.0\\.7.*\"} - node_boot_time_seconds{instance=~\"100\\.101\\.0\\.7.*\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 200,
+      "title": "docker-tower (100.101.0.8)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 6 },
+      "id": 201,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Up",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "up{job=\"node\",instance=~\"100\\.101\\.0\\.8.*\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 6 },
+      "id": 202,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "CPU%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"100\\.101\\.0\\.8.*\"}[5m])) * 100)",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 6 },
+      "id": 203,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "RAM%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"100\\.101\\.0\\.8.*\"} / node_memory_MemTotal_bytes{instance=~\"100\\.101\\.0\\.8.*\"})) * 100",
+          "legendFormat": "ram",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 6 },
+      "id": 204,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Disk%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "max by (instance) ((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.8.*\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.8.*\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.8.*\"} * 100)",
+          "legendFormat": "disk",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 6 },
+      "id": 205,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Uptime",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_time_seconds{instance=~\"100\\.101\\.0\\.8.*\"} - node_boot_time_seconds{instance=~\"100\\.101\\.0\\.8.*\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 10 },
+      "id": 300,
+      "title": "cc-worker (100.99.133.9)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 11 },
+      "id": 301,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Up",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "up{job=\"node\",instance=~\"100\\.99\\.133\\.9.*\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 11 },
+      "id": 302,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "CPU%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"100\\.99\\.133\\.9.*\"}[5m])) * 100)",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 11 },
+      "id": 303,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "RAM%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"100\\.99\\.133\\.9.*\"} / node_memory_MemTotal_bytes{instance=~\"100\\.99\\.133\\.9.*\"})) * 100",
+          "legendFormat": "ram",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 11 },
+      "id": 304,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Disk%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "max by (instance) ((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.99\\.133\\.9.*\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.99\\.133\\.9.*\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.99\\.133\\.9.*\"} * 100)",
+          "legendFormat": "disk",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 11 },
+      "id": 305,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Uptime",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_time_seconds{instance=~\"100\\.99\\.133\\.9.*\"} - node_boot_time_seconds{instance=~\"100\\.99\\.133\\.9.*\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 400,
+      "title": "mcow (100.101.0.9)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 16 },
+      "id": 401,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Up",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "up{job=\"node\",instance=~\"100\\.101\\.0\\.9.*\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 16 },
+      "id": 402,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "CPU%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"100\\.101\\.0\\.9.*\"}[5m])) * 100)",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 16 },
+      "id": 403,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "RAM%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"100\\.101\\.0\\.9.*\"} / node_memory_MemTotal_bytes{instance=~\"100\\.101\\.0\\.9.*\"})) * 100",
+          "legendFormat": "ram",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 16 },
+      "id": 404,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Disk%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "max by (instance) ((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.9.*\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.9.*\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.9.*\"} * 100)",
+          "legendFormat": "disk",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 16 },
+      "id": 405,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Uptime",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_time_seconds{instance=~\"100\\.101\\.0\\.9.*\"} - node_boot_time_seconds{instance=~\"100\\.101\\.0\\.9.*\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "id": 500,
+      "title": "nether (100.101.0.3)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 21 },
+      "id": 501,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Up",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "up{job=\"node\",instance=~\"100\\.101\\.0\\.3.*\"}",
+          "legendFormat": "up",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 21 },
+      "id": 502,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "CPU%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",instance=~\"100\\.101\\.0\\.3.*\"}[5m])) * 100)",
+          "legendFormat": "cpu",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 21 },
+      "id": 503,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "RAM%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"100\\.101\\.0\\.3.*\"} / node_memory_MemTotal_bytes{instance=~\"100\\.101\\.0\\.3.*\"})) * 100",
+          "legendFormat": "ram",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 21 },
+      "id": 504,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Disk%",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "max by (instance) ((node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.3.*\"} - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.3.*\"}) / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\",instance=~\"100\\.101\\.0\\.3.*\"} * 100)",
+          "legendFormat": "disk",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 21 },
+      "id": 505,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "none", "justifyMode": "auto" },
+      "title": "Uptime",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_time_seconds{instance=~\"100\\.101\\.0\\.3.*\"} - node_boot_time_seconds{instance=~\"100\\.101\\.0\\.3.*\"}",
+          "legendFormat": "uptime",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["homelab", "summary"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Homelab Summary",
+  "uid": "homelab-summary",
+  "version": 1
+}
