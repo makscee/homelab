@@ -1,0 +1,5 @@
+- targets:
+    - '100.101.0.8:8080'   # docker-tower cAdvisor
+    - '100.101.0.9:8080'   # mcow cAdvisor
+  labels:
+    job: cadvisor

@@ -1,0 +1,106 @@
+groups:
+  - name: homelab.nodes
+    interval: 1m
+    rules:
+
+      # --- Host reachability ---
+      - alert: HostDown
+        expr: up{job="node"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host {{ $labels.instance }} is down"
+          description: "node-exporter on {{ $labels.instance }} has been unreachable for 5 minutes."
+          runbook: "servers/{{ $labels.instance }}/inventory.md"
+
+      # --- Disk ---
+      - alert: DiskUsageCritical
+        expr: |
+          (
+            node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+            - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk >90% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full."
+
+      # --- Memory ---
+      - alert: MemoryPressure
+        expr: |
+          node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low memory on {{ $labels.instance }}"
+          description: "Available memory below 10% for 10m."
+
+  - name: homelab.containers
+    interval: 1m
+    rules:
+
+      # --- Container restart loop ---
+      - alert: ContainerRestartLoop
+        expr: |
+          changes(container_start_time_seconds{container!="",container!="cadvisor"}[15m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting on {{ $labels.instance }}"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes."
+
+      # --- cAdvisor self-availability ---
+      - alert: CAdvisorDown
+        expr: up{job="cadvisor"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cAdvisor down on {{ $labels.instance }}"
+
+  - name: homelab.prometheus
+    interval: 1m
+    rules:
+
+      # --- Prometheus self-scrape meta-alert ---
+      - alert: PrometheusSelfScrapeFailure
+        expr: up{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus cannot scrape itself"
+          description: "Prometheus self-scrape has been failing for 2 minutes — monitoring is broken."
+
+      # --- Alertmanager connectivity ---
+      - alert: AlertmanagerDown
+        expr: |
+          absent(up{job="alertmanager"}) or up{job="alertmanager"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager is unreachable from Prometheus"
+
+# ---------------------------------------------------------------------------
+# DEFERRED: Certificate expiry alert
+# ---------------------------------------------------------------------------
+# The CONTEXT.md lists cert expiry <30d as a required alert. However, no
+# cert-expiry exporter (blackbox-exporter or x509-certificate-exporter) is
+# in scope for Phase 03. Enable this rule in a future phase by adding the
+# appropriate exporter and uncommenting below.
+#
+#   - alert: CertificateExpiryWarning
+#     expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+#     for: 1h
+#     labels:
+#       severity: warning
+#     annotations:
+#       summary: "TLS cert expiring soon on {{ $labels.instance }}"
+#       description: "Certificate expires in {{ $value | humanizeDuration }}."
+# ---------------------------------------------------------------------------

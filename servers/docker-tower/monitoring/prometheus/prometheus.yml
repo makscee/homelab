@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']   # Alertmanager on host network
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+
+  # Prometheus self-scrape
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node exporters on all 6 Tailnet hosts
+  - job_name: 'node'
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/nodes.yml
+        refresh_interval: 5m
+
+  # cAdvisor — container metrics (docker-tower + mcow)
+  - job_name: 'cadvisor'
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/cadvisor.yml
+        refresh_interval: 5m
