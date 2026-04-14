@@ -93,12 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-06 | Phase 2 | Invalidated (tower-sat decommissioned) |
 | SVC-07 | Phase 2 | Pending (inventory drift reconciliation) |
 | SVC-08 | Phase 2 | Pending (new dev-worker LXCs) |
-| DR-01 | Phase 3 | Pending |
-| DR-02 | Phase 3 | Pending |
-| DR-03 | Phase 3 | Pending |
-| DR-04 | Phase 3 | Pending |
-| MON-01 | Phase 4 | Pending |
-| MON-02 | Phase 4 | Pending |
+| DR-01 | v2 (deferred) | Deferred — context preserved at `.planning/deferred/03-disaster-recovery/` |
+| DR-02 | v2 (deferred) | Deferred |
+| DR-03 | v2 (deferred) | Deferred |
+| DR-04 | v2 (deferred) | Deferred |
+| MON-01 | Phase 3 | Pending |
+| MON-02 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total (17 original + SVC-07, SVC-08 added 2026-04-14)
