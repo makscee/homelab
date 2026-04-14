@@ -17,9 +17,12 @@ mkdir -p /run/secrets
 sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
 chmod 600 /run/secrets/docker-tower.env
 
-# 2. Source it and write just the bot token to its own 600 file
+# 2. Source it and write the bot token to a file readable by the alertmanager
+#    container user. The prom/alertmanager image runs as `nobody` (uid/gid 65534),
+#    so the file must be owned by (or group-readable to) gid 65534 — otherwise
+#    the container hits "permission denied" opening telegram_token.
 source /run/secrets/docker-tower.env
-install -m 600 -o root -g root /dev/stdin /run/secrets/telegram_token <<<"$TELEGRAM_BOT_TOKEN"
+install -m 0440 -o root -g 65534 /dev/stdin /run/secrets/telegram_token <<<"$TELEGRAM_BOT_TOKEN"
 
 # 3. Bring up the stack (telegram_token is bind-mounted into the alertmanager container)
 docker compose -f docker-compose.monitoring.yml up -d
