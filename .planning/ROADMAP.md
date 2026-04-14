@@ -71,7 +71,14 @@ Plans:
   3. Grafana is deployed with prebuilt node-exporter dashboards; access via Tailscale
   4. cAdvisor runs on docker-tower and mcow; container metrics flow to Prometheus
   5. Health-check scripts allow Claude Code to confirm a deployment succeeded on any given server without manual SSH inspection
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Prometheus config capture + alerts + file_sd targets + phase-03 test harness
+- [ ] 03-02-PLAN.md — Ansible node-exporter playbook + inventory deploying native systemd binary to all 6 hosts
+- [ ] 03-03-PLAN.md — Compose migration: Alertmanager + cAdvisor, remove faux node-exporters + blackbox, decommission nether stack
+- [ ] 03-04-PLAN.md — Grafana datasource + dashboards provisioning (Node Exporter Full, cAdvisor, Homelab Summary)
+- [ ] 03-05-PLAN.md — scripts/healthcheck.sh + promtool rule tests + phase-wide 99-final gate
 
 ## Progress
 
@@ -82,4 +89,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundations | 3/3 | Complete | 2026-04-13 |
 | 2. Service Documentation | 6/6 | Complete | 2026-04-14 |
-| 3. Health Monitoring | 0/TBD | Not started | - |
+| 3. Health Monitoring | 0/5 | Not started | - |
