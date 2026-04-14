@@ -1,0 +1,76 @@
+# Extras stack: services discovered on live docker-tower that were not in the other three compose files.
+# Derived from `docker inspect` on 2026-04-14 (see /tmp/phase02-ev/docker-tower-extras.json).
+#
+# Secrets: before `docker compose up`, decrypt the SOPS-encrypted env file:
+#   mkdir -p /run/secrets
+#   sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
+#   chmod 600 /run/secrets/docker-tower.env
+# /run/secrets/ is gitignored — never commit the decrypted output.
+
+services:
+  navidrome:
+    image: deluan/navidrome@sha256:a5dce8f33304714dd138e870cca0dcab3d937ca236be1a9f2b97da009d1a0048  # was latest, pinned 2026-04-14
+    container_name: navidrome
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    env_file:
+      - path: /run/secrets/docker-tower.env  # ND_SPOTIFY_*, ND_LASTFM_* live here
+        required: false
+    environment:
+      - ND_SCANSCHEDULE=1m
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_MUSICFOLDER=/music
+      - ND_DATAFOLDER=/data
+      - ND_CONFIGFILE=/data/navidrome.toml
+      - ND_PORT=4533
+    volumes:
+      - /opt/docker-configs/shared/navidrome:/data
+      - /media/sea/music:/music
+
+  slskd:
+    image: slskd/slskd@sha256:17ef977563be206f3b5932080b1e23883b2cb39dc9010640f6f39b4eaec887e3  # was latest, pinned 2026-04-14
+    container_name: slskd
+    restart: unless-stopped
+    ports:
+      - "5030:5030"
+      - "50300:50300"
+    environment:
+      - SLSKD_REMOTE_CONFIGURATION=true
+      - SLSKD_UMASK=0022
+      - SLSKD_HTTP_PORT=5030
+      - SLSKD_HTTPS_PORT=5031
+      - SLSKD_SLSK_LISTEN_PORT=50300
+      - SLSKD_APP_DIR=/app
+    volumes:
+      - /opt/docker-configs/shared/slskd:/app
+      - /media/sea/music/_downloads:/downloads
+      - /media/sea/music/_downloads/.incomplete:/incomplete
+      - /media/sea/music:/music
+
+  docker-tower-api:
+    # Host networking — binds port 8000 on the host per live container layout.
+    image: python@sha256:a75662dfec8d90bd7161c91050be2e0a9b21d284f3b7a7253d5db25f7d583fb3  # python:3.12-slim, pinned 2026-04-14
+    container_name: docker-tower-api
+    restart: unless-stopped
+    network_mode: host
+    command: ["sh", "-c", "pip install fastapi uvicorn docker requests >/dev/null 2>&1 && python main.py"]
+    env_file:
+      - path: /run/secrets/docker-tower.env  # DOCKER_TOWER_API_KEY lives here
+        required: false
+    volumes:
+      - /opt/docker-tower-api:/app
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/homestack/workspaces:/workspaces:ro
+
+  portainer_agent:
+    image: portainer/agent@sha256:5b33e50ff131094e0b1b7272cc34205c970b6b25cecf4bbcf7c13298388a4832  # portainer/agent, pinned 2026-04-14
+    container_name: portainer_agent
+    restart: always
+    ports:
+      - "9001:9001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
