@@ -9,6 +9,7 @@ Operator-run scripts for homelab tasks. Each script is standalone and documents 
 | `tailscale-provision.sh` | Install Tailscale + join Tailnet | Fresh Debian/Ubuntu host | `TAILSCALE_AUTH_KEY` env var |
 | `enable-jellyfin-qsv.sh` | Enable Intel Quick Sync Video for Jellyfin | docker-tower (LXC 100) | None |
 | `verify-phase02.sh` | Run every Phase 2 verification snippet in `verify-phase02.d/` | Operator machine | None |
+| `healthcheck.sh` | Query Prometheus API for host health; JSON on stdout | Operator machine w/ Tailnet access | None (reads public Prometheus API over Tailnet) |
 
 ## verify-phase02.d/
 
@@ -22,6 +23,30 @@ Current snippets:
 - `05-lxc.sh` — SVC-03 + SVC-08 (Plan 05)
 - `06-tailscale.sh` — SVC-05 (Plan 06, this plan)
 - `99-final.sh` — Phase-wide sweep: secret scan + all-requirements coverage (Plan 06)
+
+## healthcheck.sh
+
+Operator CLI that queries Prometheus over Tailnet and emits strict JSON
+describing host health. Used by Claude Code after any deployment to verify
+success without SSH.
+
+Usage:
+```
+scripts/healthcheck.sh <hostname>    # e.g. scripts/healthcheck.sh mcow
+scripts/healthcheck.sh --all         # NDJSON of all 6 hosts
+scripts/healthcheck.sh --help
+```
+
+Exit: `0`=ok, `1`=degraded (warnings), `2`=fail (critical).
+Deps: `curl`, `jq`. Override Prometheus URL with `PROM_URL` env var.
+
+Output schema (per host):
+```json
+{"host":"mcow","status":"ok|degraded|fail","issues":[{"metric":"disk","value":"92%","threshold":"10%"}],"checked_at":"2026-04-15T00:00:00Z"}
+```
+
+Checks performed: `up` (fail), min disk avail (fail if <10%), memory
+(degraded if <10% available), recent reboot (info, not a failure).
 
 ## tests/phase-03/
 
