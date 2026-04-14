@@ -1,0 +1,10 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://100.101.0.8:9090
+    isDefault: true
+    uid: prometheus-homelab
+    jsonData:
+      timeInterval: '15s'
