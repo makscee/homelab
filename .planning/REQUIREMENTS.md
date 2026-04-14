@@ -17,10 +17,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **SVC-01**: Docker Compose files exist for every containerized service on docker-tower (Jellyfin, Navidrome, *arr stack, qBittorrent) with pinned image tags
 - [ ] **SVC-02**: Docker Compose files exist for every containerized service on mcow (VoidNet bot, API, portal)
-- [ ] **SVC-03**: Proxmox LXC configurations are captured for containers 100 (docker-tower), 101 (tower-sat), and 204 (cc-vk)
+- [ ] **SVC-03**: Proxmox LXC configurations are captured for containers 100 (docker-tower) and 204 (cc-worker, renamed from cc-vk). Also capture new developer-worker LXCs 200 (cc-andrey), 202 (cc-dan), 203 (cc-yuri), 205 (animaya-dev). VMID 101 removed from scope (decommissioned, see SVC-06).
 - [ ] **SVC-04**: AmneziaVPN configuration for nether is documented and reproducible
 - [ ] **SVC-05**: Tailscale node provisioning is scripted for all 6 servers
-- [ ] **SVC-06**: Tower-sat services are documented with Compose files or equivalent configs
+- [~] **SVC-06**: ~~Tower-sat services are documented with Compose files or equivalent configs~~ — **INVALIDATED 2026-04-14**: LXC 101 (tower-sat) was decommissioned and no longer exists on the tower hypervisor. Pre-flight audit during Phase 2 Wave 0 confirmed `pct list` does not include VMID 101. Closing this requirement with action = delete `servers/tower-sat/` and `servers/tower/lxc-101-tower-sat.conf`. No replacement services.
+- [ ] **SVC-07**: Phase 1 inventory drift reconciled (added 2026-04-14 via drift discovery): `CLAUDE.md` server table reflects actual infrastructure, `servers/*/inventory.md` files accurate for all active servers, `servers/cc-vk/` renamed to `servers/cc-worker/` with updated Tailscale IP `100.99.133.9`, `servers/tower-sat/` and `servers/tower/lxc-101-tower-sat.conf` deleted, `docs/network-topology.md` updated if it references decommissioned nodes
+- [ ] **SVC-08**: Developer-worker LXCs on tower are inventoried (added 2026-04-14): `servers/cc-andrey/inventory.md`, `servers/cc-dan/inventory.md`, `servers/cc-yuri/inventory.md`, `servers/animaya-dev/inventory.md` each exist with minimal fields (VMID, hostname, internal IP, Tailscale IP if present, external SSH port forward if any). VMID 201 stopped (`pct stop 201`) and documented as duplicate-backup under `servers/cc-andrey/inventory.md`
 
 ### Disaster Recovery
 
@@ -88,7 +90,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-03 | Phase 2 | Pending |
 | SVC-04 | Phase 2 | Pending |
 | SVC-05 | Phase 2 | Pending |
-| SVC-06 | Phase 2 | Pending |
+| SVC-06 | Phase 2 | Invalidated (tower-sat decommissioned) |
+| SVC-07 | Phase 2 | Pending (inventory drift reconciliation) |
+| SVC-08 | Phase 2 | Pending (new dev-worker LXCs) |
 | DR-01 | Phase 3 | Pending |
 | DR-02 | Phase 3 | Pending |
 | DR-03 | Phase 3 | Pending |
@@ -97,10 +101,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MON-02 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 17 total
-- Mapped to phases: 17
+- v1 requirements: 19 total (17 original + SVC-07, SVC-08 added 2026-04-14)
+- Active: 18 (SVC-06 invalidated — tower-sat decommissioned)
+- Mapped to phases: 19
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after roadmap creation*
+*Last updated: 2026-04-14 after Phase 2 pre-flight drift discovery*

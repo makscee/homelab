@@ -36,25 +36,20 @@ Plans:
 - [x] 01-03-PLAN.md — Cross-server dependency map and network topology diagrams
 
 ### Phase 2: Service Documentation
-**Goal**: Every containerized and LXC service has a reproducible config file committed to the repo
+**Goal**: Every containerized and LXC service has a reproducible config file committed to the repo. Also: reconcile Phase 1 inventory drift discovered during Wave 0 pre-flight (tower-sat decommissioned, cc-vk renamed to cc-worker, four new dev-worker LXCs on tower).
 **Depends on**: Phase 1
-**Requirements**: SVC-01, SVC-02, SVC-03, SVC-04, SVC-05, SVC-06
+**Requirements**: SVC-01, SVC-02, SVC-03, SVC-04, SVC-05, ~~SVC-06~~ (invalidated), SVC-07, SVC-08
+**Scope revision (2026-04-14):** Phase 2 re-scoped after Wave 0 pre-flight revealed: LXC 101 decommissioned, LXC 204 renamed cc-vk→cc-worker (new Tailscale IP `100.99.133.9`), four new developer-worker LXCs on tower (VMID 200 cc-andrey, 202 cc-dan, 203 cc-yuri, 205 animaya-dev), orphaned duplicate VMID 201 to stop (keep disk).
 **Success Criteria** (what must be TRUE):
   1. Docker Compose files with pinned image tags exist for all docker-tower services (Jellyfin, Navidrome, *arr stack, qBittorrent)
-  2. Docker Compose files exist for all mcow services (VoidNet bot, API, portal)
-  3. Proxmox LXC configs are captured for containers 100 (docker-tower), 101 (tower-sat), and 204 (cc-vk)
-  4. AmneziaVPN configuration for nether is documented with enough detail to reproduce it on a fresh VPS
-  5. A Tailscale provisioning script exists that can add any of the 6 servers to the mesh
-  6. Tower-sat services are documented with Compose files or equivalent configs
-**Plans:** 6 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Wave 0 bootstrap: SSH verify + LIVE-AUDIT.md + verify-phase02.sh
-- [ ] 02-02-PLAN.md — docker-tower compose files pinned + extras + SOPS monitoring + README
-- [ ] 02-03-PLAN.md — nether services compose + AWG SOPS + Caddyfile verify + archive void.yml
-- [ ] 02-04-PLAN.md — mcow systemd audit + stale flagging + README (Pitfall 3 — no compose)
-- [ ] 02-05-PLAN.md — Proxmox LXC 100/101/204 fresh configs + tower-sat + cc-vk READMEs
-- [ ] 02-06-PLAN.md — Tailscale provisioning script + scripts/README + final verify checkpoint
+  2. Docker Compose files exist (or systemd units audited and documented) for all mcow services (VoidNet bot, API; overseer/satellite audited for stale-unit flagging per D-07/D-08)
+  3. Proxmox LXC configs pulled fresh from `pct config` exist for 100 (docker-tower), 204 (cc-worker), 200 (cc-andrey), 202 (cc-dan), 203 (cc-yuri), 205 (animaya-dev)
+  4. AmneziaVPN configuration for nether is documented with config files committed (keys encrypted via SOPS) — reproducible from the config alone
+  5. A Tailscale provisioning script exists that can add any server to the mesh
+  6. ~~Tower-sat services documented~~ INVALIDATED — LXC 101 decommissioned; `servers/tower-sat/` and `servers/tower/lxc-101-tower-sat.conf` removed from repo
+  7. Phase 1 drift reconciled: CLAUDE.md server table accurate, `servers/cc-vk/` renamed to `servers/cc-worker/`, `servers/tower-sat/` deleted
+  8. Developer-worker LXCs (cc-andrey, cc-dan, cc-yuri, animaya-dev) have minimal `inventory.md` files; VMID 201 stopped but disk retained
+**Plans:** TBD (re-planning after 2026-04-14 drift discovery — original 6 plans archived to `.planning/phases/02-service-documentation/_archived-2026-04-14/`)
 
 ### Phase 3: Disaster Recovery
 **Goal**: Claude Code can rebuild any server's services from scratch using only this repo
@@ -84,6 +79,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 0/3 | Planning complete | - |
-| 2. Service Documentation | 0/6 | Planning complete | - |
+| 2. Service Documentation | 0/TBD | Re-planning (drift discovered 2026-04-14) | - |
 | 3. Disaster Recovery | 0/TBD | Not started | - |
 | 4. Monitoring | 0/TBD | Not started | - |

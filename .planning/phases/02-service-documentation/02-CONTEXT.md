@@ -1,7 +1,8 @@
 # Phase 2: Service Documentation - Context
 
 **Gathered:** 2026-04-13
-**Status:** Ready for planning
+**Revised:** 2026-04-14 (infrastructure drift discovered during Wave 0 pre-flight)
+**Status:** Ready for re-planning
 
 <domain>
 ## Phase Boundary
@@ -34,6 +35,19 @@ Capture all running service configs as reproducible Docker Compose files, LXC co
 ### AmneziaVPN documentation
 - **D-11:** Config files only — pull AmneziaWG configs from nether and commit (keys encrypted via SOPS). No setup procedure or automation script
 
+### Infrastructure reality reconciliation (added 2026-04-14)
+Wave 0 pre-flight on 2026-04-14 revealed Phase 1 inventory drift. New decisions:
+- **D-12 (tower-sat decommissioning):** LXC 101 no longer exists on tower. Delete `servers/tower-sat/` directory entirely. Delete `servers/tower/lxc-101-tower-sat.conf`. Remove the tower-sat row from CLAUDE.md server table. Mark SVC-06 as invalidated in REQUIREMENTS.md with a note that tower-sat was decommissioned. No replacement service.
+- **D-13 (cc-vk rename to cc-worker):** LXC 204 was renamed on Proxmox from `cc-vk` to `cc-worker` with new Tailscale IP `100.99.133.9` (was `100.91.54.83`). Rename `servers/cc-vk/` → `servers/cc-worker/`. Update CLAUDE.md row (new name, new IP). Update all in-repo references from `cc-vk` to `cc-worker`.
+- **D-14 (new LXCs inventoried):** Four additional LXCs on tower not captured in Phase 1 inventory. Create `servers/{name}/inventory.md` for each with minimal fields (hostname, VMID, role, Tailscale IP if present). Full service documentation is out of scope here; these are developer worker containers, not core homelab services:
+  - VMID 200: `cc-andrey` (reachable externally via `ssh andrey@95.31.38.176 -p 2201` — router forwards 2201 → tower:2200 → 10.10.20.200:22)
+  - VMID 202: `cc-dan`
+  - VMID 203: `cc-yuri`
+  - VMID 205: `animaya-dev` (Tailscale IP 100.119.15.122)
+- **D-15 (VMID 201 stop-but-keep):** Orphaned duplicate `cc-andrey` at VMID 201 (no external port forward, not reachable) will be stopped via `pct stop 201` on tower. Disk is retained. Document in `servers/cc-andrey/inventory.md` as "VMID 201 stopped, disk retained as backup — active container is VMID 200". Do NOT `pct destroy 201`.
+- **D-16 (Phase 1 inventory fixed in-place):** Per user decision, stale Phase 1 inventory gets corrected within Phase 2 rather than reopening Phase 1 for gap closure. Targets: `CLAUDE.md` server table, `servers/*/inventory.md` for any drift, `docs/network-topology.md` if it references decommissioned nodes.
+- **D-17 (canonical server list):** The homelab inventory is now 9 servers / containers after revision (was 6): tower (hypervisor), docker-tower, mcow, nether, cc-worker (renamed from cc-vk), cc-andrey, cc-dan, cc-yuri, animaya-dev. The 4 new ones are developer-worker LXCs with minimal docs.
+
 ### Claude's Discretion
 - Documentation format for live VoidNet services on mcow (D-09 — decide after SSH inspection)
 - README structure and level of detail per server
@@ -61,7 +75,8 @@ Capture all running service configs as reproducible Docker Compose files, LXC co
 - `servers/nether/docker-compose.void.yml` — VoidNet-related compose on nether
 - `servers/nether/docker-compose.monitoring.yml` — Monitoring compose on nether
 - `servers/tower/lxc-100-docker-tower.conf` — LXC config (replace with fresh pull from Proxmox)
-- `servers/tower/lxc-101-tower-sat.conf` — LXC config (replace with fresh pull from Proxmox)
+- ~~`servers/tower/lxc-101-tower-sat.conf`~~ — DELETE (D-12: LXC 101 decommissioned)
+- Fresh pulls needed: `pct config 100`, `pct config 204`, `pct config 200`, `pct config 202`, `pct config 203`, `pct config 205` (new LXCs from D-14)
 
 ### Phase 1 outputs (context for this phase)
 - `servers/*/inventory.md` — Server inventories with hosted services, IPs, hardware specs
