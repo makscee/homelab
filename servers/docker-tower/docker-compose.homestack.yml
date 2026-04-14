@@ -18,7 +18,7 @@ services:
       - homestack
 
   opencode:
-    image: codeyhj/opencode-docker:latest
+    image: codeyhj/opencode-docker@sha256:93ab8d573c9b96a47e470a3dcb8177ced5ca55d3b32e1a9c785b2ecccb7f91d5  # was latest, pinned 2026-04-14
     container_name: opencode-homestack
     init: true
     user: root

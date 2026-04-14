@@ -1,11 +1,15 @@
-version: '3.8'
-
 # Source: /opt/homestack/monitoring/docker-compose.yml on docker-tower
+#
+# Secrets: before `docker compose up`, decrypt the SOPS-encrypted env file:
+#   mkdir -p /run/secrets
+#   sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/grafana.env
+#   chmod 600 /run/secrets/grafana.env
+# /run/secrets/ is gitignored — never commit the decrypted output.
 
 services:
   # Prometheus - Metrics Collection
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702  # was latest, pinned 2026-04-14
     container_name: prometheus
     restart: unless-stopped
     network_mode: host
@@ -28,14 +32,15 @@ services:
 
   # Grafana - Visualization Dashboard
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # was latest, pinned 2026-04-14
     container_name: grafana
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - path: /run/secrets/grafana.env  # decrypt from secrets/docker-tower.sops.yaml — see header comment
+        required: false  # allow `docker compose config` to validate without the decrypted file
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=REDACTED
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://localhost:3000
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
@@ -51,7 +56,7 @@ services:
 
   # Node Exporter - Host Metrics for docker-tower
   node-exporter-docker-tower:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # was latest, pinned 2026-04-14
     container_name: node-exporter-docker-tower
     restart: unless-stopped
     command:
@@ -68,7 +73,7 @@ services:
 
   # Node Exporter - Host Metrics for nether
   node-exporter-nether:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter@sha256:337ff1d356b68d39cef853e8c6345de11ce7556bb34cda8bd205bcf2ed30b565  # was latest, pinned 2026-04-14
     container_name: node-exporter-nether
     restart: unless-stopped
     command:
@@ -85,7 +90,7 @@ services:
 
   # Docker Metrics Exporter
   docker-exporter:
-    image: prom/blackbox-exporter:latest
+    image: prom/blackbox-exporter@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc  # was latest, pinned 2026-04-14
     container_name: docker-exporter
     restart: unless-stopped
     volumes:

@@ -1,12 +1,10 @@
-version: '3.8'
-
 # Note: Tower API is now running as a host service (systemd), not as a container.
 # API is available on port 8000 on the host machine.
 # Source: /opt/homestack/services/tower/docker-compose.yml
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:latest
+    image: jellyfin/jellyfin@sha256:6d819e9ab067efcf712993b23455cc100ee5585919bb297ea5a109ac00cb626e  # was latest, pinned 2026-04-14
     container_name: jellyfin
     restart: unless-stopped
     ports:
@@ -23,7 +21,7 @@ services:
       - media
 
   filebrowser:
-    image: filebrowser/filebrowser:latest
+    image: filebrowser/filebrowser@sha256:a22a0e9cddfd9a83e10a0d53453fb412e152693257065299a78481a75a8c90ce  # was latest, pinned 2026-04-14
     container_name: filebrowser
     restart: unless-stopped
     ports:
@@ -38,7 +36,7 @@ services:
       - media
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.0.3  # pinned 2026-04-14 (container not live at snapshot; tag set to last-known stable)
     container_name: qbittorrent
     restart: unless-stopped
     ports:
@@ -58,7 +56,7 @@ services:
 
   prowlarr:
     network_mode: host
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr@sha256:67a8aaedcfd6989f3030b937a6a07007310b1dfc7ee8df16d2cbfa48d1c1158c  # was latest, pinned 2026-04-14
     container_name: prowlarr
     restart: unless-stopped
     volumes:
@@ -69,7 +67,7 @@ services:
       - TZ=Europe/Moscow
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr@sha256:8b9f2138ec50fc9e521960868f79d2ad0d529bc610aef19031ea8ff80b54c5e0  # was latest, pinned 2026-04-14
     container_name: sonarr
     restart: unless-stopped
     ports:
@@ -85,7 +83,7 @@ services:
       - media
 
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr@sha256:6c0948b42c149e36bb3dbc0b64d36c77b2d3c9dccf1b424c4f72af1e57ba0c21  # was latest, pinned 2026-04-14
     container_name: radarr
     restart: unless-stopped
     ports:
@@ -101,7 +99,7 @@ services:
       - media
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:latest
+    image: lscr.io/linuxserver/lidarr@sha256:0922867151c5175f394f4d865f6b3e63e8c05141132188e8790a1e66358e7196  # was latest, pinned 2026-04-14
     container_name: lidarr
     restart: unless-stopped
     ports:
@@ -117,7 +115,7 @@ services:
       - media
 
   flaresolverr:
-    image: flaresolverr/flaresolverr:latest
+    image: flaresolverr/flaresolverr@sha256:7962759d99d7e125e108e0f5e7f3cdbcd36161776d058d1d9b7153b92ef1af9e  # was latest, pinned 2026-04-14
     container_name: flaresolverr
     restart: unless-stopped
     ports:
@@ -129,7 +127,7 @@ services:
       - media
 
   docker-proxy:
-    image: tecnativa/docker-socket-proxy:latest
+    image: tecnativa/docker-socket-proxy@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476  # was latest, pinned 2026-04-14
     container_name: dockerproxy
     privileged: true
     volumes:

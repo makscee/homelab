@@ -29,3 +29,7 @@ keys.txt
 
 # SOPS temp files
 *.sops.yaml.tmp
+
+# Decrypted secrets at runtime — never commit plaintext outputs of sops --decrypt
+/run/secrets/
+**/run/secrets/
