@@ -2,7 +2,7 @@
 
 ## Overview
 
-Starting from an incomplete patchwork of configs and tribal knowledge, this roadmap builds a single source of truth for a 6-server homelab. The work moves from foundations (secrets, inventory) through service capture and disaster recovery to monitoring — ending with Claude Code able to rebuild any server's full stack from this repo alone.
+Starting from an incomplete patchwork of configs and tribal knowledge, this roadmap builds a single source of truth for a 6-server homelab. The work moves from foundations (secrets, inventory) through service capture to monitoring — ending with Claude Code able to verify any server's health programmatically. Disaster recovery deferred to v2.
 
 ## Phases
 
@@ -14,8 +14,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundations** - Establish secrets pattern and complete server inventory before any config is committed
 - [ ] **Phase 2: Service Documentation** - Capture all running service configs as reproducible Docker Compose and LXC files
-- [ ] **Phase 3: Disaster Recovery** - Build rebuild scripts, backup/restore procedures, and AI-readable runbooks
-- [ ] **Phase 4: Monitoring** - Deploy node-exporter and health-check scripts so Claude Code can verify deployments
+- [ ] **Phase 3: Health Monitoring** - Deploy node-exporter, Prometheus, Grafana, and health-check scripts so Claude Code can verify deployments
+
+**Deferred to v2:**
+- Disaster Recovery (rebuild scripts, backup/restore, AI-readable runbooks) — CONTEXT preserved at `.planning/deferred/03-disaster-recovery/`
 
 ## Phase Details
 
@@ -59,34 +61,25 @@ Plans:
 - [x] 02-05-PLAN.md — Fresh pct config pulls for 6 LXCs + inventory files for 4 new dev-workers + tower README (SVC-03, SVC-08)
 - [x] 02-06-PLAN.md — tailscale-provision.sh + scripts/README.md + final phase-wide secret sweep (SVC-05)
 
-### Phase 3: Disaster Recovery
-**Goal**: Claude Code can rebuild any server's services from scratch using only this repo
+### Phase 3: Health Monitoring
+**Goal**: Any server's health and deployment status can be verified programmatically by Claude Code
 **Depends on**: Phase 2
-**Requirements**: DR-01, DR-02, DR-03, DR-04
-**Success Criteria** (what must be TRUE):
-  1. Per-server rebuild scripts exist that install dependencies, pull images, and start services in correct order
-  2. A backup manifest documents every stateful data path per service (Jellyfin metadata, *arr DBs, VoidNet SQLite, etc.)
-  3. Restore procedures exist that recover stateful data from a backup into a fresh deployment
-  4. AI-readable runbooks provide numbered steps with exact hostnames, commands, expected outputs, and explicit stop conditions — no judgment calls required
-**Plans**: TBD
-
-### Phase 4: Monitoring
-**Goal**: Any server's health and deployment status can be verified programmatically
-**Depends on**: Phase 3
 **Requirements**: MON-01, MON-02
 **Success Criteria** (what must be TRUE):
-  1. Node-exporter is running on all 6 hosts and exposes CPU, memory, and disk metrics
-  2. Health-check scripts allow Claude Code to confirm a deployment succeeded on any given server without manual SSH inspection
+  1. Node-exporter is running on all 6 hosts and exposes CPU, memory, disk metrics
+  2. Prometheus scrapes all node-exporters over Tailscale; retention and target config committed
+  3. Grafana is deployed with prebuilt node-exporter dashboards; access via Tailscale
+  4. cAdvisor runs on docker-tower and mcow; container metrics flow to Prometheus
+  5. Health-check scripts allow Claude Code to confirm a deployment succeeded on any given server without manual SSH inspection
 **Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations | 0/3 | Planning complete | - |
-| 2. Service Documentation | 0/6 | Planning complete | - |
-| 3. Disaster Recovery | 0/TBD | Not started | - |
-| 4. Monitoring | 0/TBD | Not started | - |
+| 1. Foundations | 3/3 | Complete | 2026-04-13 |
+| 2. Service Documentation | 6/6 | Complete | 2026-04-14 |
+| 3. Health Monitoring | 0/TBD | Not started | - |
