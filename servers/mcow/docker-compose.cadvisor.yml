@@ -1,0 +1,33 @@
+# cAdvisor on mcow — container metrics for Prometheus on docker-tower.
+#
+# Port note: mcow :8080 is already used by voidnet-api. cAdvisor is therefore
+# bound to a free port (:18080) on the Tailnet IP 100.101.0.9, not host-net.
+# Prometheus target in servers/docker-tower/monitoring/prometheus/targets/cadvisor.yml
+# must use `100.101.0.9:18080` (NOT :8080).
+#
+# Deploy (on mcow):
+#   cd /root/homelab/servers/mcow/
+#   docker compose -f docker-compose.cadvisor.yml up -d
+#
+# Volumes are read-only mounts of host paths required by cAdvisor.
+
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "100.101.0.9:18080:8080"
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=30s'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl'

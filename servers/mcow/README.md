@@ -184,3 +184,33 @@ and the SQLite WAL will recover cleanly.
 - **Stale unit files remain on disk** (overseer, satellite) until Phase 3
   DR-04. Anyone running `ls /etc/systemd/system/voidnet-*.service` on mcow
   today will see 4 files; only 2 are active. This is intentional.
+
+## 7. cAdvisor (container metrics for Prometheus)
+
+Added Phase 03 — plan 03-03. mcow now runs `cadvisor` as a Docker container so
+Prometheus on `docker-tower` can scrape container metrics for the VoidNet
+remote-* / database stack.
+
+Compose file: [`docker-compose.cadvisor.yml`](./docker-compose.cadvisor.yml).
+
+**Port:** `100.101.0.9:18080` — NOT `:8080`.
+`voidnet-api` already owns `0.0.0.0:8080` on this host, so cAdvisor is bound
+to a free Tailnet port instead of using `network_mode: host`. Prometheus scrape
+target on `docker-tower` is pinned at
+`servers/docker-tower/monitoring/prometheus/targets/cadvisor.yml` →
+`100.101.0.9:18080`.
+
+Deploy (from operator with repo synced into `/root/homelab/`):
+
+```bash
+ssh root@mcow 'cd /root/homelab/servers/mcow && \
+  docker compose -f docker-compose.cadvisor.yml up -d'
+ssh root@mcow 'curl -sf http://100.101.0.9:18080/healthz'   # expect 200
+```
+
+Verify from Prometheus on docker-tower:
+```bash
+curl -s 'http://100.101.0.8:9090/api/v1/targets?state=active' \
+  | jq '.data.activeTargets[] | select(.labels.job=="cadvisor")'
+```
+Expect both `100.101.0.8:8080` and `100.101.0.9:18080` with `health: up`.
