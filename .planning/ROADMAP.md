@@ -49,7 +49,15 @@ Plans:
   6. ~~Tower-sat services documented~~ INVALIDATED — LXC 101 decommissioned; `servers/tower-sat/` and `servers/tower/lxc-101-tower-sat.conf` removed from repo
   7. Phase 1 drift reconciled: CLAUDE.md server table accurate, `servers/cc-vk/` renamed to `servers/cc-worker/`, `servers/tower-sat/` deleted
   8. Developer-worker LXCs (cc-andrey, cc-dan, cc-yuri, animaya-dev) have minimal `inventory.md` files; VMID 201 stopped but disk retained
-**Plans:** TBD (re-planning after 2026-04-14 drift discovery — original 6 plans archived to `.planning/phases/02-service-documentation/_archived-2026-04-14/`)
+**Plans:** 6 plans (re-planned 2026-04-14 after drift discovery; original 6 archived to `.planning/phases/02-service-documentation/_archived-2026-04-14/`)
+
+Plans:
+- [ ] 02-01-PLAN.md — Infrastructure reconciliation (SVC-07): delete tower-sat, rename cc-vk→cc-worker, CLAUDE.md update, stop VMID 201, seed verify-phase02 harness
+- [ ] 02-02-PLAN.md — docker-tower compose: pin image tags, move Grafana password to SOPS, .env.example + README (SVC-01)
+- [ ] 02-03-PLAN.md — mcow systemd audit + README; flag stale voidnet-overseer/satellite units (SVC-02)
+- [ ] 02-04-PLAN.md — nether services compose + Caddyfile sync + AmneziaWG template with SOPS-encrypted keys (SVC-04)
+- [ ] 02-05-PLAN.md — Fresh pct config pulls for 6 LXCs + inventory files for 4 new dev-workers + tower README (SVC-03, SVC-08)
+- [ ] 02-06-PLAN.md — tailscale-provision.sh + scripts/README.md + final phase-wide secret sweep (SVC-05)
 
 ### Phase 3: Disaster Recovery
 **Goal**: Claude Code can rebuild any server's services from scratch using only this repo
@@ -79,6 +87,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 0/3 | Planning complete | - |
-| 2. Service Documentation | 0/TBD | Re-planning (drift discovered 2026-04-14) | - |
+| 2. Service Documentation | 0/6 | Planning complete | - |
 | 3. Disaster Recovery | 0/TBD | Not started | - |
 | 4. Monitoring | 0/TBD | Not started | - |
