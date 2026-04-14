@@ -53,11 +53,11 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Infrastructure reconciliation (SVC-07): delete tower-sat, rename cc-vk→cc-worker, CLAUDE.md update, stop VMID 201, seed verify-phase02 harness
-- [ ] 02-02-PLAN.md — docker-tower compose: pin image tags, move Grafana password to SOPS, .env.example + README (SVC-01)
-- [ ] 02-03-PLAN.md — mcow systemd audit + README; flag stale voidnet-overseer/satellite units (SVC-02)
-- [ ] 02-04-PLAN.md — nether services compose + Caddyfile sync + AmneziaWG template with SOPS-encrypted keys (SVC-04)
-- [ ] 02-05-PLAN.md — Fresh pct config pulls for 6 LXCs + inventory files for 4 new dev-workers + tower README (SVC-03, SVC-08)
-- [ ] 02-06-PLAN.md — tailscale-provision.sh + scripts/README.md + final phase-wide secret sweep (SVC-05)
+- [x] 02-02-PLAN.md — docker-tower compose: pin image tags, move Grafana password to SOPS, .env.example + README (SVC-01)
+- [x] 02-03-PLAN.md — mcow systemd audit + README; flag stale voidnet-overseer/satellite units (SVC-02)
+- [x] 02-04-PLAN.md — nether services compose + Caddyfile sync + AmneziaWG template with SOPS-encrypted keys (SVC-04)
+- [x] 02-05-PLAN.md — Fresh pct config pulls for 6 LXCs + inventory files for 4 new dev-workers + tower README (SVC-03, SVC-08)
+- [x] 02-06-PLAN.md — tailscale-provision.sh + scripts/README.md + final phase-wide secret sweep (SVC-05)
 
 ### Phase 3: Disaster Recovery
 **Goal**: Claude Code can rebuild any server's services from scratch using only this repo
