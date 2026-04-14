@@ -1,5 +1,7 @@
 # Network Topology
 
+> 2026-04-14: tower-sat (LXC 101) decommissioned — see REQUIREMENTS.md SVC-06 invalidated.
+
 Visual representation of how all homelab servers connect. Shows the Tailscale mesh overlay, Proxmox virtualization layer, and VPN paths.
 
 ```mermaid
@@ -12,10 +14,6 @@ flowchart TB
 
         subgraph lxc-100["LXC 100 — 8 vCPU, 12GB RAM"]
           docker-tower-node[docker-tower\n100.101.0.8\nMedia Stack]
-        end
-
-        subgraph lxc-101["LXC 101 — 2 vCPU, 2GB RAM"]
-          tower-sat-node[tower-sat\n100.101.0.10\nSatellite Services]
         end
 
         subgraph lxc-204["LXC 204"]
@@ -44,7 +42,6 @@ flowchart TB
 
   %% Proxmox manages LXCs
   tower-proxmox -->|manages| lxc-100
-  tower-proxmox -->|manages| lxc-101
   tower-proxmox -->|manages| lxc-204
 
   %% Storage bind-mounts into docker-tower
@@ -71,7 +68,6 @@ flowchart TB
   %% Operator access (SSH via Tailscale)
   cc-vk-node -.->|SSH via Tailscale| tower-proxmox
   cc-vk-node -.->|SSH via Tailscale| docker-tower-node
-  cc-vk-node -.->|SSH via Tailscale| tower-sat-node
   cc-vk-node -.->|SSH via Tailscale| mcow-node
   cc-vk-node -.->|SSH via Tailscale| nether-node
 ```
@@ -82,7 +78,6 @@ flowchart TB
 |--------|-------------|-----------|----------|------|-----------|
 | tower | 100.101.0.7 | — | Moscow | Physical (Proxmox host) | i7-8700 12T, 16GB RAM |
 | docker-tower | 100.101.0.8 | — | Moscow (LXC 100) | Virtual | 8 vCPU, 12GB RAM |
-| tower-sat | 100.101.0.10 | — | Moscow (LXC 101) | Virtual | 2 vCPU, 2GB RAM |
 | cc-vk | 100.91.54.83 | — | Moscow (LXC 204) | Virtual | Pending SSH query |
 | mcow | 100.101.0.9 | — | Moscow | Standalone | Pending SSH query |
 | nether | 100.101.0.3 | 77.239.110.57 | Netherlands | VPS | Pending SSH query |

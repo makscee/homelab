@@ -1,5 +1,7 @@
 # Service Dependency Map
 
+> 2026-04-14: tower-sat (LXC 101) decommissioned — see REQUIREMENTS.md SVC-06 invalidated.
+
 Visual representation of which services depend on which across the homelab. Arrows indicate "depends on" or "calls" relationships.
 
 ```mermaid
@@ -55,10 +57,6 @@ flowchart TD
     node-exp-n[node-exporter :9100]
   end
 
-  subgraph tower-sat["tower-sat (100.101.0.10) — Satellite"]
-    sat-services[services pending SSH query]
-  end
-
   subgraph cc-vk["cc-vk (100.91.54.83) — Operator"]
     claude-code[Claude Code]
     sops-age[SOPS + age]
@@ -67,7 +65,6 @@ flowchart TD
 
   %% Proxmox hosts LXCs
   proxmox -.->|hosts LXC 100| docker-tower
-  proxmox -.->|hosts LXC 101| tower-sat
   proxmox -.->|hosts LXC 204| cc-vk
 
   %% mcow -> docker-tower cross-server dependencies
