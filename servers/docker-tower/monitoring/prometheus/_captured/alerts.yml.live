@@ -1,0 +1,68 @@
+# Prometheus Alerts Configuration
+
+groups:
+  - name: homestack
+    rules:
+      # Container is down
+      - alert: ContainerDown
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.container }} is down"
+          description: "Container {{ $labels.container }} has been down for more than 15 minutes"
+        expr: |
+          up{container=~".+"} == 0
+      - alert: ServiceDown
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.service }} is down"
+          description: "Service {{ $labels.service }} is unreachable"
+        expr: |
+          up{job=~"tower-api"} == 0
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 10 minutes"
+        expr: |
+          rate(process_cpu_seconds_total[5m])[5m] > 0.8
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% for 10 minutes"
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is below 20%"
+        expr: |
+          (node_filesystem_avail_bytes{fstype=~"ext.?|xfs"} / node_filesystem_size_bytes) < 0.2
+
+      # API response time high
+      - alert: HighAPIResponseTime
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response time"
+          description: "Tower API response time is above 1 second"
+        expr: |
+          http_request_duration_seconds_sum / http_request_duration_seconds_count > 1
