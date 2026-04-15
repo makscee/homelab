@@ -1,0 +1,23 @@
+# Uptime Kuma — Status page & uptime monitoring
+# Tailnet-only: binds to mcow's Tailscale IP (100.101.0.9:3001)
+#
+# Deploy:
+#   cd /root/homelab/servers/mcow
+#   docker compose -f docker-compose.uptime-kuma.yml up -d
+#
+# First visit: http://100.101.0.9:3001 — create admin account.
+# Then add monitors for homelab services (see suggested list below).
+
+services:
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "100.101.0.9:3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  uptime-kuma-data:
