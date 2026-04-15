@@ -94,8 +94,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node\"}[5m]))",
-          "legendFormat": "{{ instance }}",
+          "expr": "(1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node\"}[5m]))) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
           "refId": "A"
         }
       ]
@@ -136,8 +136,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})",
-          "legendFormat": "{{ instance }}",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
           "refId": "A"
         }
       ]
@@ -178,8 +178,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "(node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) / node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}",
-          "legendFormat": "{{ instance }}",
+          "expr": "((node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) / node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
           "refId": "A"
         }
       ]
@@ -356,14 +356,14 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "rate(node_network_receive_bytes_total{job=\"node\",device!~\"lo|veth.*|br.*|docker.*|tailscale.*\"}[5m])",
-          "legendFormat": "RX {{ instance }}",
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\",device!~\"lo|veth.*|br.*|docker.*|tailscale.*\"}[5m]) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "RX {{ nodename }}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",device!~\"lo|veth.*|br.*|docker.*|tailscale.*\"}[5m])",
-          "legendFormat": "TX {{ instance }}",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",device!~\"lo|veth.*|br.*|docker.*|tailscale.*\"}[5m]) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "TX {{ nodename }}",
           "refId": "B"
         }
       ]
