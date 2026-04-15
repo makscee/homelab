@@ -102,10 +102,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
   2. A single overview dashboard is set as Grafana home and shows: host up/down, CPU/RAM/disk gauges + time-series graphs, Docker container counts per host, active Alertmanager alerts, uptime, network I/O — all 6 hosts visible at a glance
   3. A real Alertmanager rule fire delivers a Telegram message (closes deferred 03-03 smoke test)
   4. User approves the dashboard during UAT
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 
 Plans:
 - [x] 04-01-PLAN.md — Migrate Grafana docker-tower → mcow, decommission docker-tower Grafana, datasource over Tailnet
 - [x] 04-02-PLAN.md — Overview dashboard: host status, CPU/RAM/disk gauges + time-series, container counts, active alerts, uptime, net I/O
-- [ ] 04-03-PLAN.md — Alertmanager → Telegram smoke test (real rule fire, message delivered)
+- [x] 04-03-PLAN.md — Alertmanager → Telegram smoke test (real rule fire, message delivered)
 - [x] 04-04-PLAN.md — animaya-dev SSH key push via pct exec + node-exporter deploy + deferred flag removal
