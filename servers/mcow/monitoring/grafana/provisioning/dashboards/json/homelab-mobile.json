@@ -113,16 +113,6 @@
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Value #ON" },
-            "properties": [
-              { "id": "displayName", "value": "Status" },
-              { "id": "mappings", "value": [
-                { "type": "value", "options": { "0": { "text": "offline", "color": "text" }, "1": { "text": "online", "color": "green" } } }
-              ]},
-              { "id": "custom.cellOptions", "value": { "type": "color-text" } }
-            ]
-          },
-          {
             "matcher": { "id": "byName", "options": "Value #RX" },
             "properties": [
               { "id": "displayName", "value": "RX" },
@@ -140,26 +130,26 @@
             "matcher": { "id": "byName", "options": "Value #HS" },
             "properties": [
               { "id": "displayName", "value": "Last seen" },
-              { "id": "unit", "value": "dateTimeFromNow" }
+              { "id": "unit", "value": "dateTimeFromNow" },
+              { "id": "thresholds", "value": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "text", "value": null },
+                  { "color": "green", "value": -180000 }
+                ]
+              }},
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } }
             ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "displayName": "TX", "desc": true }],
+        "sortBy": [{ "displayName": "Last seen", "desc": true }],
         "cellHeight": "sm",
         "frameIndex": 0
       },
       "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "awg_peer_connected{allowed_ip!=\"(none)\",username!=\"unknown\"}",
-          "legendFormat": "",
-          "refId": "ON",
-          "format": "table",
-          "instant": true
-        },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
           "expr": "awg_peer_transfer_rx_bytes{allowed_ip!=\"(none)\",username!=\"unknown\"}",
@@ -178,7 +168,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "awg_peer_last_handshake_seconds{allowed_ip!=\"(none)\",username!=\"unknown\"} > 0",
+          "expr": "awg_peer_last_handshake_seconds{allowed_ip!=\"(none)\",username!=\"unknown\"} * 1000",
           "legendFormat": "",
           "refId": "HS",
           "format": "table",
@@ -197,34 +187,27 @@
               "Time 1": true,
               "Time 2": true,
               "Time 3": true,
-              "Time 4": true,
               "__name__": true,
               "__name__ 1": true,
               "__name__ 2": true,
-              "__name__ 3": true,
               "instance": true,
               "instance 1": true,
               "instance 2": true,
-              "instance 3": true,
               "job": true,
               "job 1": true,
               "job 2": true,
-              "job 3": true,
               "public_key": true,
               "public_key 1": true,
               "public_key 2": true,
-              "public_key 3": true,
               "username 1": true,
               "username 2": true,
-              "username 3": true,
               "allowed_ip": true
             },
             "indexByName": {
               "username": 0,
-              "Value #ON": 1,
+              "Value #HS": 1,
               "Value #RX": 2,
-              "Value #TX": 3,
-              "Value #HS": 4
+              "Value #TX": 3
             }
           }
         },
