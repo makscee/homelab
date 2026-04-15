@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-04-15T13:56:49.456Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-04-15T14:05:56.723Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 15
-  percent: 83
+  completed_plans: 16
+  percent: 89
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Progress: [████████▏░] 82%
 
 *Updated after each plan completion*
 | Phase 04 P01 | 30min | 2 tasks | 5 files |
+| Phase 04 P04 | 8min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - [Init]: AmneziaVPN only on nether — XRay/VLESS is out of scope
 - [Init]: Document-first, automate-second — capture what exists before scripting
 - [Phase 04]: Grafana + Alertmanager migrated to mcow (Tailnet-only); docker-tower volumes preserved 7d for rollback
+- [Phase 04]: Plan 04-04: animaya-dev SSH unblocked via pct exec from tower; node-exporter live; v1.0 monitoring gap (5/6 -> 6/6) closed
 
 ### Roadmap Evolution
 
@@ -89,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T13:56:40.694Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-04-15T14:05:56.719Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
