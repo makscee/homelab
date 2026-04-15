@@ -1,0 +1,65 @@
+# Source: derived from servers/docker-tower/docker-compose.monitoring.yml
+# Grafana + Alertmanager on mcow (Tailnet 100.101.0.9 only).
+# Prometheus stays on docker-tower — this stack points at it over Tailnet.
+#
+# Secrets deploy flow (run on mcow before `docker compose up`):
+#   mkdir -p /run/secrets
+#   sops --decrypt --output-type dotenv /root/homelab/secrets/mcow.sops.yaml > /run/secrets/mcow.env
+#   chmod 600 /run/secrets/mcow.env
+#   source /run/secrets/mcow.env
+#   install -m 0600 -o root -g root /dev/stdin /run/secrets/grafana.env <<EOF
+#   GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER
+#   GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD
+#   EOF
+#   install -m 0440 -o root -g 65534 /dev/stdin /run/secrets/telegram_token <<<"$TELEGRAM_BOT_TOKEN"
+#
+# PERMS ARE LOAD-BEARING: telegram_token MUST be mode 0440 owner root group 65534
+# (prom/alertmanager runs as nobody:nogroup uid/gid 65534). 0600 will break with EACCES.
+# See servers/mcow/monitoring/alertmanager/README.md.
+
+services:
+
+  grafana:
+    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # grafana/grafana:latest pinned 2026-04-14 (matches docker-tower)
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "100.101.0.9:3000:3000"
+    env_file:
+      - path: /run/secrets/grafana.env
+        required: false
+    environment:
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://100.101.0.9:3000
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5  # prom/alertmanager:v0.27.0 pinned 2026-04-14
+    container_name: alertmanager
+    restart: unless-stopped
+    ports:
+      - "100.101.0.9:9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /run/secrets/telegram_token:/etc/alertmanager/telegram_token:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.listen-address=:9093'
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    name: monitoring
+    driver: bridge
+
+volumes:
+  grafana-data:
+  alertmanager-data:

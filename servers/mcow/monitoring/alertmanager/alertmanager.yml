@@ -1,0 +1,39 @@
+# Alertmanager configuration for docker-tower monitoring stack.
+# Deploy flow: sops --decrypt → install telegram_token → docker compose up
+# See alertmanager/README.md for full deploy instructions.
+#
+# SECURITY: bot_token is read from a file (not inline) — the token file is
+# decrypted from secrets/docker-tower.sops.yaml at deploy time and never committed.
+# chat_id is NOT a secret and is committed as a plain integer here.
+
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: [alertname, instance]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: telegram-homelab
+  routes:
+    - matchers:
+        - severity = critical
+      receiver: telegram-homelab
+      repeat_interval: 1h
+
+receivers:
+  - name: telegram-homelab
+    telegram_configs:
+      - bot_token_file: /etc/alertmanager/telegram_token
+        chat_id: 193835258
+        parse_mode: HTML
+        message: |
+          {{ if eq .Status "firing" }}🔴{{ else }}🟢{{ end }} <b>{{ .GroupLabels.alertname }}</b>
+          {{ range .Alerts }}
+          <b>Instance:</b> {{ .Labels.instance }}
+          <b>Severity:</b> {{ .Labels.severity }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Description:</b> {{ .Annotations.description }}
+          {{ end }}
+
+inhibit_rules: []
