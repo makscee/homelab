@@ -49,22 +49,6 @@ services:
       - /media/sea/music/_downloads/.incomplete:/incomplete
       - /media/sea/music:/music
 
-  docker-tower-api:
-    # Host networking — binds port 8000 on the host per live container layout.
-    image: python@sha256:a75662dfec8d90bd7161c91050be2e0a9b21d284f3b7a7253d5db25f7d583fb3  # python:3.12-slim, pinned 2026-04-14
-    container_name: docker-tower-api
-    restart: unless-stopped
-    network_mode: host
-    command: ["sh", "-c", "pip install fastapi uvicorn docker requests >/dev/null 2>&1 && python main.py"]
-    env_file:
-      - path: /run/secrets/docker-tower.env  # DOCKER_TOWER_API_KEY lives here
-        required: false
-    volumes:
-      - /opt/docker-tower-api:/app
-      - /usr/bin/docker:/usr/bin/docker:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /opt/homestack/workspaces:/workspaces:ro
-
   portainer_agent:
     image: portainer/agent@sha256:5b33e50ff131094e0b1b7272cc34205c970b6b25cecf4bbcf7c13298388a4832  # portainer/agent, pinned 2026-04-14
     container_name: portainer_agent
