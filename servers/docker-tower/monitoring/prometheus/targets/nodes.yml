@@ -4,6 +4,7 @@
     - '100.99.133.9:9100'   # cc-worker (LXC 204)
     - '100.101.0.9:9100'    # mcow
     - '100.101.0.3:9100'    # nether
-    - '100.119.15.122:9100' # animaya-dev (LXC 205)
+    # DEFERRED: node-exporter blocked on animaya-dev (SSH unavailable) — see .planning/v1.0-MILESTONE-AUDIT.md
+    # - '100.119.15.122:9100' # animaya-dev (LXC 205)
   labels:
     job: node

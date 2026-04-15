@@ -17,6 +17,11 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  # Alertmanager self-scrape (satisfies AlertmanagerDown rule in alerts/homelab.yml)
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['localhost:9093']
+
   # Node exporters on all 6 Tailnet hosts
   - job_name: 'node'
     file_sd_configs:
