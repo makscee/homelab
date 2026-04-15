@@ -1,18 +1,14 @@
 # Source: /opt/homestack/docker-compose.monitoring.yml on docker-tower
 #
-# Secrets: before `docker compose up`, decrypt the SOPS-encrypted env file AND install the bot token:
-#   mkdir -p /run/secrets
-#   sops --decrypt --output-type dotenv ../../secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
-#   chmod 600 /run/secrets/docker-tower.env
-#   source /run/secrets/docker-tower.env
-#   install -m 600 -o root -g root /dev/stdin /run/secrets/grafana.env <<EOF
-#   GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER
-#   GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD
-#   EOF
-#   install -m 600 -o root -g root /dev/stdin /run/secrets/telegram_token <<<"$TELEGRAM_BOT_TOKEN"
+# 2026-04-15: Grafana + Alertmanager DECOMMISSIONED (migrated to mcow).
+#   - Grafana:      http://100.101.0.9:3000
+#   - Alertmanager: http://100.101.0.9:9093
+#   - See servers/mcow/docker-compose.monitoring.yml
+#   - Volumes `monitoring_grafana-data` and `monitoring_alertmanager-data` preserved
+#     until 2026-04-22 for rollback. After that date: docker volume rm the two volumes.
 #
-# /run/secrets/ is gitignored — never commit the decrypted output.
-# See monitoring/alertmanager/README.md for full alertmanager deploy notes.
+# This stack now runs only: prometheus + cadvisor.
+# /run/secrets/ no longer consumed here (telegram_token lives on mcow).
 
 services:
 
@@ -35,41 +31,50 @@ services:
       - '--storage.tsdb.retention.time=720h'
       - '--web.enable-lifecycle'
 
-  # ── Grafana — Visualization Dashboard ────────────────────────────────────────
-  grafana:
-    image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f  # grafana/grafana:latest, pinned 2026-04-14
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - "100.101.0.8:3000:3000"
-    env_file:
-      - path: /run/secrets/grafana.env  # decrypt from secrets/docker-tower.sops.yaml — see header comment
-        required: false                  # allows `docker compose config` to validate without the decrypted file
-    environment:
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://100.101.0.8:3000
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
+  # ── Grafana — DECOMMISSIONED 2026-04-15 ─────────────────────────────────────
+  # Migrated to mcow (100.101.0.9:3000). See servers/mcow/docker-compose.monitoring.yml.
+  # Volume `monitoring_grafana-data` preserved for 1 week rollback window.
+  # If rollback needed within that window: uncomment + `docker compose up -d grafana`.
+  # After 2026-04-22: remove this block and run `docker volume rm monitoring_grafana-data`.
+  # grafana:
+  #   image: grafana/grafana@sha256:2175aaa91c96733d86d31cf270d5310b278654b03f5718c59de12a865380a31f
+  #   container_name: grafana
+  #   restart: unless-stopped
+  #   ports:
+  #     - "100.101.0.8:3000:3000"
+  #   env_file:
+  #     - path: /run/secrets/grafana.env
+  #       required: false
+  #   environment:
+  #     - GF_USERS_ALLOW_SIGN_UP=false
+  #     - GF_SERVER_ROOT_URL=http://100.101.0.8:3000
+  #     - GF_INSTALL_PLUGINS=grafana-piechart-panel
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #     - ./grafana/provisioning:/etc/grafana/provisioning:ro
+  #   networks:
+  #     - monitoring
+  #   depends_on:
+  #     - prometheus
 
-  # ── Alertmanager — Alert Routing (Telegram) ───────────────────────────────────
-  alertmanager:
-    image: prom/alertmanager@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5  # prom/alertmanager:v0.27.0, pinned 2026-04-14
-    container_name: alertmanager
-    restart: unless-stopped
-    network_mode: host
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - /run/secrets/telegram_token:/etc/alertmanager/telegram_token:ro
-      - alertmanager-data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
+  # ── Alertmanager — DECOMMISSIONED 2026-04-15 ────────────────────────────────
+  # Migrated to mcow (100.101.0.9:9093). See servers/mcow/docker-compose.monitoring.yml.
+  # Volume `monitoring_alertmanager-data` preserved for 1 week rollback window.
+  # If rollback needed within that window: uncomment + `docker compose up -d alertmanager`
+  # and flip Prometheus alerting target back to localhost:9093 (see prometheus/prometheus.yml).
+  # After 2026-04-22: remove this block and run `docker volume rm monitoring_alertmanager-data`.
+  # alertmanager:
+  #   image: prom/alertmanager@sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5
+  #   container_name: alertmanager
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   volumes:
+  #     - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+  #     - /run/secrets/telegram_token:/etc/alertmanager/telegram_token:ro
+  #     - alertmanager-data:/alertmanager
+  #   command:
+  #     - '--config.file=/etc/alertmanager/alertmanager.yml'
+  #     - '--storage.path=/alertmanager'
 
   # ── cAdvisor — Container Metrics ─────────────────────────────────────────────
   cadvisor:

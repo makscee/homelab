@@ -31,7 +31,11 @@ services:
     environment:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://100.101.0.9:3000
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      # GF_INSTALL_PLUGINS removed 2026-04-15: mcow egress to grafana.com plugin API
+      # over UDP:53 is blocked (Grafana Go resolver bypasses embedded 127.0.0.11 DNS).
+      # Plugin install at startup crash-loops the container. piechart-panel is not
+      # referenced by any 03-04/04-02 homelab dashboard. Re-enable only if a future
+      # dashboard requires it AND external DNS/egress confirmed stable.
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

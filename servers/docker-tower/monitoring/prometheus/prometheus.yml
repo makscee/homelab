@@ -5,7 +5,7 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['localhost:9093']   # Alertmanager on host network
+        - targets: ['100.101.0.9:9093']   # Alertmanager on mcow (moved 2026-04-15; was localhost:9093)
 
 rule_files:
   - /etc/prometheus/alerts/*.yml
@@ -17,10 +17,10 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Alertmanager self-scrape (satisfies AlertmanagerDown rule in alerts/homelab.yml)
+  # Alertmanager scrape (moved to mcow 2026-04-15; satisfies AlertmanagerDown rule)
   - job_name: 'alertmanager'
     static_configs:
-      - targets: ['localhost:9093']
+      - targets: ['100.101.0.9:9093']
 
   # Node exporters on all 6 Tailnet hosts
   - job_name: 'node'
