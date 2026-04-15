@@ -9,21 +9,13 @@
   "fiscalYearStartMonth": 0,
   "liveNow": false,
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "panels": [
-    {
-      "id": 1,
-      "title": "",
-      "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
-      "collapsed": false,
-      "panels": []
-    },
     {
       "id": 2,
       "title": "Hosts Up",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -59,10 +51,46 @@
       ]
     },
     {
+      "id": 6,
+      "title": "Containers",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "count(container_last_seen{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
+          "legendFormat": "running",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 3,
       "title": "CPU %",
       "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 5 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 4 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -104,7 +132,7 @@
       "id": 4,
       "title": "RAM %",
       "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 11 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 10 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -146,7 +174,7 @@
       "id": 5,
       "title": "Disk %",
       "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 16 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -186,53 +214,17 @@
     },
     {
       "id": 10,
-      "title": "",
+      "title": "Containers",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
       "collapsed": false,
       "panels": []
-    },
-    {
-      "id": 6,
-      "title": "Containers Running",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "count(container_last_seen{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
-          "legendFormat": "containers",
-          "refId": "A"
-        }
-      ]
     },
     {
       "id": 7,
       "title": "Top Containers by CPU",
       "type": "bargauge",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 28 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 23 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -274,7 +266,7 @@
       "id": 8,
       "title": "Top Containers by RAM",
       "type": "bargauge",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 35 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 30 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -312,10 +304,145 @@
       ]
     },
     {
-      "id": 11,
-      "title": "",
+      "id": 20,
+      "title": "VPN (nether)",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 21,
+      "title": "AmneziaWG",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ],
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "node_network_up{job=\"node\",instance=~\"100.101.0.3.*\",device=\"amn0\"}",
+          "legendFormat": "awg",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "VPN Uptime",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null },
+              { "color": "green", "value": 86400 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "time() - node_boot_time_seconds{job=\"node\",instance=~\"100.101.0.3.*\"}",
+          "legendFormat": "nether",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "VPN Traffic (amn0)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 42 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisBorderShow": false
+          },
+          "color": { "mode": "palette-classic" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "TX" },
+            "properties": [
+              { "id": "custom.transform", "value": "negative-Y" }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\",instance=~\"100.101.0.3.*\",device=\"amn0\"}[5m])",
+          "legendFormat": "RX",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",instance=~\"100.101.0.3.*\",device=\"amn0\"}[5m])",
+          "legendFormat": "TX",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Network",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
       "collapsed": false,
       "panels": []
     },
@@ -323,7 +450,7 @@
       "id": 9,
       "title": "Network I/O",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 43 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 50 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
