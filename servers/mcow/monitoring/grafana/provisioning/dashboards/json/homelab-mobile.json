@@ -94,9 +94,9 @@
     },
     {
       "id": 33,
-      "title": "Active Clients",
+      "title": "Clients",
       "type": "table",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 5 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -107,10 +107,19 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "allowed_ip" },
+            "matcher": { "id": "byName", "options": "username" },
             "properties": [
-              { "id": "displayName", "value": "IP" },
-              { "id": "custom.width", "value": 90 }
+              { "id": "displayName", "value": "User" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #ON" },
+            "properties": [
+              { "id": "displayName", "value": "Status" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": { "0": { "text": "offline", "color": "text" }, "1": { "text": "online", "color": "green" } } }
+              ]},
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } }
             ]
           },
           {
@@ -133,18 +142,6 @@
               { "id": "displayName", "value": "Last seen" },
               { "id": "unit", "value": "dateTimeFromNow" }
             ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "public_key" },
-            "properties": [
-              { "id": "custom.hidden", "value": true }
-            ]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Time" },
-            "properties": [
-              { "id": "custom.hidden", "value": true }
-            ]
           }
         ]
       },
@@ -157,7 +154,15 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "awg_peer_transfer_rx_bytes{allowed_ip!=\"(none)\"} > 0",
+          "expr": "awg_peer_connected{allowed_ip!=\"(none)\",username!=\"unknown\"}",
+          "legendFormat": "",
+          "refId": "ON",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "awg_peer_transfer_rx_bytes{allowed_ip!=\"(none)\",username!=\"unknown\"}",
           "legendFormat": "",
           "refId": "RX",
           "format": "table",
@@ -165,7 +170,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "awg_peer_transfer_tx_bytes{allowed_ip!=\"(none)\"} > 0",
+          "expr": "awg_peer_transfer_tx_bytes{allowed_ip!=\"(none)\",username!=\"unknown\"}",
           "legendFormat": "",
           "refId": "TX",
           "format": "table",
@@ -173,7 +178,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "awg_peer_last_handshake_seconds{allowed_ip!=\"(none)\"} > 0",
+          "expr": "awg_peer_last_handshake_seconds{allowed_ip!=\"(none)\",username!=\"unknown\"} > 0",
           "legendFormat": "",
           "refId": "HS",
           "format": "table",
@@ -192,21 +197,31 @@
               "Time 1": true,
               "Time 2": true,
               "Time 3": true,
+              "Time 4": true,
               "__name__": true,
               "__name__ 1": true,
               "__name__ 2": true,
+              "__name__ 3": true,
               "instance": true,
               "instance 1": true,
               "instance 2": true,
+              "instance 3": true,
               "job": true,
               "job 1": true,
               "job 2": true,
+              "job 3": true,
+              "public_key": true,
               "public_key 1": true,
-              "public_key 2": true
+              "public_key 2": true,
+              "public_key 3": true,
+              "username 1": true,
+              "username 2": true,
+              "username 3": true,
+              "allowed_ip": true
             },
             "indexByName": {
-              "allowed_ip": 0,
-              "public_key": 1,
+              "username": 0,
+              "Value #ON": 1,
               "Value #RX": 2,
               "Value #TX": 3,
               "Value #HS": 4
@@ -227,7 +242,7 @@
       "id": 34,
       "title": "VPN Traffic (amn0)",
       "type": "timeseries",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 13 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 15 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -276,7 +291,7 @@
       "id": 1,
       "title": "Infrastructure",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "collapsed": false,
       "panels": []
     },
