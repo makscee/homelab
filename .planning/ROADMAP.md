@@ -15,6 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundations** - Establish secrets pattern and complete server inventory before any config is committed
 - [ ] **Phase 2: Service Documentation** - Capture all running service configs as reproducible Docker Compose and LXC files
 - [ ] **Phase 3: Health Monitoring** - Deploy node-exporter, Prometheus, Grafana, and health-check scripts so Claude Code can verify deployments
+- [ ] **Phase 4: Operator Dashboard** - Migrate Grafana to mcow, build one-page at-a-glance overview of all hosts/services, smoke-test Telegram alerts
 
 **Deferred to v2:**
 - Disaster Recovery (rebuild scripts, backup/restore, AI-readable runbooks) — CONTEXT preserved at `.planning/deferred/03-disaster-recovery/`
@@ -74,19 +75,37 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Prometheus config capture + alerts + file_sd targets + phase-03 test harness
-- [ ] 03-02-PLAN.md — Ansible node-exporter playbook + inventory deploying native systemd binary to all 6 hosts
-- [ ] 03-03-PLAN.md — Compose migration: Alertmanager + cAdvisor, remove faux node-exporters + blackbox, decommission nether stack
-- [ ] 03-04-PLAN.md — Grafana datasource + dashboards provisioning (Node Exporter Full, cAdvisor, Homelab Summary)
+- [x] 03-01-PLAN.md — Prometheus config capture + alerts + file_sd targets + phase-03 test harness
+- [x] 03-02-PLAN.md — Ansible node-exporter playbook + inventory deploying native systemd binary to all 6 hosts
+- [x] 03-03-PLAN.md — Compose migration: Alertmanager + cAdvisor, remove faux node-exporters + blackbox, decommission nether stack
+- [x] 03-04-PLAN.md — Grafana datasource + dashboards provisioning (Node Exporter Full, cAdvisor, Homelab Summary)
 - [ ] 03-05-PLAN.md — scripts/healthcheck.sh + promtool rule tests + phase-wide 99-final gate
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 3/3 | Complete | 2026-04-13 |
 | 2. Service Documentation | 6/6 | Complete | 2026-04-14 |
-| 3. Health Monitoring | 0/5 | Not started | - |
+| 3. Health Monitoring | 5/5 | Complete | 2026-04-15 |
+| 4. Operator Dashboard | 0/4 | Not started | - |
+
+### Phase 4: Operator Dashboard
+**Goal**: One-page Grafana dashboard on mcow showing all hosts and services at a glance; Telegram alerts proven end-to-end
+**Depends on**: Phase 3
+**Requirements**: MON-01 (extends — operator-facing UI), MON-02 (extends — alert delivery proven)
+**Success Criteria** (what must be TRUE):
+  1. Grafana runs on mcow (Tailscale-only), pointed at docker-tower Prometheus over Tailnet; docker-tower Grafana decommissioned
+  2. A single overview dashboard is set as Grafana home and shows: host up/down, CPU/RAM/disk gauges + time-series graphs, Docker container counts per host, active Alertmanager alerts, uptime, network I/O — all 6 hosts visible at a glance
+  3. A real Alertmanager rule fire delivers a Telegram message (closes deferred 03-03 smoke test)
+  4. User approves the dashboard during UAT
+**Plans:** 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Migrate Grafana docker-tower → mcow, decommission docker-tower Grafana, datasource over Tailnet
+- [ ] 04-02-PLAN.md — Overview dashboard: host status, CPU/RAM/disk gauges + time-series, container counts, active alerts, uptime, net I/O
+- [ ] 04-03-PLAN.md — Alertmanager → Telegram smoke test (real rule fire, message delivered)
+- [ ] 04-04-PLAN.md — animaya-dev SSH key push via pct exec + node-exporter deploy + deferred flag removal
