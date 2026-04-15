@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 Phase: 03 (health-monitoring) — READY TO PLAN
 Plan: 0 of TBD
 Status: Phase 02 complete; roadmap revised — DR deferred to v2
-Last activity: 2026-04-14 -- Roadmap revised: Phase 03 = Health Monitoring
+Last activity: 2026-04-15 - Completed quick task 260415-fd2: fix alertmanager scrape job + suppress animaya-dev HostDown alert
 
 Progress: [██████▋░░░] 67%
 
@@ -74,6 +74,12 @@ None yet.
 - nether is SPOF for Netherlands VPN — prioritize AmneziaVPN config capture early in Phase 2
 - Backup target destination not yet specified — needs decision before DR-02/DR-03 can be fully implemented
 - Monitoring host placement (which server runs Grafana/Prometheus) deferred to v2
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260415-fd2 | fix alertmanager scrape job + suppress animaya-dev HostDown alert | 2026-04-15 | 325c3f5 | [260415-fd2-fix-alertmanager-scrape-job-suppress-ani](./quick/260415-fd2-fix-alertmanager-scrape-job-suppress-ani/) |
 
 ## Session Continuity
 
