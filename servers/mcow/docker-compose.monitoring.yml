@@ -39,6 +39,7 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro  # 04-02: pin home dashboard (Operator Overview)
     networks:
       - monitoring
 

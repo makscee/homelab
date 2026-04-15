@@ -669,7 +669,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "count(container_last_seen{name!=\"\"})",
+          "expr": "count(container_last_seen{id=~\"/system.slice/docker-.*\\\\.scope\"})",
           "instant": true
         }
       ],
@@ -1334,7 +1334,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "count(container_last_seen{name!=\"\",instance=~\"100.101.0.8:(8080|18080)\"})",
+          "expr": "count(container_last_seen{id=~\"/system.slice/docker-.*\\\\.scope\",instance=~\"100.101.0.8:(8080|18080)\"})",
           "instant": true
         }
       ],
@@ -2119,7 +2119,7 @@
                 "type": "prometheus",
                 "uid": "prometheus-homelab"
               },
-              "expr": "count(container_last_seen{name!=\"\",instance=~\"100.101.0.9:(8080|18080)\"})",
+              "expr": "count(container_last_seen{id=~\"/system.slice/docker-.*\\\\.scope\",instance=~\"100.101.0.9:(8080|18080)\"})",
               "instant": true
             }
           ],
