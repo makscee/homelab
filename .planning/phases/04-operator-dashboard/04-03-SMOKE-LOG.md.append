@@ -1,0 +1,55 @@
+## Delivery-gap investigation (2026-04-15)
+
+**Symptom:** `alertmanager_notifications_total{integration="telegram"}` incrementing 8→9, but operator (chat 193835258) receiving nothing.
+
+### Diagnostic results
+
+1. **AM config (mcow /etc/alertmanager/alertmanager.yml):**
+   - `bot_token_file: /etc/alertmanager/telegram_token`
+   - `chat_id: 193835258`
+   - No custom `telegram_api_url` (uses default `https://api.telegram.org`)
+
+2. **AM logs — actual dispatch result (NOT success):**
+   ```
+   level=error component=dispatcher msg="Notify for alerts failed"
+   err="telegram-homelab/telegram[0]: notify retry canceled after 4 attempts:
+       telebot: Post https://api.telegram.org/bot<TOKEN>/sendMessage:
+       dial tcp 149.154.166.110:443: connect: connection timed out"
+   ```
+   Timestamps: 14:25:06, 14:32:20 (retry), 14:36:50. Every attempt times out.
+
+3. **Token redacted from this log — but leaked in AM stdout as plain `bot<TOKEN>:` URL. Rotate after incident.**
+
+4. **Host-level network check on mcow:**
+   - `curl -m 10 https://api.telegram.org/` → `curl(28) Connection timed out after 10s`
+   - `getent hosts api.telegram.org` → `2001:67c:4e8:f004::9` (IPv6 only in resolver)
+   - Container `wget` → same timeout
+   - AM log shows dial to IPv4 `149.154.166.110:443` also times out
+
+5. **getMe / getChat / direct sendMessage NOT executed** — would hit same network wall; skipped to save time.
+
+### Root cause
+
+Network egress from mcow to `api.telegram.org` is broken on both IPv4 and IPv6. This is not a bot, token, or chat_id problem. The Prometheus `notifications_total` counter increments on *attempt*, not success — it is a misleading "green" signal. `alertmanager_notifications_failed_total{integration="telegram"}` is the real delivery indicator and should be non-zero (needs re-check).
+
+### Why it worked before and not now (hypothesis)
+
+Earlier in phase 04 Telegram delivery was observed. Something changed since:
+- nether (VPN exit) routing for mcow may have flapped
+- Telegram IPs may be blocked at upstream ISP (common in RU); previous path was via VPN
+- mcow's default route may have changed (e.g., exit-node toggled off in Tailscale)
+
+### Next actions (operator decision required — do NOT auto-fix)
+
+A. Verify Tailscale exit-node on mcow: `ssh root@mcow 'tailscale status | head; tailscale debug daemon-goroutines | grep -i exit'`
+B. If exit-node lost → re-advertise nether, re-enable on mcow: `tailscale up --exit-node=nether --exit-node-allow-lan-access`
+C. If exit-node fine but Telegram still unreachable → check nether's own Telegram egress (VLESS/AmneziaWG outbound)
+D. Confirm bot token has not leaked — AM log contains it in cleartext URL; rotate via BotFather once delivery is restored.
+
+### What changed on disk during diagnosis
+
+- None. Read-only checks only. No config edited, no container restarted, no silence modified, no test message sent (network unreachable anyway).
+
+### Blocker flag
+
+ALERT delivery path is broken upstream of AM. Task 04-03 cannot be marked complete. HostDown alert for animaya-dev remains firing with silences intact — safe to leave as-is until network is restored.

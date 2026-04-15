@@ -20,12 +20,12 @@ groups:
           (
             node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
             - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
-          ) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} > 0.90
+          ) / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"} > 0.98
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "Disk >90% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          summary: "Disk >98% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
           description: "Disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full."
 
       # --- Memory ---
