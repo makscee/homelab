@@ -9,313 +9,21 @@
   "fiscalYearStartMonth": 0,
   "liveNow": false,
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "panels": [
     {
-      "id": 2,
-      "title": "Hosts Up",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 4 },
-              { "color": "green", "value": 6 }
-            ]
-          },
-          "mappings": [],
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "count(up{job=\"node\"} == 1)",
-          "legendFormat": "hosts up",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "title": "Containers",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "auto",
-        "textMode": "auto",
-        "wideLayout": true,
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "count(container_last_seen{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
-          "legendFormat": "running",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "CPU %",
-      "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.7 },
-              { "color": "red", "value": 0.9 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "horizontal",
-        "displayMode": "lcd",
-        "showUnfilled": true,
-        "minVizWidth": 8,
-        "minVizHeight": 16,
-        "namePlacement": "auto",
-        "valueMode": "color"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "(1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node\"}[5m]))) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
-          "legendFormat": "{{ nodename }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "RAM %",
-      "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 10 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.7 },
-              { "color": "red", "value": 0.9 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "horizontal",
-        "displayMode": "lcd",
-        "showUnfilled": true,
-        "minVizWidth": 8,
-        "minVizHeight": 16,
-        "namePlacement": "auto",
-        "valueMode": "color"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
-          "legendFormat": "{{ nodename }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Disk %",
-      "type": "bargauge",
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.7 },
-              { "color": "red", "value": 0.9 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "horizontal",
-        "displayMode": "lcd",
-        "showUnfilled": true,
-        "minVizWidth": 8,
-        "minVizHeight": 16,
-        "namePlacement": "auto",
-        "valueMode": "color"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "((node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) / node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
-          "legendFormat": "{{ nodename }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 10,
-      "title": "Containers",
+      "id": 30,
+      "title": "VPN (AmneziaWG)",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "collapsed": false,
       "panels": []
     },
     {
-      "id": 7,
-      "title": "Top Containers by CPU",
-      "type": "bargauge",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 23 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.5 },
-              { "color": "red", "value": 0.8 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "horizontal",
-        "displayMode": "lcd",
-        "showUnfilled": true,
-        "minVizWidth": 8,
-        "minVizHeight": 16,
-        "namePlacement": "auto",
-        "valueMode": "color"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "topk(7, rate(container_cpu_usage_seconds_total{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"}[5m]))",
-          "legendFormat": "{{ name }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 8,
-      "title": "Top Containers by RAM",
-      "type": "bargauge",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 30 },
-      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 536870912 },
-              { "color": "red", "value": 1073741824 }
-            ]
-          },
-          "color": { "mode": "thresholds" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
-        "orientation": "horizontal",
-        "displayMode": "lcd",
-        "showUnfilled": true,
-        "minVizWidth": 8,
-        "minVizHeight": 16,
-        "namePlacement": "auto",
-        "valueMode": "color"
-      },
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "topk(7, container_memory_rss{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
-          "legendFormat": "{{ name }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 20,
-      "title": "VPN (nether)",
-      "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 21,
-      "title": "AmneziaWG",
+      "id": 31,
+      "title": "Connected",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 38 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -326,9 +34,6 @@
               { "color": "green", "value": 1 }
             ]
           },
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
-          ],
           "color": { "mode": "thresholds" }
         },
         "overrides": []
@@ -345,26 +50,24 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "node_network_up{job=\"node\",instance=~\"100.101.0.3.*\",device=\"amn0\"}",
-          "legendFormat": "awg",
+          "expr": "awg_peers_connected",
+          "legendFormat": "clients online",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 22,
-      "title": "VPN Uptime",
+      "id": 32,
+      "title": "Total Peers",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 38 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "orange", "value": null },
-              { "color": "green", "value": 86400 }
+              { "color": "purple", "value": null }
             ]
           },
           "color": { "mode": "thresholds" }
@@ -383,17 +86,148 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
-          "expr": "time() - node_boot_time_seconds{job=\"node\",instance=~\"100.101.0.3.*\"}",
-          "legendFormat": "nether",
+          "expr": "awg_peers_total",
+          "legendFormat": "configured",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 23,
+      "id": 33,
+      "title": "Active Clients",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "allowed_ip" },
+            "properties": [
+              { "id": "displayName", "value": "IP" },
+              { "id": "custom.width", "value": 90 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #RX" },
+            "properties": [
+              { "id": "displayName", "value": "RX" },
+              { "id": "unit", "value": "decbytes" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #TX" },
+            "properties": [
+              { "id": "displayName", "value": "TX" },
+              { "id": "unit", "value": "decbytes" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #HS" },
+            "properties": [
+              { "id": "displayName", "value": "Last seen" },
+              { "id": "unit", "value": "dateTimeFromNow" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "public_key" },
+            "properties": [
+              { "id": "custom.hidden", "value": true }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Time" },
+            "properties": [
+              { "id": "custom.hidden", "value": true }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "TX", "desc": true }],
+        "cellHeight": "sm",
+        "frameIndex": 0
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "awg_peer_transfer_rx_bytes{allowed_ip!=\"(none)\"} > 0",
+          "legendFormat": "",
+          "refId": "RX",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "awg_peer_transfer_tx_bytes{allowed_ip!=\"(none)\"} > 0",
+          "legendFormat": "",
+          "refId": "TX",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "awg_peer_last_handshake_seconds{allowed_ip!=\"(none)\"} > 0",
+          "legendFormat": "",
+          "refId": "HS",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": { "byField": "allowed_ip" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "public_key 1": true,
+              "public_key 2": true
+            },
+            "indexByName": {
+              "allowed_ip": 0,
+              "public_key": 1,
+              "Value #RX": 2,
+              "Value #TX": 3,
+              "Value #HS": 4
+            }
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "targetField": "Value #HS", "destinationType": "time" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 34,
       "title": "VPN Traffic (amn0)",
       "type": "timeseries",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 42 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 13 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -439,10 +273,310 @@
       ]
     },
     {
+      "id": 1,
+      "title": "Infrastructure",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "title": "Hosts Up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 4 },
+              { "color": "green", "value": 6 }
+            ]
+          },
+          "mappings": [],
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "count(up{job=\"node\"} == 1)",
+          "legendFormat": "hosts up",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Containers",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "wideLayout": true,
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "count(container_last_seen{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
+          "legendFormat": "running",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "CPU %",
+      "type": "bargauge",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node\"}[5m]))) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "RAM %",
+      "type": "bargauge",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Disk %",
+      "type": "bargauge",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "((node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} - node_filesystem_avail_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) / node_filesystem_size_bytes{job=\"node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) * on(instance) group_left(nodename) node_uname_info{job=\"node\"}",
+          "legendFormat": "{{ nodename }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Containers",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 7,
+      "title": "Top Containers by CPU",
+      "type": "bargauge",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 43 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 0.8 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "topk(7, rate(container_cpu_usage_seconds_total{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"}[5m]))",
+          "legendFormat": "{{ name }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Top Containers by RAM",
+      "type": "bargauge",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 50 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 536870912 },
+              { "color": "red", "value": 1073741824 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "horizontal",
+        "displayMode": "lcd",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "namePlacement": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "topk(7, container_memory_rss{job=\"cadvisor\",name!=\"\",name!=\"cadvisor\"})",
+          "legendFormat": "{{ name }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 11,
       "title": "Network",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 57 },
       "collapsed": false,
       "panels": []
     },
@@ -450,7 +584,7 @@
       "id": 9,
       "title": "Network I/O",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 50 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 58 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
