@@ -1,7 +1,5 @@
 ---
-# Ansible static inventory — all 6 Tailnet-reachable hosts
-# animaya-dev SSH is blocked (publickey auth refused); marked deferred.
-# TODO: push SSH key from tower/Proxmox — blocked Phase 03 on 2026-04-14
+# Ansible static inventory — all 6 Tailnet-reachable hosts.
 
 all:
   children:
@@ -25,7 +23,4 @@ all:
         animaya-dev:
           ansible_host: 100.119.15.122
           ansible_user: root
-          # deferred: true
-          # SSH publickey auth refused — cannot deploy node_exporter until SSH key is pushed.
-          # TODO: push SSH key from tower/Proxmox — blocked Phase 03 on 2026-04-14
-          # Workaround: access via tower port-forward (tower:2205 -> animaya-dev:22) if needed.
+          # SSH key pushed via pct exec 205 on tower 2026-04-15 (Plan 04-04). See .planning/phases/04-operator-dashboard/04-04-SSH-UNBLOCK-LOG.md.

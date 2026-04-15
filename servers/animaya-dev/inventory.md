@@ -33,3 +33,4 @@ Not a homelab service host — no services documented in this repo.
 ## History
 
 - 2026-04-14: Inventoried during Phase 2 (SVC-08).
+- 2026-04-15: SSH access restored via Plan 04-04 (`pct exec 205` key push from tower). node_exporter live on :9100, scraped by Prometheus on docker-tower. See `.planning/phases/04-operator-dashboard/04-04-SSH-UNBLOCK-LOG.md`.
