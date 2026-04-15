@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Phase 04 all plans complete
-last_updated: "2026-04-15T17:56:42.160Z"
-last_activity: 2026-04-15
+milestone_name: Homelab Infrastructure-as-Code
+status: complete
+stopped_at: v1.0 shipped
+last_updated: "2026-04-15T21:30:00.000Z"
+last_activity: 2026-04-15 — v1.0 milestone shipped
 progress:
   total_phases: 4
   completed_phases: 4
@@ -18,79 +18,46 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-13)
+See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** Phase 04 — operator-dashboard
+**Current focus:** v1.0 shipped — planning next milestone (run `/gsd-new-milestone`).
 
 ## Current Position
 
-Phase: 04 (operator-dashboard) — EXECUTING
-Plan: 3 of 4
-Status: Ready to execute
-Last activity: 2026-04-15
+Milestone: v1.0 — COMPLETE (shipped 2026-04-15)
+Next: `/gsd-new-milestone` to scope v2.0
 
-Progress: [████████▏░] 82%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Velocity:**
+**Milestone velocity:**
 
-- Total plans completed: 3
-- Average duration: —
-- Total execution time: 0 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01 | 3 | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
-| Phase 04 P01 | 30min | 2 tasks | 5 files |
-| Phase 04 P04 | 8min | 2 tasks | 4 files |
+- Total plans completed: 18
+- Timeline: 2026-04-10 → 2026-04-15 (6 days)
+- Git: 116 commits, 190 files changed (+44,833 / -2)
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions have all been moved to Validated status.
 
-- [Init]: Claude Code is the operator — runbooks must use numbered steps, exact hostnames, expected outputs, and stop conditions
-- [Init]: Secrets via SOPS + age at hub level; homelab repo only references encrypted values, never stores raw secrets
-- [Init]: AmneziaVPN only on nether — XRay/VLESS is out of scope
-- [Init]: Document-first, automate-second — capture what exists before scripting
-- [Phase 04]: Grafana + Alertmanager migrated to mcow (Tailnet-only); docker-tower volumes preserved 7d for rollback
-- [Phase 04]: Plan 04-04: animaya-dev SSH unblocked via pct exec from tower; node-exporter live; v1.0 monitoring gap (5/6 -> 6/6) closed
+### Open Blockers/Concerns (carry forward to v2)
 
-### Roadmap Evolution
-
-- Phase 4 added (2026-04-15): Operator Dashboard — Grafana on mcow + at-a-glance overview + Telegram alert smoke test. Closes v1.0.
+- DiskUsageCritical persistent on tower + docker-tower — root cause still outstanding
+- docker-tower cleanup scheduled 2026-04-22 (after 7-day rollback window): monitoring volumes, stale compose path, commented decommissioned stanzas
+- nether secrets cleanup — `GF_SECURITY_ADMIN_*` unreferenced post-decommission
+- D-06 ADR update pending
+- Backup target destination not yet specified — needed before DR-02/DR-03 can be implemented (v2)
 
 ### Pending Todos
 
-None yet.
-
-### Blockers/Concerns
-
-- nether is SPOF for Netherlands VPN — prioritize AmneziaVPN config capture early in Phase 2
-- Backup target destination not yet specified — needs decision before DR-02/DR-03 can be fully implemented
-- Monitoring host placement (which server runs Grafana/Prometheus) deferred to v2
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260415-fd2 | fix alertmanager scrape job + suppress animaya-dev HostDown alert | 2026-04-15 | 325c3f5 | [260415-fd2-fix-alertmanager-scrape-job-suppress-ani](./quick/260415-fd2-fix-alertmanager-scrape-job-suppress-ani/) |
+- Schedule: docker-tower cleanup (2026-04-22)
 
 ## Session Continuity
 
-Last session: 2026-04-15T17:56:42.157Z
-Stopped at: Phase 04 all plans complete
-Resume file: .planning/phases/04-operator-dashboard/04-03-SUMMARY.md
+Last session: 2026-04-15T21:30:00.000Z
+Stopped at: v1.0 shipped
+Resume file: N/A (milestone complete)
