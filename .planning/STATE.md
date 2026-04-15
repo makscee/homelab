@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phase 04 context gathered
-last_updated: "2026-04-15T12:32:06.649Z"
-last_activity: 2026-04-15 - Phase 04 added (operator dashboard) to close v1.0
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-15T13:56:49.456Z"
+last_activity: 2026-04-15
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 18
+  completed_plans: 15
+  percent: 83
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** Phase 03 — health-monitoring (planning next)
+**Current focus:** Phase 04 — operator-dashboard
 
 ## Current Position
 
-Phase: 04 (operator-dashboard) — READY TO PLAN
-Plan: 0 of 3
-Status: Phases 01-03 complete; Phase 04 added to close v1.0 (operator dashboard + alert smoke test)
-Last activity: 2026-04-15 - Phase 04 added (operator dashboard) to close v1.0
+Phase: 04 (operator-dashboard) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-15
 
 Progress: [████████▏░] 82%
 
@@ -52,6 +52,7 @@ Progress: [████████▏░] 82%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 04 P01 | 30min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,7 @@ Recent decisions affecting current work:
 - [Init]: Secrets via SOPS + age at hub level; homelab repo only references encrypted values, never stores raw secrets
 - [Init]: AmneziaVPN only on nether — XRay/VLESS is out of scope
 - [Init]: Document-first, automate-second — capture what exists before scripting
+- [Phase 04]: Grafana + Alertmanager migrated to mcow (Tailnet-only); docker-tower volumes preserved 7d for rollback
 
 ### Roadmap Evolution
 
@@ -87,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T12:32:06.639Z
-Stopped at: Phase 04 context gathered
-Resume file: .planning/phases/04-operator-dashboard/04-CONTEXT.md
+Last session: 2026-04-15T13:56:40.694Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None

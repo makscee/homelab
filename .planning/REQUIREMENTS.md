@@ -33,8 +33,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Monitoring
 
-- [ ] **MON-01**: Node-exporter is deployed on all hosts providing CPU, memory, and disk metrics
-- [ ] **MON-02**: Health-check scripts allow Claude Code to verify deployment success on any server
+- [x] **MON-01**: Node-exporter is deployed on all hosts providing CPU, memory, and disk metrics
+- [x] **MON-02**: Health-check scripts allow Claude Code to verify deployment success on any server
 
 ### Secrets & Security
 
@@ -97,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DR-02 | v2 (deferred) | Deferred |
 | DR-03 | v2 (deferred) | Deferred |
 | DR-04 | v2 (deferred) | Deferred |
-| MON-01 | Phase 3 | Pending |
-| MON-02 | Phase 3 | Pending |
+| MON-01 | Phase 3 | Complete |
+| MON-02 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total (17 original + SVC-07, SVC-08 added 2026-04-14)

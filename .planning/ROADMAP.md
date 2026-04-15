@@ -105,7 +105,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 **Plans:** 4 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Migrate Grafana docker-tower → mcow, decommission docker-tower Grafana, datasource over Tailnet
+- [x] 04-01-PLAN.md — Migrate Grafana docker-tower → mcow, decommission docker-tower Grafana, datasource over Tailnet
 - [ ] 04-02-PLAN.md — Overview dashboard: host status, CPU/RAM/disk gauges + time-series, container counts, active alerts, uptime, net I/O
 - [ ] 04-03-PLAN.md — Alertmanager → Telegram smoke test (real rule fire, message delivered)
 - [ ] 04-04-PLAN.md — animaya-dev SSH key push via pct exec + node-exporter deploy + deferred flag removal
