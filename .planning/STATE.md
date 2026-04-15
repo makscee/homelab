@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 02 complete; roadmap updated — DR deferred to v2, Phase 03 is Health Monitoring
-last_updated: "2026-04-14T20:45:00.000Z"
-last_activity: 2026-04-14 -- Roadmap revised: DR deferred, Phase 03 = Health Monitoring
+status: completed
+stopped_at: Phase 04 context gathered
+last_updated: "2026-04-15T12:32:06.649Z"
+last_activity: 2026-04-15 - Phase 04 added (operator dashboard) to close v1.0
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 67
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 14
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 ## Current Position
 
-Phase: 03 (health-monitoring) — READY TO PLAN
-Plan: 0 of TBD
-Status: Phase 02 complete; roadmap revised — DR deferred to v2
-Last activity: 2026-04-15 - Completed quick task 260415-fd2: fix alertmanager scrape job + suppress animaya-dev HostDown alert
+Phase: 04 (operator-dashboard) — READY TO PLAN
+Plan: 0 of 3
+Status: Phases 01-03 complete; Phase 04 added to close v1.0 (operator dashboard + alert smoke test)
+Last activity: 2026-04-15 - Phase 04 added (operator dashboard) to close v1.0
 
-Progress: [██████▋░░░] 67%
+Progress: [████████▏░] 82%
 
 ## Performance Metrics
 
@@ -65,6 +65,10 @@ Recent decisions affecting current work:
 - [Init]: AmneziaVPN only on nether — XRay/VLESS is out of scope
 - [Init]: Document-first, automate-second — capture what exists before scripting
 
+### Roadmap Evolution
+
+- Phase 4 added (2026-04-15): Operator Dashboard — Grafana on mcow + at-a-glance overview + Telegram alert smoke test. Closes v1.0.
+
 ### Pending Todos
 
 None yet.
@@ -83,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T20:30:19.438Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-service-documentation/02-CONTEXT.md
+Last session: 2026-04-15T12:32:06.639Z
+Stopped at: Phase 04 context gathered
+Resume file: .planning/phases/04-operator-dashboard/04-CONTEXT.md
