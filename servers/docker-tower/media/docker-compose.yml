@@ -195,8 +195,8 @@ services:
     container_name: dockerproxy
     restart: unless-stopped
     privileged: true
-    ports:
-      - "2375:2375"
+    # No external port binding — host dockerd already listens on 127.0.0.1:2375.
+    # Internal consumers on `media` network reach it at dockerproxy:2375.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
