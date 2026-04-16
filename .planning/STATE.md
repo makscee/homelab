@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Claude Code Usage Monitor
 status: active
-stopped_at: defining requirements
-last_updated: "2026-04-16T10:00:00.000Z"
-last_activity: 2026-04-16 — v2.0 milestone started
+stopped_at: roadmap created, awaiting phase 05 planning
+last_updated: "2026-04-16T12:00:00.000Z"
+last_activity: 2026-04-16 — v2.0 ROADMAP created, 7 phases (05-11), 33 REQ-IDs mapped
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** v2.0 — Claude Code Usage Monitor + Token Registry. Defining requirements.
+**Current focus:** v2.0 — Claude Code Usage Monitor. Roadmap created. Phase 05 is a feasibility go/no-go gate — validate `api.anthropic.com/api/oauth/usage` is reachable from mcow via nether App Connector, survives 300s polling with <5% 429 rate, and schema matches expectations before committing to implementation work.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-16 — Milestone v2.0 started
+Phase: 05 — Feasibility Gate (not started)
+Plan: — (awaiting `/gsd-plan-phase 05`)
+Status: ROADMAP created, awaiting phase planning
+Last activity: 2026-04-16 — v2.0 roadmap written: 7 phases, 33 requirements, 100% coverage
 
-Progress: [          ] 0%
+Progress: [          ] 0% (0/7 v2.0 phases)
 
 ## Performance Metrics
 
@@ -40,11 +40,19 @@ Progress: [          ] 0%
 - Timeline: 2026-04-10 → 2026-04-15 (6 days)
 - Git: 116 commits, 190 files changed (+44,833 / -2)
 
+**v2.0 targets:**
+
+- 7 phases (05-11), 33 requirements across 6 categories (TOKEN, EXP, MON, DASH, ALERT, DEPLOY)
+- Phase 05 is a go/no-go gate — milestone may halt here if feasibility fails (pivot to local-log approach, replan, or abandon)
+
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Validated status.
+
+**v2.0 pending ADR:**
+- **D-07 (Phase 05 output):** ToS interpretation + endpoint-scrape approach rationale — user considers monitoring-own-CC tokens in-scope; ADR must be written during Phase 05 feasibility work
 
 ### Open Blockers/Concerns (carried from v1.0)
 
@@ -54,15 +62,21 @@ Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Va
 - nether secrets cleanup — `GF_SECURITY_ADMIN_*` unreferenced post-decommission (v1.0 tech-debt)
 - D-06 ADR update pending (v1.0 tech-debt)
 - Backup target destination not yet specified — needed before DR phases (future milestone)
-- **v2.0 feasibility risk**: no documented Anthropic endpoint for OAuth-token quota; phase 1 research must find one or decide fallback
+
+### v2.0 Risks
+
+- **Feasibility (Phase 05 dominant):** Anthropic `/api/oauth/usage` is undocumented, has known 429-storm bug, and ToS-adjacent (Feb 2026 policy restricts OAuth tokens to Claude Code + Claude.ai). Phase 05 is the go/no-go gate.
+- **Egress (Phase 05 pre-work):** Moscow ISP behavior vs `api.anthropic.com` unverified. Base rate says assume hostile (Telegram v1.0 precedent). First Phase 05 action must be `ssh root@mcow 'curl -m 8 -sSIL https://api.anthropic.com/'` BEFORE writing exporter code.
+- **Secret leakage (Phases 06-08):** v1.0 S-03 bug replay risk — token file perms `install -m 0440 root:65534` lesson must transfer verbatim.
+- **Alert flap (Phase 09):** Weekly reset boundary triggers HIGH→RESOLVE→HIGH flap; `for: 15m` + hysteresis mandatory.
 
 ### Pending Todos
 
 - 2026-04-22: `docker volume rm monitoring_grafana-data monitoring_alertmanager-data` on docker-tower
-- v2.0 phase 1: reverse-engineer Claude Code CLI's usage API endpoint
+- v2.0 Phase 05 first action: `curl -m 8 -sSIL https://api.anthropic.com/` from mcow to validate Moscow egress path before anything else
 
 ## Session Continuity
 
-Last session: 2026-04-16T10:00:00.000Z
-Stopped at: v2.0 milestone kickoff (defining requirements)
-Resume file: N/A (active milestone setup)
+Last session: 2026-04-16T12:00:00.000Z
+Stopped at: v2.0 ROADMAP created, awaiting `/gsd-plan-phase 05`
+Resume file: `.planning/ROADMAP.md` — Phase 05 details under "v2.0 — Claude Code Usage Monitor"

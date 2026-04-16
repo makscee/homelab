@@ -92,12 +92,46 @@
 
 ## Traceability
 
-Filled by roadmapper after phase decomposition.
+Mapped by roadmapper 2026-04-16. 33/33 REQ-IDs → exactly one phase each.
 
 | REQ-ID | Phase | Plan(s) | Notes |
 |--------|-------|---------|-------|
-| _(pending)_ | | | |
+| TOKEN-01 | 08 | TBD | SOPS registry file creation |
+| TOKEN-02 | 08 | TBD | Registry schema fields |
+| TOKEN-03 | 08 | TBD | Add/retire via playbook |
+| TOKEN-04 | 08 | TBD | `enabled: false` flag behavior |
+| EXP-01 | 07 | TBD | 300s jittered polling (validated in 05 spike) |
+| EXP-02 | 07 | TBD | Gauge schema lands in Prometheus |
+| EXP-03 | 07 | TBD | Error counter in Prometheus |
+| EXP-04 | 07 | TBD | Freshness timestamp gauge |
+| EXP-05 | 06 | TBD | No-token-in-labels hardening |
+| EXP-06 | 11 | TBD | Per-token isolation proven under 2-5 real tokens |
+| EXP-07 | 06 | TBD | Exponential backoff on 429 |
+| EXP-08 | 06 | TBD | Non-root container + RO mount |
+| EXP-09 | 06 | TBD | Tailnet-only bind on 9201 |
+| MON-01 | 07 | TBD | Prometheus file_sd target + scrape |
+| MON-02 | 05 | TBD | nether App Connector route |
+| MON-03 | 05 | TBD | Egress smoke test |
+| DASH-01 | 10 | TBD | Provisioned JSON dashboard |
+| DASH-02 | 10 | TBD | Token-selector variable |
+| DASH-03 | 10 | TBD | Weekly + session gauges |
+| DASH-04 | 10 | TBD | Sonnet-specific gauge |
+| DASH-05 | 10 | TBD | Historical timeseries |
+| DASH-06 | 10 | TBD | Reset countdowns |
+| DASH-07 | 10 | TBD | Exporter health panels |
+| ALERT-01 | 09 | TBD | WeeklyQuotaHigh |
+| ALERT-02 | 09 | TBD | WeeklyQuotaCritical |
+| ALERT-03 | 09 | TBD | SessionQuotaHigh |
+| ALERT-04 | 09 | TBD | ClaudeUsageExporterDown |
+| ALERT-05 | 09 | TBD | Rule file path |
+| ALERT-06 | 09 | TBD | promtool test rules |
+| ALERT-07 | 09 | TBD | Telegram FIRING+RESOLVED E2E |
+| DEPLOY-01 | 08 | TBD | Ansible playbook |
+| DEPLOY-02 | 08 | TBD | Idempotency verified |
+| DEPLOY-03 | 05 | TBD | ADR D-07 written during feasibility gate |
+
+**Coverage:** 33/33 REQ-IDs mapped to exactly one phase. No orphans. No duplicates.
 
 ---
 
-*Requirements defined: 2026-04-16 (v2.0 kickoff)*
+*Requirements defined: 2026-04-16 (v2.0 kickoff). Traceability populated 2026-04-16 by roadmapper.*
