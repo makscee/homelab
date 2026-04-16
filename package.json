@@ -1,0 +1,11 @@
+{
+  "name": "homelab",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "build": "cd apps/admin && bun run build",
+    "dev": "cd apps/admin && bun run dev",
+    "lint": "cd apps/admin && bun run lint",
+    "audit": "bun audit --audit-level high"
+  }
+}

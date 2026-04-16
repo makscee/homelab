@@ -37,3 +37,12 @@ keys.txt
 # Ansible
 ansible/collections/
 ansible/*.retry
+
+# v3.0 Next.js admin app
+node_modules
+apps/*/node_modules
+apps/*/.next
+apps/*/.turbo
+apps/*/next-env.d.ts
+apps/*/.env.local
+apps/*/.env.*.local
