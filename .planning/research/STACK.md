@@ -1,311 +1,383 @@
-# Stack Additions — Claude Code Usage Monitor (v2.0)
+# Technology Stack — v3.0 Unified Stack (Homelab Admin Dashboard)
 
-**Milestone:** v2.0 — Claude Code Usage Monitor (additive to v1.0 stack)
+**Project:** homelab admin dashboard (`homelab.makscee.ru`)
 **Researched:** 2026-04-16
-**Overall confidence:** HIGH on endpoint shape, MEDIUM on polling interval, HIGH on surrounding stack choices
-
-> **Scope note:** This document records stack ADDITIONS for v2.0 only. The v1.0 stack (Ansible 2.17+, SOPS+age, Prometheus 2.x, Grafana 11.x/12.x, Alertmanager v0.27.0, community.docker, community.proxmox) is validated and locked — see git history for the v1.0 STACK.md snapshot.
+**Scope:** Dependency-level decisions for implementation. Core locked decisions (Bun, Next.js 15, React 19, TypeScript, Tailwind, shadcn/ui, Caddy, Tailscale, SOPS+age) are NOT re-litigated here.
 
 ---
 
-## Critical: Anthropic Usage API Endpoint
+## 1. Core Framework
 
-**THIS IS THE CENTRAL FEASIBILITY FINDING.** The endpoint exists and is documented by community reverse-engineering + multiple official `anthropics/claude-code` GitHub issues. **No SDK exposes it**; the CLI itself is the only first-party consumer. **It is unofficial-but-stable-enough for homelab use, with caveats.**
+| Package | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| `next` | **15.2.4** | App framework | Latest stable. Use App Router (not Pages). |
+| `react` | **19.2.5** | UI runtime | Exact peer required by Next 15.2. |
+| `react-dom` | **19.2.5** | DOM renderer | Must match react version. |
+| `@types/react` | **19.2.14** | TS types | Ship with react 19; no separate DefinitelyTyped needed. |
+| `typescript` | **5.x** (latest) | Language | Next 15 scaffolds TS 5 natively. |
 
-### Endpoint
+**Bun compatibility:** Next.js 15 works with Bun as package manager AND as runtime for `bun run dev` / `bun run start`. Official Bun docs have a Next.js guide. No known blockers as of 2026-04. One gotcha: `next build` still uses the Next.js bundler (Turbopack/webpack); Bun is the process runner, not the bundler.
 
+**Confidence:** HIGH — official Bun docs + multiple 2025 production reports.
+
+---
+
+## 2. Database
+
+| Package | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| `drizzle-orm` | **0.45.2** | ORM + query builder | Use `bun:sqlite` driver, NOT `better-sqlite3`. |
+| `drizzle-kit` | **0.31.10** | Migration CLI | `bunx drizzle-kit migrate` runs migrations. |
+
+**Decision: use `bun:sqlite` (built-in), skip `better-sqlite3`.**
+
+Drizzle officially supports `bun:sqlite` with a dedicated adapter (`drizzle-orm/bun-sqlite`). It is sync-capable, zero native compilation, and ships with Bun — no `npm rebuild` needed after deploy. `better-sqlite3` requires a native N-API binding compiled against Node; under Bun it works but requires a prebuilt that matches Bun's N-API shim version. Risk of breakage on Bun upgrades. Use `bun:sqlite` natively.
+
+Migration pattern: `drizzle-orm/bun-sqlite/migrator` → `migrate(db, { migrationsFolder: './drizzle' })` called at app startup.
+
+**Confidence:** HIGH — Drizzle official docs confirm `bun:sqlite` adapter.
+
+---
+
+## 3. Prometheus Query Client
+
+| Package | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| `prometheus-query` | **3.5.1** | HTTP API client for querying Prometheus | Query, range-query, metadata endpoints. |
+
+**Why `prometheus-query` over raw fetch:** Typed request/response wrappers for `/api/v1/query`, `/api/v1/query_range`, `/api/v1/series`. No runtime deps. Actively maintained.
+
+`prom-client` is the wrong tool here — it EXPOSES metrics. We need a QUERY client against the existing Prometheus at `docker-tower:9090`.
+
+Alternatively, raw `fetch` to `http://100.101.0.8:9090/api/v1/query?query=...` is viable for a small number of queries — the Prometheus HTTP API is simple enough that thin typed wrappers over fetch work fine. Use `prometheus-query` if you want autocomplete on the response schema; raw fetch if you want zero deps.
+
+**Recommendation:** `prometheus-query` 3.5.1 for typed DX. Fall back to raw fetch if the library causes issues under Bun.
+
+**Confidence:** MEDIUM — package confirmed on npm; Bun fetch compatibility confirmed; no known issues.
+
+---
+
+## 4. Charts
+
+**Recommendation: Recharts 3.8.1**
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `recharts` | **3.8.1** | Time-series + sparkline charts |
+
+**Why Recharts over Tremor / Visx:**
+
+- **Tremor** (`@tremor/react` 3.18.7): dashboard component library, not a charting primitive. Brings its own design system that conflicts with shadcn/ui. Overkill and opinionated — we already have shadcn.
+- **Visx** (`@visx/visx` 3.12.0): low-level D3-backed primitives from Airbnb. Maximum control but high boilerplate; appropriate for custom data viz, not for a homelab dashboard with 4-5 chart types.
+- **Recharts** (3.8.1): React-native SVG charts, composable, well-maintained, native React 19 support, smallest API surface for what we need (line charts for utilization over time, bar charts for credits). shadcn/ui chart primitives are built on top of Recharts — zero integration friction.
+
+**Confidence:** HIGH — shadcn/ui docs explicitly use Recharts; React 19 compatible.
+
+---
+
+## 5. SOPS Integration
+
+**Recommendation: spawn `sops` CLI as subprocess.**
+
+Do NOT use `sops-age` JS library for WRITE operations. The JS library (`github.com/humphd/sops-age`) is decrypt-only and read-only — it cannot re-encrypt and write back. For a CRUD interface over SOPS-encrypted registry files, the only complete path is subprocess:
+
+```typescript
+import { spawnSync } from 'child_process';
+
+// Decrypt to stdout
+const decrypted = spawnSync('sops', ['--decrypt', filePath], { encoding: 'utf8' });
+
+// Edit + re-encrypt in place
+spawnSync('sops', ['--encrypt', '--in-place', tmpPath]);
 ```
-GET https://api.anthropic.com/api/oauth/usage
+
+Pattern: decrypt → parse YAML → mutate → write temp file → `sops --encrypt --in-place` → move to target.
+
+`sops` binary must be on `PATH` on mcow (already a v1.0 requirement). The `age` key is at `~/.config/sops/age/keys.txt` or via `SOPS_AGE_KEY_FILE` env var set in the systemd unit.
+
+No npm package needed for SOPS. `js-yaml` handles YAML parse/stringify.
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `js-yaml` | **4.1.0** | Parse/stringify YAML after sops decrypt |
+
+**Confidence:** MEDIUM — sops-age JS library confirmed read-only by GitHub README; subprocess pattern is standard homelab practice.
+
+---
+
+## 6. SSH + Web Terminal
+
+| Package | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| `ssh2` | **1.17.0** | SSH client | Lower-level, stream-oriented — required for xterm.js piping. |
+| `@xterm/xterm` | **6.0.0** | Terminal emulator (browser) | New scoped package; old `xterm` 5.x is deprecated. |
+| `@xterm/addon-fit` | latest | Auto-resize terminal | Companion to @xterm/xterm. |
+| `@xterm/addon-web-links` | latest | Clickable URLs in terminal | Optional quality-of-life. |
+
+**Why `ssh2` over `node-ssh`:** `node-ssh` (13.2.1) is a convenience wrapper around `ssh2` — it's fine for scripted commands but its stream API is abstracted away, making it awkward to pipe raw PTY output to a WebSocket for xterm.js. Use `ssh2` directly for Proxmox web terminal: open a PTY channel, pipe to WebSocket, xterm.js renders on client. For non-interactive Ansible-style commands (restart LXC, etc.), `ssh2` handles those too — one library for both.
+
+**Web terminal architecture:** Next.js API route cannot handle WebSocket upgrades in App Router serverless mode. Run a separate `bun ws-server.ts` process on port 3001 managed by a second systemd unit. This process owns `ssh2` PTY sessions and relays to browser xterm.js over `ws://localhost:3001`. Caddy proxies `/terminal/ws` to it.
+
+**Confidence:** HIGH for ssh2; MEDIUM for xterm/WS architecture (custom server approach is well-established but adds deployment complexity).
+
+---
+
+## 7. Proxmox API
+
+**Recommendation: direct `fetch` over the Proxmox REST API, NOT the `proxmox-api` npm package.**
+
+`proxmox-api` (1.1.1) is a thin community wrapper with sparse docs and low download counts. The Proxmox VE REST API is well-documented and straightforward (JSON over HTTPS). Roll a minimal typed client:
+
+```typescript
+const PVE_BASE = 'https://100.101.0.7:8006/api2/json';
+const headers = { Authorization: `PVEAPIToken=${token}` };
 ```
 
-### Required headers
+Operations needed: LXC status, start/stop/restart (`POST /nodes/{node}/lxc/{vmid}/status/restart`), config read. All are 2-3 fetch calls. A full npm library adds a maintenance surface for no gain.
 
-| Header | Value | Notes |
-|---|---|---|
-| `Authorization` | `Bearer sk-ant-oat01-<...>` | The OAuth access token, same format Claude Code CLI writes to `~/.claude/.credentials.json` |
-| `anthropic-beta` | `oauth-2025-04-20` | Gatekeeper; omitting or using wrong value returns 401 |
-| `User-Agent` | any non-empty (CLI sends `claude-cli/<version>`) | Not strictly enforced, but mirror CLI to avoid future heuristics |
+Use the existing Proxmox API token (SOPS-stored). Self-signed cert on Proxmox: install the Proxmox CA cert on mcow for prod (preferred), or scope `NODE_TLS_REJECT_UNAUTHORIZED=0` to the Proxmox fetch client only (not globally).
 
-### Response schema
+**Confidence:** HIGH — Proxmox REST API is stable and well-documented; direct fetch is the standard homelab approach.
 
-Verified from multiple community sources (GitHub issues #31021, #31637, #30930, codelynx.dev walkthrough):
+---
 
-```json
-{
-  "five_hour":            { "utilization": 6.0,  "resets_at": "2026-04-16T04:59:59.943648+00:00" },
-  "seven_day":            { "utilization": 35.0, "resets_at": "2026-04-18T03:59:59.943679+00:00" },
-  "seven_day_oauth_apps": null,
-  "seven_day_opus":       { "utilization": 0.0,  "resets_at": null },
-  "iguana_necktie":       null
+## 8. Telegram Bot (Alerts)
+
+**Recommendation: grammY 1.42.0**
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `grammy` | **1.42.0** | Telegram Bot API client |
+
+**Why grammY over Telegraf:**
+
+- **TypeScript-first** — types are precise and ergonomic; Telegraf's TS migration left complex types that are hard to use correctly.
+- **Bun-native** — grammY explicitly supports Bun, Deno, and Node; Telegraf is Node-first.
+- **Alert-only use case** — we only need to send messages (no complex middleware pipeline), so grammY's simple API is ideal: `bot.api.sendMessage(chatId, text)`.
+
+For alert delivery specifically, grammY does not even need to run as a polling bot — use `bot.api.sendMessage()` as a pure HTTP client. Zero overhead, no long-polling process needed.
+
+**Confidence:** HIGH — grammY docs confirm Bun support; widely used in production.
+
+---
+
+## 9. Tailscale Header Auth
+
+No npm package needed. Tailscale Serve injects headers on the reverse-proxy hop:
+
+| Header | Value |
+|--------|-------|
+| `Tailscale-User-Login` | `alice@example.com` |
+| `Tailscale-User-Name` | `Alice Architect` |
+| `Tailscale-User-Profile-Pic` | URL |
+
+**Middleware pattern (Next.js App Router):**
+
+```typescript
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export function middleware(req: NextRequest) {
+  const user = req.headers.get('tailscale-user-login');
+  if (!user) {
+    return new NextResponse('Unauthorized — Tailscale access only', { status: 401 });
+  }
+  const res = NextResponse.next();
+  res.headers.set('x-tailscale-user', user);
+  return res;
 }
+
+export const config = { matcher: ['/((?!_next|favicon).*)'] };
 ```
 
-Field semantics:
-- `utilization` — percentage 0.0–100.0 (float). Maps cleanly to `claude_code_*_used_ratio` gauge (/100).
-- `resets_at` — RFC3339 timestamp with timezone, `null` when nothing consumed in that window. Export as `*_resets_at_timestamp_seconds` gauge (unix epoch), or omit when null.
-- `five_hour` — the rolling session window. Resets 5h after first activity in window.
-- `seven_day` — the weekly quota (actual field name for the "weekly reset" on Max plans).
-- `seven_day_opus` — Opus-only subquota (the ~20% Opus budget on Max 20x). **This is the Opus carve-out the milestone needs.**
-- `seven_day_oauth_apps` — quota for third-party OAuth apps (null for pure Claude Code usage).
-- `iguana_necktie` — unknown/feature-flag field; ignore.
+**Critical requirement:** the Next.js server must listen on `127.0.0.1` only, so Tailscale Serve (via Caddy) is the only ingress path. If it binds on `0.0.0.0`, the headers can be forged by any caller on the same machine. Set `hostname: '127.0.0.1'` in the Next.js start command or bind via Caddy reverse_proxy upstream config.
 
-### Rate limit (CRITICAL — shapes polling design)
+Headers are only injected on Tailscale Serve traffic — not on Tailscale Funnel (public). Funnel is not used here.
 
-The endpoint is **aggressively rate-limited**. Documented behavior from `anthropics/claude-code#31637` and `#30930`:
-
-- 30–60s polling intervals trigger persistent 429s within minutes.
-- Once 429'd, endpoint stays 429 for 30+ minutes with **no Retry-After header**.
-- Backoff of 30→60→120→240→300s still gets 429 for entire session in some reports.
-
-**Implication for v2.0 design:**
-- **Default poll interval: 300s (5 min) per token, jittered ±30s.** Usage data changes on the order of minutes-to-hours; 5-min granularity is operationally sufficient for 80%/95% threshold alerts.
-- **Exponential backoff on 429: 5m → 15m → 30m → 60m cap.** Emit a separate `claude_code_usage_fetch_errors_total{label,reason}` counter so Alertmanager can fire `UsageEndpointStuck` when error-rate > threshold.
-- **Cache last-good response** and serve it as the gauge value until next successful poll, with a `claude_code_usage_stale_seconds{label}` gauge so dashboards show freshness.
-- With 2–5 tokens × one 5-min poll each, we make 12 req/hour/token, well under any sane server-side limit if the bug is actually per-token.
-
-### Token expiry & refresh
-
-From `anthropics/claude-code#12447`, `#36911`, `#37402` and daveswift.com:
-
-- `sk-ant-oat01-*` access tokens expire. Typical lifetimes: **8–12h** (interactive /login) or **~8h** (--print mode). Some users report expiry "multiple times per day."
-- The CLI's credential file (`~/.claude/.credentials.json`) also contains a **refresh token** and handles refresh internally (RFC 6749 `grant_type=refresh_token`).
-- **For long-lived unattended automation, Anthropic recommends `claude setup-token`**, which mints a **1-year long-lived token** specifically designed for headless use. **This is what the exporter should consume.** Store the long-lived token (not the interactive OAuth token) in `secrets/claude-tokens.sops.yaml`.
-- Exporter does NOT need to implement refresh logic if it only consumes `setup-token` output. Detect 401 → mark token as `claude_code_token_invalid{label}=1` and page operator to regenerate.
-
-### Confidence on endpoint itself: HIGH
-
-Cross-referenced across 6+ independent GitHub issues from Anthropic's own repo, plus a community statusline implementation (codelynx.dev) with the same schema. Not officially documented, not promised stable, but has existed and kept the same shape since April 2025 (per `anthropic-beta: oauth-2025-04-20`).
-
-**Risk flag:** Anthropic's Feb 2026 auth policy restricts OAuth tokens to "Claude Code and Claude.ai only" — a Prometheus exporter technically violates this. Homelab-only scope (no third-party redistribution, no commercial use) keeps this at policy-gray rather than policy-red. Document in PITFALLS.md.
+**Confidence:** HIGH — Tailscale official docs confirm header injection via Serve; official demo repo `tailscale-dev/id-headers-demo` demonstrates the pattern.
 
 ---
 
-## Language Choice
+## 10. Testing
 
-**Recommendation: Python 3.12** with `prometheus-client`.
+| Package | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| `@playwright/test` | **1.59.1** | E2E browser tests | Confirmed locked decision. |
+| Bun test (built-in) | — | Unit + integration tests | No additional package. `bun test` runs `.test.ts` files natively. |
 
-| Criterion | Python | Go | Winner |
-|---|---|---|---|
-| Code size for ~200-LOC polling exporter | compact, readable | more boilerplate | Python |
-| Prometheus client maturity | `prometheus-client` 0.25.0, mature | `client_golang` 1.20+, equally mature | tie |
-| HTTP client for OAuth Bearer | `httpx` or stdlib, trivial | `net/http`, trivial | tie |
-| Image size (slim base) | ~130MB + deps ≈ 150MB | ~15MB single static binary | Go |
-| Dev velocity / hackability | high | medium | Python |
-| Homelab conventions | no Python exporters yet, but Ansible is Python; Python is on every LXC | no Go toolchain currently | Python |
-| Container restart cost | negligible (polling, not hot path) | negligible | tie |
-| Type safety | Pydantic models optional | native | Go |
+**Why Bun test over Vitest:** Bun's built-in test runner (`bun test`) is Jest-compatible syntax, zero config, and faster than Vitest for Bun projects. Vitest adds 15-20 deps and is optimized for Vite bundler projects. For a Bun-native project, `bun test` is the obvious choice. Use Playwright for anything that touches the browser (Tailscale auth headers, dashboard rendering, xterm.js).
 
-**Why Python wins here:** the exporter is a low-frequency poller (once per 5 min per token), not a high-throughput service. Image size doesn't matter (150MB vs 15MB is irrelevant on a 500GB SSD). Code velocity + operator readability (future Claude Code edits) + existing Python presence in Ansible tooling tip the balance. Go's single-binary advantage matters for airgapped distribution, which we don't have.
-
-**Python version: 3.12** (matches Debian 13 LXC default; avoids 3.13 freshness tax for no gain).
-
-Confidence: HIGH.
+**Confidence:** HIGH — Bun test docs confirm Jest-compatible API; no additional package needed.
 
 ---
 
-## Prometheus Client Library
+## 11. Deployment (systemd on mcow)
 
-**Recommendation: `prometheus-client==0.23.0`** (pinned, not `>=`).
+**Recommendation: systemd unit directly invoking `bun`, NO PM2.**
 
-- Current latest: **0.25.0** (released 2026-04-09 per PyPI).
-- Pin 0.23.0 for stability (well-tested late-2025 release; Gauge/Counter API unchanged since 0.17).
-- Requires Python ≥3.9 (we're using 3.12).
-- Usage pattern: `start_http_server(9835, addr="127.0.0.1")` then update `Gauge` objects in a polling loop.
+PM2 is a Node.js process manager — it works with Bun but adds a Node runtime dependency for no gain. On a systemd-managed host (Debian/Ubuntu LXC), systemd handles restart-on-crash, log capture to journald, and resource limits natively.
 
-Suggested port: **9835** (unclaimed in [Prometheus default port allocations](https://github.com/prometheus/prometheus/wiki/Default-port-allocations); no conflict with existing 9090/9093/9100/9101 on homelab).
+```ini
+[Unit]
+Description=Homelab Admin Dashboard
+After=network.target
 
-Confidence: HIGH.
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/opt/homelab-admin
+ExecStart=/usr/local/bin/bun run start
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/homelab-admin/.env
+StandardOutput=journal
+StandardError=journal
 
----
-
-## HTTP Client + OAuth Handling
-
-**Recommendation: `httpx==0.27.2`** (sync client).
-
-- No async needed (5-min polls), but `httpx.Client` is strictly better than `requests`:
-  - HTTP/2 support (Anthropic API serves HTTP/2; slight latency win).
-  - Same library Anthropic's own Python SDK uses internally → mirrors real CLI traffic more closely.
-  - Cleaner timeout API (`timeout=httpx.Timeout(10.0, connect=5.0)`).
-- **Do not use `requests`** — no HTTP/2; the project deliberately avoids legacy deps for new work.
-- **OAuth:** no library needed. The exporter reads a pre-minted long-lived token from a mounted file and sends it as `Authorization: Bearer <token>`. No authorization-code flow, no PKCE, no refresh.
-- **Retry/backoff:** implement manually (5 req/hour is trivial). Do NOT add `tenacity` — pointless dep.
-
-Token refresh: **NOT NEEDED** if we use `claude setup-token` output (1-year tokens). Document in registry schema that tokens MUST come from `setup-token`, not from `/login`.
-
-Confidence: HIGH.
-
----
-
-## Base Container Image
-
-**Recommendation: `python:3.12-slim-bookworm@sha256:<pin>`** (Debian slim, NOT Alpine).
-
-- Alpine saves ~80MB but uses musl libc; `prometheus-client` is pure-Python so it works, but any future C-extension dep (cryptography, etc.) breaks.
-- Slim-bookworm matches Debian-based LXC host OS → predictable behavior, same ca-certificates trust store, easier to debug.
-- amd64 only (both docker-tower and mcow are amd64; no ARM hosts). Skip multi-arch.
-- Multi-stage build not needed (no compilation).
-- Final image expected ~160MB including `httpx` + `prometheus-client` + `PyYAML`.
-
-Pin workflow: `docker pull python:3.12-slim-bookworm && docker inspect --format='{{index .RepoDigests 0}}' python:3.12-slim-bookworm` → commit the resulting `sha256:...` to compose. Matches existing v1.0 pinning convention.
-
-Confidence: HIGH.
-
----
-
-## SOPS Integration Pattern
-
-**Recommendation: Match v1.0 pattern exactly — decrypt on controller, push file to host, bind-mount into container read-only.**
-
-This mirrors `ansible/playbooks/deploy-docker-tower.yml` lines 25–48 (navidrome secret flow) and the mcow pattern in `servers/mcow/docker-compose.monitoring.yml`.
-
-### Registry schema (`secrets/claude-tokens.sops.yaml`)
-
-Plaintext shape before SOPS encryption:
-
-```yaml
-# secrets/claude-tokens.sops.yaml (encrypted with age)
-tokens:
-  - label: mcow-primary
-    token: sk-ant-oat01-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    owner_host: mcow
-    subscription: max-20x
-    added_on: 2026-04-16
-    notes: "primary operator token (via claude setup-token)"
-  - label: cc-worker
-    token: sk-ant-oat01-yyyyyyyyyyyyyyyyyyyyyyyyyyyy
-    owner_host: cc-worker
-    subscription: max-20x
-    added_on: 2026-04-16
+[Install]
+WantedBy=multi-user.target
 ```
 
-### Ansible deploy flow
+`bun run start` executes `next start` via `package.json` scripts. Bun binary is a single static binary installed on mcow at `/usr/local/bin/bun`.
 
-```yaml
-- name: Decrypt claude-tokens registry locally
-  delegate_to: localhost
-  ansible.builtin.shell:
-    cmd: "sops --decrypt {{ playbook_dir }}/../../secrets/claude-tokens.sops.yaml"
-  register: tokens_plain
-  changed_when: false
-  no_log: true
+For the WebSocket terminal server: second systemd unit, same pattern, port 3001.
 
-- name: Write /run/secrets/claude-tokens.yaml on mcow
-  ansible.builtin.copy:
-    content: "{{ tokens_plain.stdout }}"
-    dest: /run/secrets/claude-tokens.yaml
-    mode: '0440'
-    owner: root
-    group: '65534'   # nobody — matches v1.0 telegram_token pattern
-  no_log: true
-```
-
-### Compose bind mount
-
-```yaml
-services:
-  claude-usage-exporter:
-    image: ghcr.io/<org>/claude-usage-exporter@sha256:<pin>
-    user: "65534:65534"   # run as nobody, consistent with prom/alertmanager
-    volumes:
-      - /run/secrets/claude-tokens.yaml:/etc/claude-exporter/tokens.yaml:ro
-    environment:
-      - EXPORTER_PORT=9835
-      - POLL_INTERVAL_SECONDS=300
-      - TOKENS_FILE=/etc/claude-exporter/tokens.yaml
-    ports:
-      - "100.101.0.9:9835:9835"   # Tailnet-only bind, same pattern as grafana/alertmanager
-    networks:
-      - monitoring
-```
-
-**Perms note (load-bearing, per v1.0 Key Decision):** `install -m 0440 root:65534` mirrors the telegram_token pattern. `0600` root:root will EACCES for the `nobody` container user.
-
-### What we do NOT do
-
-- No `sops-exec`-style in-container decryption (adds SOPS binary + age key inside image; key management nightmare).
-- No env-var injection of raw tokens (leaks via `docker inspect` and systemd journal).
-- No Docker secrets swarm mode (not using swarm).
-
-Confidence: HIGH — straight port of an already-validated v1.0 pattern.
+**Confidence:** HIGH — systemd is the standard for Debian LXC; Bun single-binary deployment is straightforward.
 
 ---
 
-## Recommended Additions (Summary)
+## 12. Logging
 
-| Component | Choice | Version pin | Placement |
-|---|---|---|---|
-| Language | Python | 3.12-slim-bookworm | container |
-| Prometheus client | `prometheus-client` | 0.23.0 | requirements.txt |
-| HTTP client | `httpx` | 0.27.2 | requirements.txt |
-| YAML parser | `PyYAML` | 6.0.2 | requirements.txt (parse tokens file) |
-| Base image | `python:3.12-slim-bookworm` | sha256 pinned at deploy | Dockerfile FROM |
-| Secrets registry | `secrets/claude-tokens.sops.yaml` | SOPS+age, existing recipient | repo |
-| Secret delivery | Ansible decrypt → `/run/secrets/claude-tokens.yaml` (0440 root:65534) | matches v1.0 | new playbook `deploy-mcow-claude-exporter.yml` |
-| Scrape target | mcow 100.101.0.9:9835 | new entry in `targets/claude-exporter.yml` on docker-tower Prometheus | prometheus config |
-| Alert rules | `claude_code_weekly_used_ratio > 0.80` (warning), `> 0.95` (critical); same for session; `claude_code_usage_fetch_errors_total` rate alert | new file `alerts/claude-usage.yml` | Prometheus |
-| Poll interval | 300s per token, jittered ±30s | env `POLL_INTERVAL_SECONDS=300` | runtime |
-| Port | 9835 | new Tailnet-only bind | mcow compose |
-| Token source | `claude setup-token` (1-year tokens) | documented in registry notes | operator procedure |
+**Recommendation: pino 10.3.1**
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `pino` | **10.3.1** | Structured JSON logging |
+| `pino-pretty` | **13.x** | Dev-mode human-readable output (dev dep only) |
+
+**Why pino over winston:** pino is 5-8x faster than winston (async, streams-based), outputs newline-delimited JSON natively, and integrates with journald cleanly. winston is older, slower, and more complex to configure for structured output. For a systemd service, pino JSON → journald → `journalctl -u homelab-admin -o json` is the standard pipeline.
+
+```typescript
+import pino from 'pino';
+export const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
+```
+
+In dev: `bun run dev 2>&1 | bunx pino-pretty`
+
+**Confidence:** HIGH — pino is the standard for performance-sensitive Node/Bun apps; journald JSON support is well-documented.
 
 ---
 
-## Confidence Notes (per decision)
+## 13. Env/Config Validation
 
-| Decision | Confidence | Basis |
-|---|---|---|
-| Endpoint URL + schema | **HIGH** | 6+ independent GitHub issues in anthropics/claude-code with matching schema; community statusline tooling uses it in production |
-| Endpoint is unofficial | HIGH | Not in Anthropic API docs; only referenced in bug reports |
-| 300s poll interval | **MEDIUM** | Derived from community 429 reports; not formally documented. Phase 1 MUST validate with a manual soak test (poll every 5min for 24h, count 429s) before finalizing |
-| sk-ant-oat01 bearer auth | HIGH | Token format confirmed across multiple sources; `anthropic-beta: oauth-2025-04-20` header confirmed |
-| setup-token 1-year lifetime | HIGH | Anthropic-maintained troubleshooting docs + multiple issues cite this |
-| Feb 2026 policy risk | MEDIUM | Policy text is restrictive; homelab/personal-use enforcement posture unknown |
-| Python over Go | HIGH | Low-freq polling, ~200 LOC, team familiarity, homelab conventions |
-| prometheus-client 0.23.0 | HIGH | Stable API, widely used, matches Python 3.12 |
-| httpx over requests | HIGH | HTTP/2, mirrors Anthropic SDK, no async overhead in sync mode |
-| python:3.12-slim-bookworm | HIGH | Matches host OS, avoids Alpine musl risk, image size irrelevant at homelab scale |
-| SOPS decrypt-on-host bind-mount | HIGH | Direct port of validated v1.0 pattern |
-| Port 9835 | MEDIUM | Unclaimed in Prometheus default list; verify no conflict at deploy |
+**Recommendation: zod + Bun's built-in dotenv. No `dotenv` package needed.**
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `zod` | **4.3.6** | Schema validation for env vars + API inputs |
+
+Bun natively loads `.env` files — `process.env` is populated automatically. No `dotenv` package needed.
+
+```typescript
+// lib/env.ts
+import { z } from 'zod';
+
+const EnvSchema = z.object({
+  PROMETHEUS_URL: z.string().url(),
+  PROXMOX_API_TOKEN: z.string(),
+  TELEGRAM_BOT_TOKEN: z.string(),
+  LOG_LEVEL: z.enum(['trace','debug','info','warn','error']).default('info'),
+});
+
+export const env = EnvSchema.parse(process.env);
+```
+
+Zod is also used for API route input validation and VoidNet API response validation — consolidate on one library rather than adding `yup` or `joi`.
+
+**Zod 4 vs Zod 3 gotcha:** shadcn/ui form examples and most tutorials reference Zod 3 (`3.x`). Zod 4 has API changes. Verify shadcn form integration works with Zod 4 before committing; if not, pin `zod@3.24.x` and migrate later.
+
+**Confidence:** HIGH — Bun dotenv behavior documented; Zod 4.x is stable; TS 5 compatible.
+
+---
+
+## Complete Dependency Reference
+
+### Production dependencies
+
+```bash
+bun add next@15.2.4 react@19.2.5 react-dom@19.2.5
+bun add drizzle-orm@0.45.2
+bun add recharts@3.8.1
+bun add prometheus-query@3.5.1
+bun add js-yaml@4.1.0
+bun add ssh2@1.17.0
+bun add @xterm/xterm@6.0.0 @xterm/addon-fit @xterm/addon-web-links
+bun add grammy@1.42.0
+bun add pino@10.3.1
+bun add zod@4.3.6
+```
+
+### Dev dependencies
+
+```bash
+bun add -d drizzle-kit@0.31.10
+bun add -d @types/react@19.2.14 @types/react-dom @types/ssh2 @types/js-yaml
+bun add -d typescript
+bun add -d @playwright/test@1.59.1
+bun add -d pino-pretty
+```
+
+### No npm packages needed for
+
+- **Proxmox API** — raw `fetch` with typed wrapper
+- **dotenv** — Bun built-in
+- **Unit testing** — `bun test` built-in
+- **SOPS read/write** — `sops` CLI subprocess
+- **Tailscale auth** — standard HTTP header parsing in `middleware.ts`
+
+---
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| SQLite driver | `bun:sqlite` (built-in) | `better-sqlite3` | Native N-API binding; risky on Bun upgrades |
+| Charts | Recharts | Tremor | Own design system conflicts with shadcn/ui |
+| Charts | Recharts | Visx | Too low-level; high boilerplate for 4-5 chart types |
+| SSH | `ssh2` | `node-ssh` | node-ssh hides PTY streams needed for xterm.js |
+| Proxmox | raw fetch | `proxmox-api` npm | Sparse docs, low adoption; REST API is simple |
+| Telegram | grammY | Telegraf | Telegraf TS types are complex; Node-first not Bun-first |
+| Logging | pino | winston | winston 5-8x slower; harder to configure structured output |
+| Test runner | `bun test` | Vitest | Vitest is Vite-optimized; `bun test` is zero-config native |
+| Process mgr | systemd | PM2 | PM2 adds Node runtime dep; systemd already on mcow |
+| SOPS integration | CLI subprocess | `sops-age` JS lib | sops-age is decrypt-only; cannot write back encrypted files |
+
+---
+
+## Known Gotchas
+
+1. **`bun:sqlite` in Next.js middleware:** Bun's SQLite driver only works in Bun runtime, not the Next.js Edge Runtime. Keep all DB access in Server Components or API routes, never in `middleware.ts` (which runs on the edge runtime even in local Bun).
+
+2. **`@xterm/xterm` is a breaking rename from `xterm`:** the old `xterm` package is deprecated as of v5. Import from `@xterm/xterm` and `@xterm/addon-*`.
+
+3. **Proxmox self-signed TLS:** Install Proxmox CA cert on mcow (`/usr/local/share/ca-certificates/` + `update-ca-certificates`) for clean TLS. Avoid global `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+4. **WebSocket + Next.js App Router:** App Router does not support `ws://` upgrades on the Next.js port without a custom server. Plan a separate `bun ws-server.ts` on port 3001 + second systemd unit for the xterm.js terminal. Caddy proxies `/terminal/ws` to it.
+
+5. **pino in Next.js dev mode:** `pino-pretty` must only load in dev. Use transport config: `pino({ transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined })`.
+
+6. **Zod 4 + shadcn/ui forms:** shadcn/ui examples were written for Zod 3. Test form validation with Zod 4 early; the `z.object` API is compatible but some refinement methods changed. Fallback: pin `zod@3.24.x`.
 
 ---
 
 ## Sources
 
-### Endpoint discovery (critical path)
-- [anthropics/claude-code#31637 — /api/oauth/usage aggressively rate limits](https://github.com/anthropics/claude-code/issues/31637)
-- [anthropics/claude-code#30930 — /api/oauth/usage persistent 429 for Max users](https://github.com/anthropics/claude-code/issues/30930)
-- [anthropics/claude-code#31021 — OAuth usage API returns persistent 429](https://github.com/anthropics/claude-code/issues/31021)
-- [anthropics/claude-code#34348 — Expose enterprise spending limit via /api/oauth/usage](https://github.com/anthropics/claude-code/issues/34348)
-- [anthropics/claude-code#27915 — Expose rate-limit/plan quota in statusLine JSON](https://github.com/anthropics/claude-code/issues/27915)
-- [anthropics/claude-code#45392 — API access to usage limits and total monthly usage](https://github.com/anthropics/claude-code/issues/45392)
-- [codelynx.dev — How to Show Claude Code Usage Limits in Your Statusline](https://codelynx.dev/posts/claude-code-usage-limits-statusline)
-
-### Token lifecycle
-- [anthropics/claude-code#12447 — OAuth token expiration disrupts autonomous workflows](https://github.com/anthropics/claude-code/issues/12447)
-- [anthropics/claude-code#36911 — OAuth token expires multiple times per day](https://github.com/anthropics/claude-code/issues/36911)
-- [anthropics/claude-code#37402 — OAuth token not persisted/refreshed for --print mode](https://github.com/anthropics/claude-code/issues/37402)
-- [Claude Code Troubleshooting docs](https://code.claude.com/docs/en/troubleshooting)
-- [Claude Code OAuth Token Expiry: Fixes & Alternatives](https://daveswift.com/claude-oauth-update/)
-
-### Policy context (risk flag)
-- [Claude API Authentication in 2026: OAuth Tokens vs API Keys Explained](https://lalatenduswain.medium.com/claude-api-authentication-in-2026-oauth-tokens-vs-api-keys-explained-12e8298bed3d)
-- [Claude Code Authentication docs](https://code.claude.com/docs/en/authentication)
-
-### Existing tooling (prior art)
-- [ryoppippi/ccusage — Claude Code usage CLI from local JSONL](https://github.com/ryoppippi/ccusage)
-- [TylerGallenbeck/claude-code-limit-tracker](https://github.com/TylerGallenbeck/claude-code-limit-tracker)
-- [jonis100/claude-quota-tracker](https://github.com/jonis100/claude-quota-tracker)
-- [How I Monitor Claude Code with Grafana + OTel + VictoriaMetrics](https://tcude.net/how-i-monitor-my-claude-code-usage-with-grafana-opentelemetry-and-victoriametrics/)
-- [Claude Code Monitoring docs (OTel/Prometheus exporters)](https://code.claude.com/docs/en/monitoring-usage)
-
-### Stack choices
-- [prometheus-client · PyPI](https://pypi.org/project/prometheus-client/)
-- [prometheus/client_python on GitHub](https://github.com/prometheus/client_python)
-- [HTTPX vs Requests vs AIOHTTP (2026)](https://decodo.com/blog/httpx-vs-requests-vs-aiohttp)
-- [Python HTTP Clients: Requests vs HTTPX vs AIOHTTP (Speakeasy)](https://www.speakeasy.com/blog/python-http-clients-requests-vs-httpx-vs-aiohttp)
-- [The best Docker base image for your Python application (Feb 2026)](https://pythonspeed.com/articles/base-image-python-docker-images/)
-- [python:3.12-slim image layer details](https://hub.docker.com/layers/library/python/3.12-slim/)
-
-### Claude API context
-- [Anthropic rate limits](https://platform.claude.com/docs/en/api/rate-limits)
-- [Anthropic API errors](https://platform.claude.com/docs/en/api/errors)
-- [Claude Code Rate Limits Explained 2026 (SitePoint)](https://www.sitepoint.com/claude-code-rate-limits-explained/)
+- [Bun + Next.js guide](https://bun.com/docs/guides/ecosystem/nextjs) — HIGH confidence
+- [Drizzle ORM + bun:sqlite](https://orm.drizzle.team/docs/connect-bun-sqlite) — HIGH confidence
+- [shadcn/ui React 19 + Recharts](https://ui.shadcn.com/docs/react-19) — HIGH confidence
+- [Tailscale identity headers](https://tailscale.com/docs/concepts/tailscale-identity) — HIGH confidence
+- [Tailscale id-headers-demo](https://github.com/tailscale-dev/id-headers-demo) — HIGH confidence
+- [grammY framework](https://grammy.dev/) — HIGH confidence
+- [prometheus-query npm](https://www.npmjs.com/package/prometheus-query) — MEDIUM confidence
+- [sops-age JS library (decrypt-only)](https://github.com/humphd/sops-age) — MEDIUM confidence
+- npm registry version checks — all versions verified 2026-04-16

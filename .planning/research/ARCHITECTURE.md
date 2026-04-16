@@ -1,301 +1,481 @@
-# Architecture — Claude Code Usage Monitor
+# Architecture Patterns — v3.0 Homelab Admin Dashboard
 
-**Milestone:** v2.0
-**Researched:** 2026-04-16
-**Confidence:** HIGH (integration paths verified against live v1.0 files); MEDIUM on Anthropic quota endpoint (feasibility-gated — see PITFALLS.md and FEATURES.md)
+**Domain:** Next.js 15 + Bun admin dashboard on mcow, integrating Prometheus, VoidNet API, SOPS secrets, Proxmox API, and web terminal
+**Researched:** 2026-04-17
+**Overall confidence:** HIGH (proxy/TLS/systemd patterns), MEDIUM (SOPS-in-Node write path, node-pty Bun native compatibility)
 
 ---
 
-## Integration Points (existing stack touchpoints)
-
-Every touchpoint is an **existing v1.0 file**. v2.0 must extend, not replace.
-
-| # | Integration point | File | Change type |
-|---|---|---|---|
-| 1 | Prometheus scrape config | `servers/docker-tower/monitoring/prometheus/prometheus.yml` | **Modify** — append one `scrape_configs` job using `file_sd_configs` (matches `node` / `cadvisor` pattern at lines 27–39) |
-| 2 | Prometheus target file | `servers/docker-tower/monitoring/prometheus/targets/claude-usage.yml` | **New** — one-entry target list, mirrors `targets/cadvisor.yml` (2-line style) |
-| 3 | Alert rules | `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml` | **New** — rule_files glob is `/etc/prometheus/alerts/*.yml`, so a new file is auto-picked up. Keeps `alerts/homelab.yml` focused on infra (nodes/containers/prometheus groups) |
-| 4 | Alertmanager routes | `servers/mcow/monitoring/alertmanager/alertmanager.yml` | **Modify** — add one `route` matching `alertname =~ "ClaudeQuota.*"` into the existing `telegram-homelab` receiver (chat_id 193835258 reused — no new secret). Could optionally add a second receiver with a distinct emoji/group_wait; v2.0 keeps it simple with one receiver |
-| 5 | Grafana dashboard | `servers/mcow/monitoring/grafana/provisioning/dashboards/json/claude-usage.json` | **New** — `dashboards.yml` provisioner already globs `json/*.json` (path: `/etc/grafana/provisioning/dashboards/json`). No provisioner edits needed. Dashboard UID: `claude-usage-homelab`. Siblings: `homelab-overview.json`, `homelab-summary.json`, `homelab-mobile.json` |
-| 6 | Compose stack on mcow | `servers/mcow/docker-compose.usage-monitor.yml` | **New** — separate file (see §New Components for rationale) |
-| 7 | SOPS secret | `secrets/claude-tokens.sops.yaml` | **New** — sibling of `mcow.sops.yaml`. Structure: see §Token Registry Schema |
-| 8 | Ansible playbook | `ansible/playbooks/deploy-mcow-usage-monitor.yml` | **New** — clone of `deploy-docker-tower.yml` structure (sops decrypt → push env → git pull → compose up → hot-reload Prometheus on docker-tower) |
-| 9 | Ansible (docker-tower) — config hot-reload | `ansible/playbooks/deploy-docker-tower.yml` | **Unmodified** — existing `POST /-/reload` task already picks up scrape/rule changes on `git_result.changed`. v2.0 deploy order: commit → run mcow playbook → run docker-tower playbook. No code change, just ordering |
-
-## New Components
-
-### Decision: separate compose file, same directory
-
-**Chosen:** `servers/mcow/docker-compose.usage-monitor.yml` (sibling to `docker-compose.monitoring.yml` and `docker-compose.cadvisor.yml`).
-
-**Rationale:** mcow already runs multiple compose files in the same directory (`docker-compose.monitoring.yml` for grafana+alertmanager, `docker-compose.cadvisor.yml`, plus voidnet stacks). The precedent is **one compose file per concern**, deployed independently. Extending `docker-compose.monitoring.yml` would mix a stateful observability collector with an outbound-API-calling exporter whose failure modes (rate limits, 401s, geo-block) are orthogonal to Grafana/Alertmanager health. A subdirectory (`servers/mcow/usage-monitor/`) would break the established flat layout and confuse Ansible playbook path computation.
-
-### Container shape
-
-```yaml
-# servers/mcow/docker-compose.usage-monitor.yml (sketch)
-services:
-  claude-usage-exporter:
-    image: ghcr.io/<repo>/claude-usage-exporter:<pinned-digest>
-    container_name: claude-usage-exporter
-    restart: unless-stopped
-    ports:
-      - "100.101.0.9:9201:9201"          # Tailnet-only; see §Port
-    volumes:
-      - /run/secrets/claude-tokens.yaml:/etc/exporter/tokens.yaml:ro  # SOPS-decrypted at deploy
-    environment:
-      # If Tailscale App Connector advertises api.anthropic.com via MagicDNS,
-      # no proxy env vars are needed. Otherwise:
-      # - HTTPS_PROXY=http://100.101.0.3:<proxy-port>
-      # - NO_PROXY=localhost,127.0.0.1,100.101.0.0/16
-    command:
-      - '--config=/etc/exporter/tokens.yaml'
-      - '--listen=:9201'
-    networks: [monitoring]
-networks:
-  monitoring:
-    external: true    # shared mcow monitoring net (already created by docker-compose.monitoring.yml)
-```
-
-### Port: **9201**
-
-Scanned all current bindings across `servers/**/*.yml`:
-
-| Port | In use by |
-|------|-----------|
-| 3000 | grafana (mcow) |
-| 5030 / 50300 | slskd |
-| 7878 / 8989 / 8686 | radarr / sonarr / lidarr |
-| 8080 | cadvisor (docker-tower) |
-| 8096 | jellyfin |
-| 9001 | portainer agent (docker-tower) |
-| 9090 | prometheus |
-| 9093 | alertmanager |
-| 9100 | node-exporter (all hosts) |
-| 9443 | portainer (nether) |
-| 18080 | cadvisor on mcow (non-host net — :8080 taken by voidnet-api) |
-
-**9201 is free** across all hosts. Rationale: 9200 is a near-standard Elasticsearch port (future-proof against ES-style regret); **91xx/92xx is the Prometheus-exporter convention** (9100 node, 9104 mysqld, 9115 blackbox, 9187 postgres, 9252 gitlab). 9201 falls cleanly in that band. If a second exporter emerges later (e.g. `voidnet-exporter`), suggest 9202.
-
-Bind is `100.101.0.9:9201` (Tailnet-only, not 0.0.0.0), matching the mcow pattern for grafana/alertmanager/cadvisor.
-
-## Data Flow Diagram
+## Recommended Architecture
 
 ```
-                         ┌──────────────────────────────────────┐
-                         │        api.anthropic.com             │
-                         │   (NOT reachable from Moscow IPs)    │
-                         └──────────────┬───────────────────────┘
-                                        │ HTTPS (OAuth bearer)
-                                        │
-                   ┌────────────────────┴───────────────────────┐
-                   │  nether (100.101.0.3, Netherlands)         │
-                   │  Tailscale App Connector (existing v1.0)   │
-                   │  — already proxies Telegram IPv4 egress    │
-                   └────────────────────┬───────────────────────┘
-                                        │ Tailnet (100.101.0.0/16)
-                                        │ advertised route via MagicDNS
-                                        │
-    ┌───────────────────────────────────┴────────────────────────┐
-    │ mcow (100.101.0.9, Moscow)                                 │
-    │                                                            │
-    │  ┌──────────────────────────────────────┐                  │
-    │  │ claude-usage-exporter  :9201         │                  │
-    │  │  ├── reads /etc/exporter/tokens.yaml │                  │
-    │  │  │    (SOPS-decrypted at deploy)     │                  │
-    │  │  └── emits /metrics per label        │                  │
-    │  │       claude_code_weekly_used_ratio  │                  │
-    │  │       claude_code_session_used_ratio │                  │
-    │  └──────────────────┬───────────────────┘                  │
-    └─────────────────────┼──────────────────────────────────────┘
-                          │ Tailnet pull :9201/metrics (every 15s)
-                          │
-   ┌──────────────────────┴──────────────────────┐
-   │ docker-tower (100.101.0.8)                  │
-   │  ┌──────────────────────────────────┐       │
-   │  │ prometheus :9090                 │       │
-   │  │  scrape_configs:                 │       │
-   │  │    - job_name: claude-usage      │       │
-   │  │      file_sd: targets/claude...  │       │
-   │  │  rule_files: alerts/*.yml        │       │
-   │  │  alerting → 100.101.0.9:9093     │       │
-   │  └────────┬─────────────────────────┘       │
-   └───────────┼─────────────────────────────────┘
-               │ Tailnet (alertmanager push)
-               │
-   ┌───────────┴─────────────────────────────────┐
-   │ mcow :9093 alertmanager                     │
-   │   routes: alertname =~ "ClaudeQuota.*"      │
-   │   → telegram-homelab receiver               │
-   │   → Telegram (via existing nether           │
-   │      App Connector path, already E2E-proven)│
-   └──────────────────┬──────────────────────────┘
-                      │
-                      ▼
-              Telegram chat 193835258
-                (operator group)
-
-   ┌──────────────────────────────────────┐
-   │ mcow :3000 grafana                   │
-   │   datasource: docker-tower:9090      │
-   │   dashboard: claude-usage.json       │
-   │   uid: claude-usage-homelab          │
-   └──────────────────────────────────────┘
+Internet (public DNS: homelab.makscee.ru → 100.101.0.9)
+    │
+    ▼ (Tailscale ACL: only Tailnet peers can reach 100.101.0.9:443)
+[Caddy — :443]
+    │  TLS termination (LE DNS-01 via Cloudflare — no port 80 required)
+    │  Injects Tailscale identity via tailscale/cmd/nginx-auth UNIX socket
+    │
+    ▼
+[Next.js 15 + Bun — 127.0.0.1:3000]  (custom server.js, systemd)
+    │
+    ├──► GET /api/metrics/*    → Prometheus HTTP API (100.101.0.8:9090)
+    ├──► GET /api/claude/*     → claude-usage-exporter /metrics (100.101.0.9:9101 Tailnet)
+    ├──► ANY /api/voidnet/*    → voidnet-api admin routes (127.0.0.1:<port>) + shared secret header
+    ├──► ANY /api/proxmox/*    → Proxmox REST API (100.101.0.7:8006) + API token
+    ├──► WS  /api/terminal/:id → node-pty → SSH to target host (xterm.js relay)
+    └──► ANY /api/secrets/*    → sops-age TS lib decrypts secrets/claude-tokens.sops.yaml
 ```
 
-### New Tailscale / firewall holes
+---
 
-| Hop | Path | New ACL? | Notes |
-|-----|------|----------|-------|
-| prometheus → exporter | `100.101.0.8:ephemeral → 100.101.0.9:9201` | **Effectively no** — v1.0 already permits docker-tower→mcow on `:9100`, `:9093`, `:18080`. Same source/dest pair, new port. If Tailscale ACL is port-scoped, add `9201` to mcow's allowed ingress. If it is `accept` any-port between homelab hosts (likely, per SEC-03 deferral), no change |
-| exporter → nether proxy | `100.101.0.9 → 100.101.0.3:<proxy-port>` | **No** (reused) — nether App Connector already accepts Tailnet clients for Telegram egress. Same mechanism advertises `api.anthropic.com` routes |
-| nether → api.anthropic.com | egress | **No** — nether has direct public IPv4 outbound; Anthropic does not block NL IPs |
+## Component Boundaries
 
-## Token Registry Schema
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| Caddy | TLS termination, reverse proxy, Tailscale identity injection | Next.js app (:3000) |
+| Next.js app (Bun) | UI + all API Route Handlers as proxy layer | Prometheus, voidnet-api, Proxmox, sops-age lib, node-pty |
+| claude-usage-exporter (Python, existing) | Scrapes Anthropic OAuth usage endpoint, exposes /metrics | Prometheus (scrape source), Next.js (read consumer) |
+| voidnet-api (Rust axum, existing) | VoidNet business logic, SQLite | Next.js admin consumer |
+| Prometheus (docker-tower, existing) | Metrics storage | Next.js (query only) |
+| Proxmox API (tower, existing) | LXC lifecycle and node info | Next.js operator |
+| sops-age (npm lib) | Decrypt SOPS-encrypted secrets at runtime | Next.js API routes |
+| node-pty + ws | PTY relay for web terminal sessions | Next.js WS handler, SSH targets |
 
-**Chosen:** structured YAML list (not flat env style).
+---
 
-```yaml
-# secrets/claude-tokens.sops.yaml  (plaintext form — committed encrypted)
-tokens:
-  - label: laptop-maks
-    token: sk-ant-oat01-...
-    owner_host: laptop-maks       # free-form string; becomes `host` label in exporter metrics
-    tier: max20x                  # enum: pro | max5x | max20x | team | enterprise
-    added: 2026-04-16             # ISO date, informational only
-    notes: ""                     # optional, free-form
+## Integration Points — Every Cross-Service Call
 
-  - label: cc-worker
-    token: sk-ant-oat01-...
-    owner_host: cc-worker
-    tier: max20x
-    added: 2026-04-16
-    notes: "Shared dev worker; rotate if cc-worker LXC is reprovisioned"
+### 1. Dashboard → Prometheus
+
+- **Endpoint:** `http://100.101.0.8:9090/api/v1/`
+- **Auth:** None. Prometheus on docker-tower is Tailnet-reachable only; no auth configured.
+- **Call patterns:**
+  - Gauge/instant: `GET /api/v1/query?query=<promql>&time=<unix>`
+  - Graph/range: `GET /api/v1/query_range?query=<promql>&start=<>&end=<>&step=<>`
+- **Caching:** Next.js Route Handlers use `export const revalidate = 15` (15 s, matching Prometheus scrape interval). Gauge values served stale-while-revalidate; graph range queries cached for the same window.
+- **A depends on B:** Prometheus already operational on docker-tower. No new setup.
+
+### 2. Dashboard → claude-usage-exporter
+
+- **Current state:** Exporter runs on mcow as systemd unit, bound to `0.0.0.0:9101` (tech-debt).
+- **Target state after rebind:** Bound to `100.101.0.9:9101` (Tailscale interface only — not 0.0.0.0, not 127.0.0.1). This preserves Prometheus scrape from docker-tower (100.101.0.8 → 100.101.0.9:9101 over Tailnet) while removing general public exposure.
+- **Dashboard call:** `GET http://127.0.0.1:9101/metrics` from same host (loopback works regardless of bind interface). Parse Prometheus text exposition format in Next.js API route `/api/claude/usage`.
+- **Decision:** Keep Python exporter. No TypeScript rewrite. It works in production (ADR D-07). Parse its text format in a thin TS wrapper.
+- **A depends on B:** Exporter rebind (tech-debt task) is independent of dashboard build. Claude tokens page can stub with cached data while rebind is pending.
+
+### 3. Dashboard → voidnet-api
+
+- **Endpoint:** `http://127.0.0.1:<VOIDNET_PORT>/admin/*` (loopback; both on mcow)
+- **Auth:** Shared secret header — `X-Admin-Token: <secret>`. Dashboard sends it on every request. voidnet-api validates in middleware. Secret stored in `VOIDNET_ADMIN_SECRET` env var on both sides, sourced from SOPS-decrypted secrets at service startup.
+- **Why not Tailscale-User header here:** Tailscale-User identifies the human browser session; it cannot authenticate the dashboard server process making loopback calls. Shared secret is unambiguous for service-to-service.
+- **A depends on B:** voidnet-api must expose `/admin/*` routes with this middleware before the VoidNet management page works. Route contract (list, request/response shapes) must be agreed before page implementation begins.
+
+### 4. Dashboard → Proxmox API
+
+- **Endpoint:** `https://100.101.0.7:8006/api2/json/`
+- **Auth:** Proxmox API token — `Authorization: PVEAPIToken=homelab-admin@pve!dashboard=<uuid>:<secret>`
+- **Role — `dashboard-operator`** — create on tower once:
+  ```
+  pveum user add homelab-admin@pve
+  pveum role add dashboard-operator -privs "VM.Audit,VM.PowerMgmt,Datastore.Audit"
+  pveum aclmod / -user homelab-admin@pve -role dashboard-operator
+  pveum user token add homelab-admin@pve dashboard --privsep 1
+  ```
+  Explicitly excluded: `VM.Allocate`, `VM.Config.*`, `Sys.Modify`, `Permissions.Modify`.
+- **TLS:** Proxmox uses a self-signed cert. Install Proxmox CA on mcow at `/usr/local/share/ca-certificates/proxmox-tower.crt` and run `update-ca-certificates`. Avoids disabling TLS verification globally.
+- **A depends on B:** Proxmox API token creation (one-time manual step on tower) before Proxmox ops page works.
+
+### 5. Tailscale Identity — Auth Model
+
+- **Mechanism:** Caddy uses `forward_auth` directive pointing at the `tailscale/cmd/nginx-auth` UNIX socket. The socket validates the request came through Tailscale's kernel netfilter and returns identity headers. Caddy strips any inbound `Tailscale-*` headers before forwarding, then re-injects from auth result.
+- **Headers passed to Next.js:** `Tailscale-User-Login` (email), `Tailscale-User-Name`, `Tailscale-Tailnet`.
+- **Next.js reads:** `request.headers.get('tailscale-user-login')` in middleware or server components.
+- **No login form.** Unauthenticated (no Tailscale-User-Login header) → 401.
+- **Spoofing:** Impossible from browser — Caddy enforces header source; nginx-auth socket validates kernel-level Tailscale identity.
+- **A depends on B:** `tailscale/cmd/nginx-auth` binary installed and socket running on mcow + Caddy configured with `forward_auth` before auth-gated pages can work.
+
+### 6. Dashboard → SOPS Secrets (claude-tokens.sops.yaml)
+
+- **Mechanism:** `sops-age` npm library (TypeScript, works in Bun). No shell-out to `sops` CLI for reads.
+- **Age key location:** `/etc/homelab-admin/age.key` — owner `root`, group `homelab-admin`, mode `0440`. Dashboard process runs as `homelab-admin` user.
+- **Env var:** `SOPS_AGE_KEY_FILE=/etc/homelab-admin/age.key` in systemd unit's `EnvironmentFile`.
+- **Secret file:** `/opt/homelab-admin/secrets/claude-tokens.sops.yaml` (rsync'd from repo at deploy time — SOPS-encrypted, never plaintext on disk).
+- **Read pattern:** API route `/api/secrets/claude-tokens` — decrypt on-demand, return JSON, discard plaintext at end of request. Do not cache decrypted secrets across requests.
+- **Write/rotate pattern:** Decrypt → mutate → re-encrypt via `sops-age` encrypt (MEDIUM confidence on write API — verify during implementation; fallback: shell out to `sops --encrypt`). Write back to file. Git commit is out of scope for dashboard — operator confirms via Claude Code.
+- **A depends on B:** Age private key provisioned on mcow (`/etc/homelab-admin/age.key`, matching the `age:` recipient in `.sops.yaml`) before Claude tokens page works.
+
+### 7. Web Terminal — SSH via node-pty
+
+- **Flow:**
+  1. Browser (xterm.js) opens WebSocket to `/api/terminal/cc-worker`
+  2. Next.js custom server WS handler looks up target: box name → Tailscale IP (config map in `/etc/homelab-admin/env` or hardcoded registry)
+  3. Retrieves SSH credential: dashboard SSH keypair preferred (`/etc/homelab-admin/dashboard_id_rsa`, added to `authorized_keys` on each target box via Ansible)
+  4. `node-pty` forks PTY running `ssh -i /etc/homelab-admin/dashboard_id_rsa -o StrictHostKeyChecking=no root@<tailscale-ip>`
+  5. PTY stdout → WS `send()`. WS inbound messages → PTY `write()`
+- **Session lifetime:** WS disconnect → `SIGHUP` to PTY child. Idle timeout: 30 min (PTY stdin timeout via `setTimeout`).
+- **Custom server requirement:** Next.js App Router cannot handle raw WebSocket upgrades — `next start` does not expose the underlying `http.Server`. A custom `server.js` is mandatory (see Pattern 3 below).
+- **SSH credential model:** Dashboard SSH keypair (generate once, Ansible provisions to target boxes) is preferred over per-session SOPS-decrypted passwords. Password model adds SOPS decrypt latency and leaves decrypted material in memory longer.
+- **A depends on B:** node-pty native addon must build successfully under Bun (`bun install`). Dashboard SSH key provisioned to target boxes via Ansible before terminal works. node-pty Bun compatibility is a MEDIUM-confidence gap — verify at build time (see Gaps section).
+
+---
+
+## Reverse Proxy: Caddy (chosen over nginx and Traefik)
+
+| Criterion | Caddy | nginx | Traefik |
+|-----------|-------|-------|---------|
+| DNS-01 Cloudflare | Native via `caddy-dns/cloudflare` module; one Caddyfile directive | Requires certbot sidecar + renewal cron + reload hook | Native but TOML/YAML config more complex |
+| Tailscale identity | `forward_auth` directive works with nginx-auth socket (despite branding) | nginx-auth is natively designed for it | Supported but more middleware config |
+| AI-editable config | Single Caddyfile, minimal syntax | nginx.conf verbose, many pitfalls | TOML/YAML, more files |
+| systemd | Official `caddy.service` unit; `systemctl reload caddy` is graceful | Standard but certbot adds second unit | Standard |
+| Footprint | ~50 MB RAM, single Go binary | ~20 MB but certbot adds Python process | ~80 MB |
+
+**Verdict:** Caddy. One binary, one config file, automatic cert renewal without sidecars.
+
+**Installation:** Standard package `caddy` cannot be used because the Cloudflare DNS module requires a custom build:
+```bash
+go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+xcaddy build --with github.com/caddy-dns/cloudflare
+# Place resulting ./caddy binary at /usr/local/bin/caddy
+```
+Ansible task manages this at deploy time; binary is version-pinned in Ansible vars.
+
+---
+
+## TLS Flow — LE DNS-01 via Cloudflare
+
+```
+Caddy starts → reads Caddyfile global block: acme_dns cloudflare {env.CF_API_TOKEN}
+    │
+    ▼
+Caddy contacts Let's Encrypt ACME: "I want cert for homelab.makscee.ru"
+    │
+    ▼
+LE issues DNS-01 challenge: "set TXT _acme-challenge.homelab.makscee.ru = <token>"
+    │
+    ▼
+Caddy calls Cloudflare DNS API (Zone:DNS:Edit token) → TXT record created
+    │
+    ▼
+LE validates TXT record → issues cert
+    │
+    ▼
+Caddy stores cert at /var/lib/caddy/.local/share/caddy/ (automatic, managed by Caddy)
+    │
+    ▼
+Renewal: Caddy checks expiry every 12 h; renews 30 days before expiry; same DNS-01 flow
 ```
 
-### Why structured over flat env
+**Key facts:**
+- Port 80 NOT required (DNS-01, not HTTP-01). Caddy binds only :443.
+- `homelab.makscee.ru` public A-record → `100.101.0.9`. Tailscale ACL blocks non-Tailnet connections. DNS resolves publicly, traffic only reaches Tailnet peers.
+- Cloudflare API token scope: `Zone > DNS > Edit` on zone `makscee.ru` only.
+- Token stored in `/etc/caddy/cloudflare.env` (mode `0600`, owner `caddy`), loaded via `EnvironmentFile=` in caddy.service drop-in.
 
-| Dimension | Structured YAML (chosen) | Flat env (`CLAUDE_TOKEN_LAPTOP=sk-…`) |
-|-----------|--------------------------|----------------------------------------|
-| SOPS behavior | Per-value encryption; keys `label`, `tier`, `added` remain readable in git | Per-value encryption; key names readable, but structure lost in flat namespace |
-| Metric labels | Exporter reads `label`, `owner_host`, `tier` directly → emits as Prometheus labels | Must parse env key names (fragile) or duplicate metadata elsewhere |
-| Adding a token | One YAML block | Must add 3–5 env vars with parallel naming convention |
-| Rotation (Shape A) | Edit one block, `sops --encrypt` | Easier to mis-paste across 5 parallel env vars |
-| Validation | Schema-validatable at exporter startup | Ad-hoc parsing |
+**Caddyfile skeleton:**
+```
+{
+    acme_dns cloudflare {env.CF_API_TOKEN}
+}
 
-### SOPS rules
+homelab.makscee.ru {
+    forward_auth unix//run/tailscale/tailscale-nginx-auth.sock {
+        uri /auth
+        copy_headers Tailscale-User-Login Tailscale-User-Name Tailscale-Tailnet
+    }
+    reverse_proxy 127.0.0.1:3000
+}
+```
 
-Repo already has `.sops.yaml` matching `secrets/*.sops.yaml` to the homelab age recipient. New file inherits — no config change.
+---
 
-**Encrypted values:** `token` (and by current repo default, everything else too — which is acceptable; `sops --decrypt` is one command for review).
+## Process Supervision — systemd Unit
 
-### Exporter config interface
+```ini
+# /etc/systemd/system/homelab-admin.service
+[Unit]
+Description=Homelab Admin Dashboard (Next.js 15 + Bun)
+After=network.target tailscaled.service
+Wants=tailscaled.service
 
-**Follow v1.0 precedent** (from `docker-compose.monitoring.yml` deploy-flow comments and `deploy-docker-tower.yml` SOPS pattern):
+[Service]
+Type=simple
+User=homelab-admin
+Group=homelab-admin
+WorkingDirectory=/opt/homelab-admin/app
+EnvironmentFile=/etc/homelab-admin/env
+ExecStart=/usr/local/bin/bun server.js
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homelab-admin
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/homelab-admin/app/.next/cache
+PrivateTmp=true
 
-1. **Ansible controller** runs `sops --decrypt secrets/claude-tokens.sops.yaml > /tmp/claude-tokens.yaml`.
-2. **Ansible `copy`** pushes the plaintext YAML to `/run/secrets/claude-tokens.yaml` on mcow, mode `0440 root:root` (match container user — likely root for an in-repo image; flip to `root:65534` only if image declares `USER nobody`).
-3. **docker-compose** bind-mounts `/run/secrets/claude-tokens.yaml:/etc/exporter/tokens.yaml:ro`.
-4. **Exporter** takes `--config=/etc/exporter/tokens.yaml`, loads on startup. SIGHUP reload is nice-to-have; Ansible can `docker restart claude-usage-exporter` on config change instead (simpler).
+[Install]
+WantedBy=multi-user.target
+```
 
-No per-token CLI args, no env-var proliferation. Single file, single mount — same shape as `telegram_token` in v1.0.
+**Decisions:**
+- `Type=simple` — Bun starts the HTTP server synchronously, no forking.
+- `Restart=on-failure` not `always` — clean exit (e.g. during deploy stop) does not trigger restart.
+- `EnvironmentFile=/etc/homelab-admin/env` — contains `NODE_ENV=production`, `PORT=3000`, `SOPS_AGE_KEY_FILE`, `VOIDNET_ADMIN_SECRET`, `PROXMOX_API_TOKEN`. Mode `0600`, owner `homelab-admin`.
+- Logs via journalctl only: `journalctl -u homelab-admin -f`. No log rotation to manage.
 
-## Suggested Build Order
+---
 
-Dependency-ordered. Each phase produces a visible artifact the next depends on.
+## File Layout on mcow
 
-1. **Phase R — Feasibility research** (BLOCKING, non-negotiable per PROJECT.md).
-   - Determine whether Anthropic exposes an OAuth-queryable quota endpoint.
-   - Outcome gate: YES → phases 2+ use the real endpoint. NO → fall back to local counter strategy (likely requires per-host agent on each Claude-running LXC, expanding v2.0 scope; flag for milestone reshape).
-   - **Until R resolves, do not write exporter code.**
+```
+/opt/homelab-admin/
+├── app/                          # Next.js app (rsync'd from repo apps/admin/)
+│   ├── server.js                 # Custom HTTP+WS server entry point
+│   ├── package.json
+│   ├── bun.lockb
+│   ├── node_modules/             # bun install --frozen-lockfile
+│   └── .next/                    # bun run build output
+│       └── cache/                # writable (ReadWritePaths in unit)
+└── secrets/
+    └── claude-tokens.sops.yaml   # Rsync'd from repo secrets/ (SOPS-encrypted)
 
-2. **Phase E — Exporter skeleton on mcow, one token, no alerts.**
-   - `docker-compose.usage-monitor.yml` with hand-populated plaintext `tokens.yaml` (one entry, operator's personal token).
-   - Exporter emits `claude_code_weekly_used_ratio{label="laptop-maks",tier="max20x"}` and `claude_code_session_used_ratio{...}` — even a stub `0.0` is fine initially.
-   - Bind `:9201`, verify `curl 100.101.0.9:9201/metrics` from docker-tower.
-   - *Dependencies: Phase R. Required by every subsequent phase.*
+/etc/homelab-admin/
+├── env                           # Env vars (mode 0600, homelab-admin:homelab-admin)
+├── age.key                       # age private key (mode 0440, root:homelab-admin)
+└── dashboard_id_rsa              # SSH keypair for web terminal (mode 0400, homelab-admin)
 
-3. **Phase P — Prometheus integration.**
-   - Add `targets/claude-usage.yml`, scrape_configs block in `prometheus.yml`, git pull on docker-tower, `POST /-/reload` (existing playbook covers this).
-   - Verify UP state in Prometheus UI (`http://100.101.0.8:9090/targets`).
-   - *Dependencies: Phase E producing a real /metrics endpoint.*
+/etc/caddy/
+├── Caddyfile                     # (mode 0644, caddy:caddy)
+└── cloudflare.env                # CF_API_TOKEN (mode 0600, caddy:caddy)
 
-4. **Phase S — SOPS token registry.**
-   - Create `secrets/claude-tokens.sops.yaml` with one entry (same token Phase E used plaintext).
-   - Update Ansible playbook: decrypt → push → restart exporter.
-   - Delete plaintext fallback.
-   - *Dependencies: Phase E. Must precede multi-token to prove encrypted path works.*
+/usr/local/bin/
+└── caddy                         # xcaddy-built binary with cloudflare module
+```
 
-5. **Phase A — Alerts.**
-   - Create `alerts/claude-usage.yml` with `ClaudeQuotaWeeklyHigh` (80%), `ClaudeQuotaWeeklyCritical` (95%), same for session.
-   - Add Alertmanager route matching `alertname =~ "ClaudeQuota.*"`.
-   - Force-fire test: temporarily set threshold to 0.0 → observe Telegram message → revert.
-   - *Dependencies: Phase P (needs metric in Prometheus). Independent of dashboard.*
+**Permission model:**
 
-6. **Phase D — Grafana dashboard.**
-   - Drop `claude-usage.json` into provisioning. UID `claude-usage-homelab`.
-   - Gauge row (current ratios per label) + timeseries row (historical) + token-selector variable (`label` as template var).
-   - *Dependencies: Phase P. After alerts — alerts are the safety floor; dashboard is diagnostic polish.*
+| Path | Owner | Mode | Reason |
+|------|-------|------|--------|
+| `/etc/homelab-admin/env` | `homelab-admin:homelab-admin` | `0600` | Plaintext secrets in env vars |
+| `/etc/homelab-admin/age.key` | `root:homelab-admin` | `0440` | age private key; root-owned, group-readable by service user |
+| `/etc/homelab-admin/dashboard_id_rsa` | `homelab-admin:homelab-admin` | `0400` | SSH private key for terminal |
+| `/opt/homelab-admin/app/` | `homelab-admin:homelab-admin` | `0755` | App files |
+| `/opt/homelab-admin/app/.next/cache/` | `homelab-admin:homelab-admin` | `0755` | Next.js writable cache |
+| `/opt/homelab-admin/secrets/` | `homelab-admin:homelab-admin` | `0700` | SOPS files; only service user reads them |
+| `/etc/caddy/cloudflare.env` | `caddy:caddy` | `0600` | Cloudflare API token |
 
-7. **Phase M — Multi-token rollout.**
-   - Expand `claude-tokens.sops.yaml` to 2–5 entries (personal + worker LXCs).
-   - Restart exporter, verify per-label metrics in Grafana.
-   - *Dependencies: Phase S, D, A. Last so alerts and dashboards are proven against one token before fan-out surfaces new edge cases (per-tier quota differences, API rate limits on parallel polls).*
+---
 
-### Ordering rationale summary
+## Deploy Pipeline
 
-- **Alerts before dashboards** (A before D) — alerts are the safety mechanism and the reason this milestone exists; dashboards are visibility on top.
-- **Single token before multi-token** (E → M at end) — debug single path first; multi-token adds fan-out concerns orthogonal to the core integration.
-- **SOPS before alerts** (S before A) — once alerts exist, tokens leaving plaintext in git during debugging becomes a real risk. Gate the plaintext window tightly.
-- **Research blocks everything** — if R says "no endpoint," phases 2–7 fundamentally reshape.
+Pattern mirrors `ansible/playbooks/deploy-docker-tower.yml`. Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml`:
 
-## Egress Path Decision
+```
+1. Secrets (delegate_to: localhost, no_log: true)
+   sops --decrypt secrets/claude-tokens.sops.yaml → extract VOIDNET_ADMIN_SECRET, PROXMOX_API_TOKEN
+   Write /etc/homelab-admin/env on mcow
 
-**Decision: mcow MUST egress to api.anthropic.com via nether App Connector. Direct egress is infeasible.**
+2. Rsync app source
+   rsync apps/admin/ → /opt/homelab-admin/app/  (exclude: node_modules, .next)
+   rsync secrets/claude-tokens.sops.yaml → /opt/homelab-admin/secrets/
 
-### Evidence
+3. Install
+   bun install --frozen-lockfile  (cwd: /opt/homelab-admin/app)
 
-- **Anthropic geo-blocks Russian IPs.** Confirmed 2026-04 via community tracker ([v2fly/domain-list-community #2860](https://github.com/v2fly/domain-list-community/issues/2860)) — `api.anthropic.com` requires proxy from RU IPs. Anthropic's [supported countries page](https://www.anthropic.com/supported-countries) does not list Russia.
-- **mcow is in Moscow** with a Russian public IPv4 route.
-- **Precedent exists:** PROJECT.md "Key Decisions" explicitly logs `Tailscale App Connector on nether (IPv4 Telegram egress fallback)`. The same mechanism applies here. Memory entry `project_mcow_egress_lesson.md` already warns that Moscow ISP behavior requires App Connector routing.
+4. Build (with rollback guard)
+   mv .next .next.prev  (if exists)
+   bun run build
+   on failure: mv .next.prev .next → restart → fail task
 
-### Implementation options (ranked)
+5. Restart
+   systemctl restart homelab-admin
 
-1. **Preferred — Tailscale App Connector advertises `api.anthropic.com`.**
-   Add `api.anthropic.com` to the existing App Connector config on nether. mcow's DNS (via Tailscale MagicDNS) auto-resolves to the connector; exporter makes plain HTTPS calls, no proxy env vars needed. Zero code change in exporter.
-   **Confidence: HIGH** — identical mechanism to the Telegram egress path already proven E2E in v1.0.
+6. Smoke check
+   uri: http://127.0.0.1:3000/api/health → 200
+   on failure: trigger rollback (restore .next.prev, restart)
+```
 
-2. **Fallback — explicit `HTTPS_PROXY` env.**
-   Stand up a forward HTTPS proxy (tinyproxy / squid) on nether bound to `100.101.0.3:<port>`. Set `HTTPS_PROXY` in the exporter container. Works if App Connector can't handle the anthropic domain pattern, but adds a service to maintain.
+**Rollback:** Ansible `block/rescue` — on smoke failure, restore `.next.prev` and restart. Previous build always kept until new build is proven healthy.
 
-3. **Rejected — direct egress from mcow.** Will fail (401/timeout from Anthropic's edge), possibly silently at certain ISP paths.
+**Version pinning:** `bun.lockb` committed. `--frozen-lockfile` enforced. Bun binary version pinned in Ansible vars: `bun_version: "1.x.y"`, installed from official install script at exact tag.
 
-### Downstream implication for Phase E
+---
 
-First smoke test MUST be done from **nether** or **docker-tower** (via the connector) first — `curl -H "Authorization: Bearer ..." https://api.anthropic.com/<quota-endpoint>` — to establish that the token + endpoint work before adding mcow's egress hop as a confounder. Only then deploy the exporter on mcow.
+## Code Patterns
 
-## Open Questions for Requirements
+### Pattern 1: API Route as Proxy with Cache
 
-1. **App Connector domain allowlist format** — nether's current App Connector config (Tailscale ACL `autoApprovers` + `routes`) is not in the repo (SEC-03 deferred). Confirm the operator can add `api.anthropic.com` without blocking on SEC-03; may require a one-off manual Tailscale admin-console change.
+All external calls go through Next.js Route Handlers. Browser never calls Prometheus, voidnet-api, or Proxmox directly.
 
-2. **Exporter image sourcing** — no mature upstream exporter for Claude Code OAuth quotas is known. Likely in-repo Python/Go, pinned by digest. Requirements should declare **where** the exporter source lives: this repo under `exporter/claude-usage/` or a sibling hub project? Roadmapper should call this out.
+```typescript
+// app/api/metrics/cpu/route.ts
+export const revalidate = 15;
 
-3. **Poll interval vs Anthropic API rate limits** — Prometheus scrapes every 15s (global in `prometheus.yml`). The exporter should **not** hit Anthropic on every scrape (rate-limit risk, connector bandwidth waste). Cache per-token quota for N minutes, serve cached value. Suggest N=5min; resolve in Phase R.
+export async function GET() {
+  const res = await fetch(
+    'http://100.101.0.8:9090/api/v1/query?query=100-(avg+by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])*100))'
+  );
+  return Response.json(await res.json());
+}
+```
 
-4. **Container user / file perms on `claude-tokens.yaml`** — v1.0 precedent (`telegram_token` mode `0440 root:65534`) applies only if the exporter image runs as `nobody`. If in-repo image runs as `root` (simplest), `0400 root:root` is fine. Confirm in Phase E.
+### Pattern 2: Auth Extraction in Middleware
 
-5. **Secondary Telegram receiver?** — single `telegram-homelab` receiver is simpler; a dedicated `telegram-claude` receiver would allow different `group_wait` / chat_id / message format (e.g. dollar cost per quota). Default recommendation: **reuse existing receiver** for v2.0; defer specialized routing.
+```typescript
+// middleware.ts
+import { NextRequest, NextResponse } from 'next/server';
 
-6. **Historical retention for quota ratios** — Prometheus is already configured `--storage.tsdb.retention.time=720h` (30d). Weekly quota windows are 168h, so retention covers 4+ cycles. No change needed, but confirm this horizon matches user expectation.
+export function middleware(req: NextRequest) {
+  const user = req.headers.get('tailscale-user-login');
+  if (!user) return new Response('Unauthorized', { status: 401 });
+  const headers = new Headers(req.headers);
+  headers.set('x-dashboard-user', user);
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = { matcher: ['/((?!_next|favicon).*)'] };
+```
+
+### Pattern 3: Custom Server for WebSocket
+
+Required because Next.js App Router cannot expose raw `http.Server` for WS upgrades.
+
+```typescript
+// server.js  (entry point: bun server.js)
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import next from 'next';
+import { handleTerminalSession } from './lib/terminal.js';
+
+const app = next({ dev: false });
+const handle = app.getRequestHandler();
+await app.prepare();
+
+const server = createServer((req, res) => handle(req, res));
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (req, socket, head) => {
+  if (req.url?.startsWith('/api/terminal/')) {
+    wss.handleUpgrade(req, socket, head, (ws) => handleTerminalSession(ws, req));
+  } else {
+    socket.destroy();
+  }
+});
+
+server.listen(Number(process.env.PORT ?? 3000), '127.0.0.1');
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Fetching from Prometheus in Client Components
+Browser calling `http://100.101.0.8:9090/...` directly. Exposes internal Tailnet address; CORS blocked; no caching.
+**Instead:** Always proxy through Next.js Route Handler.
+
+### Anti-Pattern 2: Caching Decrypted Secrets Across Requests
+Module-scope `const secrets = await decryptSops(...)`. Plaintext stays in memory for process lifetime.
+**Instead:** Decrypt per-request in API route, discard after response.
+
+### Anti-Pattern 3: Running Dashboard as Root
+`User=root` in systemd unit. Compromised app = full mcow access.
+**Instead:** `homelab-admin` user with scoped file permissions.
+
+### Anti-Pattern 4: App Router WebSocket
+Handling WS upgrades in a Next.js App Router Route Handler. App Router does not expose raw `http.Server`; upgrade is impossible.
+**Instead:** Custom `server.js` with `ws` package as entry point.
+
+### Anti-Pattern 5: Proxmox API with Root or PVEAdmin Token
+Full cluster access — one XSS or SSRF = game over.
+**Instead:** `dashboard-operator` role with only `VM.Audit + VM.PowerMgmt + Datastore.Audit`.
+
+### Anti-Pattern 6: Binding claude-usage-exporter to 0.0.0.0
+Current tech-debt state. Exposes metrics port to any network interface.
+**Instead:** Rebind to `100.101.0.9` (Tailscale interface only). Prometheus on docker-tower still scrapes via Tailnet; general internet cannot reach it.
+
+---
+
+## Build Order — Dependency Graph
+
+```
+[1] mcow OS user + dirs provisioned
+    homelab-admin uid=1500, /opt/homelab-admin/, /etc/homelab-admin/
+    → ALL subsequent steps depend on this
+
+[2] age private key on mcow
+    /etc/homelab-admin/age.key (root:homelab-admin 0440)
+    → [6] SOPS decrypt works → Claude tokens page
+    → [3] VOIDNET_ADMIN_SECRET can be sourced from SOPS into env
+
+[3] Caddy installed (xcaddy build with cloudflare module)
+    → [4] TLS cert obtained
+    → [5] Tailscale identity headers injected into app
+
+[4] Cloudflare API token + DNS-01 cert for homelab.makscee.ru
+    → dashboard is publicly reachable (Tailnet-only via ACL)
+
+[5] tailscale-nginx-auth socket running on mcow
+    → auth-gated pages display correct user identity
+
+[6] sops-age lib + age key working in Next.js
+    → Claude tokens CRUD page
+    → Web terminal SSH credential retrieval (fallback path)
+
+[7] voidnet-api admin routes + VOIDNET_ADMIN_SECRET agreed
+    → VoidNet management page
+
+[8] Proxmox API token created on tower (homelab-admin@pve, dashboard-operator role)
+    → Proxmox ops page (LXC list, restart)
+
+[9] node-pty builds successfully under Bun + dashboard SSH key on target boxes
+    → Web terminal
+
+[10] claude-usage-exporter rebound to 100.101.0.9 (Tailscale interface)
+     → Claude tokens live metrics in dashboard
+
+[11] Prometheus range/instant queries working from dashboard
+     → Global overview graphs (may work before [10]; independent)
+```
+
+**Critical path to MVP (dashboard reachable + global overview):**
+`[1] → [3] → [4] → [5]` + `[11]`
+
+**Phase groupings implied:**
+- Phase A: `[1] + [3] + [4] + [5]` — infra foundation (user, Caddy, TLS, auth)
+- Phase B: `[11]` — global overview page (Prometheus queries)
+- Phase C: `[2] + [6] + [10]` — Claude tokens page (SOPS + exporter rebind)
+- Phase D: `[7]` — VoidNet management page (depends on voidnet-api contract)
+- Phase E: `[8]` — Proxmox ops page
+- Phase F: `[9]` — Web terminal (highest complexity, most unknowns)
+
+---
+
+## Gaps Requiring Phase-Specific Research
+
+| Gap | Risk | Mitigation |
+|-----|------|------------|
+| node-pty Bun native addon compatibility | node-pty uses native Node.js addons; Bun's Node compatibility may not fully support node-gyp builds | Test `bun install node-pty` in Phase F spike. Fallback: use `ssh2` Node.js library (pure JS, no native build) for non-interactive commands; accept reduced terminal fidelity |
+| sops-age write/encrypt API | `humphd/sops-age` library documentation focuses on decrypt; encrypt API less proven | Verify round-trip in Phase C. Fallback: shell out to `sops --encrypt` CLI for writes only |
+| voidnet-api admin route contract | Route list, request/response shapes, and VOIDNET_ADMIN_SECRET header name must be confirmed with voidnet-api codebase before VoidNet page is built | Coordinate in Phase D planning; read voidnet-api source before coding |
+| tailscale-nginx-auth socket path on mcow's Debian | Socket path may be `/var/run/tailscale/tailscaled.sock` or `/run/tailscale/tailscaled.sock` depending on Debian version | Verify with `ls /run/tailscale/` on mcow before writing Caddyfile |
+| Cloudflare API token — new or existing? | Unknown whether a Cloudflare token already exists in SOPS secrets for this zone | Check `secrets/` for existing Cloudflare credentials before creating a new token |
 
 ---
 
 ## Sources
 
-- [Anthropic supported countries](https://www.anthropic.com/supported-countries) — Russia not listed (confidence: HIGH)
-- [v2fly/domain-list-community #2860](https://github.com/v2fly/domain-list-community/issues/2860) — community-documented RU block on anthropic domains (confidence: MEDIUM)
-- `.planning/PROJECT.md` Key Decisions table — App Connector precedent (confidence: HIGH, own repo)
-- `servers/mcow/docker-compose.monitoring.yml` — mcow compose layout and Tailnet bind pattern (confidence: HIGH)
-- `servers/docker-tower/monitoring/prometheus/prometheus.yml` — scrape_configs + rule_files glob (confidence: HIGH)
-- `ansible/playbooks/deploy-docker-tower.yml` — SOPS→compose→reload playbook template (confidence: HIGH)
-- MEMORY entry `project_mcow_egress_lesson.md` — prior lesson on Moscow egress (confidence: HIGH)
+- [Caddy DNS-01 Cloudflare module — caddy-dns/cloudflare](https://github.com/caddy-dns/cloudflare)
+- [Caddy + Cloudflare DNS-01 setup guide — Akash Rajpurohit](https://akashrajpurohit.com/blog/setup-caddy-with-automatic-ssl-certificates-with-cloudflare/)
+- [Traefik vs Caddy vs nginx Proxy Manager 2026 — SelfHostWise](https://selfhostwise.com/posts/traefik-vs-caddy-vs-nginx-proxy-manager-which-reverse-proxy-should-you-choose-in-2026/)
+- [nginx vs Caddy 2025 — MangoHost](https://mangohost.net/blog/nginx-vs-caddy-in-2025-which-is-better-for-performance-and-tls-automation-2/)
+- [Tailscale identity headers — Tailscale Docs](https://tailscale.com/docs/concepts/tailscale-identity)
+- [tailscale/cmd/nginx-auth — works with Caddy forward_auth](https://github.com/tailscale/tailscale/tree/main/cmd/nginx-auth)
+- [sops-age TypeScript/Bun library — humphd/sops-age](https://github.com/humphd/sops-age/)
+- [Bun production deployment with systemd — OneUptime](https://oneuptime.com/blog/post/2026-01-31-bun-production-deployment/view)
+- [xterm.js + node-pty + WebSocket web terminal](https://ashishpoudel.substack.com/p/web-terminal-with-xtermjs-node-pty)
+- [Proxmox User Management and API tokens](https://pve.proxmox.com/wiki/User_Management)
+- [Proxmox VM.PowerMgmt privilege for LXC restart](https://forum.proxmox.com/threads/help-with-api-permissions.163310/)
