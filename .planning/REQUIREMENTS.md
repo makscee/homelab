@@ -1,137 +1,125 @@
-# Milestone v2.0 Requirements — Claude Code Usage Monitor
+# Requirements — v3.0 Unified Stack Migration (homelab scope)
 
-**Goal:** Centralized SOPS-encrypted registry of 2-5 Claude Code OAuth tokens (personal + worker LXCs), with per-token weekly + 5-hour-session quota dashboard on mcow Grafana and Telegram alerts at configurable thresholds.
+> **Scope note:** this milestone covers the HOMELAB admin dashboard at `homelab.makscee.ru` built in this repo. VoidNet + Animaya migrations are parallel milestones in their own repos; they consume the shared `hub-shared/ui-kit` produced here.
 
-**Subscription target:** Max 20x ($100/mo, 5-hour sessions + weekly reset, separate Sonnet weekly cap).
-
-**Approach decision (2026-04-16):**
-- **Endpoint-scrape approach** — exporter polls `GET api.anthropic.com/api/oauth/usage` per token at 300s intervals.
-- **ToS interpretation:** user considers this within-scope for their own Claude Code monitoring (tokens used for CC, monitoring is operator-side only). ADR D-07 to document reasoning.
-- **Egress:** mcow routes `api.anthropic.com` to nether exit via Tailscale (same mechanism as Telegram v1.0 App Connector pattern).
-- **Token type:** `claude setup-token` 1-year long-lived tokens only — no interactive `/login` tokens (4-day TTL).
-
----
+> **Previous:** v2.0 closed with pivot 2026-04-16 — phases 05-07 operational, 08-11 absorbed into v3.0. See `.planning/MILESTONE-CLOSE-v2.0.md`.
 
 ## Active Requirements
 
-### Token Registry (TOKEN-*)
+### INFRA — Foundation (must land first)
 
-- [ ] **TOKEN-01**: Operator can store 2-5 Claude Code OAuth tokens in a single SOPS-encrypted file `secrets/claude-tokens.sops.yaml`
-- [ ] **TOKEN-02**: Each token entry records label, token, owner_host, tier, added-date, optional notes
-- [ ] **TOKEN-03**: Operator can add or retire a token by editing the SOPS file + running the deploy playbook (no server restart required beyond compose recreate)
-- [ ] **TOKEN-04**: Registry supports an `enabled: false` flag to disable a token without removing it
+- [ ] **INFRA-01**: Next.js 15 + React 19 + TypeScript app scaffolded under `apps/admin/` in this repo, running under Bun, managed by systemd on mcow
+- [ ] **INFRA-02**: App binds Unix socket (or 127.0.0.1:PORT, port ≠ 3000 since Docker already owns it) — never public-bound directly; existing Caddy on mcow reverse-proxies `homelab.makscee.ru` to the socket
+- [ ] **INFRA-03**: LE TLS certificate auto-issued + auto-renewed via existing Caddy HTTP-01 flow on mcow (mirrors `vibe.makscee.ru` pattern in `/etc/caddy/Caddyfile`); new site block added to Caddyfile
+- [ ] **INFRA-04**: GitHub OAuth sign-in via Auth.js v5; allowlist of GitHub user logins enforced (initial: `makscee`); unlisted users rejected with 403 before any handler runs
+- [ ] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
+- [ ] **INFRA-06**: Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml` deploys the app to mcow (rsync source, `bun install`, `bun run build`, systemd unit install/reload); idempotent
+- [ ] **INFRA-07**: Next.js pinned to a release containing the CVE-2025-66478 fix; `bun audit` clean before deploy; dependency bump policy documented
+- [ ] **INFRA-08**: Secrets (GitHub OAuth client id/secret, session secret, allowlist) live in SOPS-encrypted `secrets/mcow.sops.yaml`; never committed plaintext; loaded at app start via Ansible-decrypted `.env`
 
-### Exporter Service (EXP-*)
+### UI — Shared Design System
 
-- [ ] **EXP-01**: Prometheus exporter polls `GET /api/oauth/usage` per enabled token at 300s jittered intervals (per-token fan-out)
-- [ ] **EXP-02**: Exporter emits `claude_code_weekly_used_ratio{label}`, `claude_code_session_used_ratio{label}`, `claude_code_weekly_sonnet_used_ratio{label}`, `claude_code_reset_seconds{label,window}` gauges
-- [ ] **EXP-03**: Exporter emits `claude_code_api_errors_total{label,status}` counter (tracks 429s, 401s, network errors)
-- [ ] **EXP-04**: Exporter emits `claude_code_poll_last_success_timestamp{label}` gauge (observability of staleness)
-- [ ] **EXP-05**: Exporter never logs or labels with raw tokens — use opaque labels only
-- [ ] **EXP-06**: Exporter isolates per-token failures — one invalid/rate-limited token does not block others
-- [ ] **EXP-07**: Exporter applies exponential backoff on 429 (5m → 10m → 20m → 60m cap) with last-good-value cache emitted during backoff
-- [ ] **EXP-08**: Exporter container runs as non-root uid 65534 (nobody), SOPS-decrypted token file bind-mounted read-only
-- [ ] **EXP-09**: Exporter exposes `/metrics` on port 9201, bind to Tailnet IP `100.101.0.9:9201` only
+- [ ] **UI-01**: `hub-shared/ui-kit` repo created (separate from homelab repo) with Tailwind config, CSS variable theme tokens, base shadcn component set, README with usage instructions
+- [ ] **UI-02**: Homelab admin consumes `hub-shared/ui-kit` as a git submodule at `vendor/ui-kit/`; updates flow one-way from ui-kit → consumers
+- [ ] **UI-03**: Base layout component with sidebar nav (pages), top bar (GitHub user chip), page content slot; dark mode default
+- [ ] **UI-04**: Standard error page + 404 + unauthorized (403) page using shared components; consistent empty-state + loading + error patterns
 
-### Monitoring Integration (MON-*)
+### DASH — Global Overview Page
 
-- [ ] **MON-01**: Prometheus on docker-tower scrapes exporter via new target file `servers/docker-tower/monitoring/prometheus/targets/claude-usage.yml`
-- [ ] **MON-02**: mcow routes `api.anthropic.com` egress through nether exit node (Tailscale App Connector or equivalent)
-- [ ] **MON-03**: Egress path verified by smoke test before exporter deploy (curl `api.anthropic.com` from mcow must succeed)
+- [ ] **DASH-01**: Page `/` shows per-host stat rows for all 6 monitored Tailnet hosts: CPU %, memory %, disk %, container count (from node_exporter metrics)
+- [ ] **DASH-02**: Page shows Claude usage summary (per-token 5h + 7d utilization gauges, small form factor, links to tokens page for detail)
+- [ ] **DASH-03**: Page shows current Alertmanager firing alert count with severity breakdown; links to alerts page
+- [ ] **DASH-04**: All data auto-refreshes every 30s via SWR; loading/stale states handled gracefully
+- [ ] **DASH-05**: Prometheus queries served via Route Handler (server-side fetch) — no Prometheus creds or URLs exposed client-side
 
-### Dashboard (DASH-*)
+### TOKEN — Claude Code Tokens Page
 
-- [ ] **DASH-01**: Grafana dashboard "Claude Code Usage" provisioned as JSON in `servers/mcow/monitoring/grafana/provisioning/dashboards/json/claude-usage.json` (uid: `claude-usage-homelab`)
-- [ ] **DASH-02**: Dashboard has token-selector variable (single + "All")
-- [ ] **DASH-03**: Dashboard shows weekly % gauge + 5-hour session % gauge per token
-- [ ] **DASH-04**: Dashboard shows Sonnet-specific weekly % when exposed by API
-- [ ] **DASH-05**: Dashboard shows historical timeseries of ratios (30d retention, matches v1.0)
-- [ ] **DASH-06**: Dashboard shows reset countdown (time until next weekly + next session reset)
-- [ ] **DASH-07**: Dashboard shows exporter health (last-success-timestamp, 429 counter rate)
+- [ ] **TOKEN-01**: Page `/tokens` lists all entries from SOPS-encrypted token registry (`secrets/claude-tokens.sops.yaml`) with: label, owner host, tier, added date, enabled flag
+- [ ] **TOKEN-02**: Each row shows live per-token gauges (5h utilization, 7d utilization, next reset countdown) driven by Prometheus queries against `claude_usage_*` metrics
+- [ ] **TOKEN-03**: Add-token form: paste `sk-ant-oat01-*`, label, owner host → backend validates format, appends to registry via `sops` subprocess, redeploys exporter via Ansible task trigger; token never logged, never reflected back in HTML
+- [ ] **TOKEN-04**: Rotate flow: replace existing token value → SOPS write → redeploy; old token disabled in one atomic commit
+- [ ] **TOKEN-05**: Disable / enable / rename / delete operations on existing entries, each as an audit-logged mutation
+- [ ] **TOKEN-06**: Per-token historical timeseries chart (7-day window) using Recharts; range query from Prometheus
+- [ ] **TOKEN-07**: Tokens page read-path works even if SOPS write path is broken (degraded mode shows existing entries but disables CRUD)
 
-### Alerts (ALERT-*)
+### VOIDNET — VoidNet Management Page (proxy)
 
-- [ ] **ALERT-01**: `WeeklyQuotaHigh` fires at ratio ≥ 0.80 for 15m, severity warning, Telegram
-- [ ] **ALERT-02**: `WeeklyQuotaCritical` fires at ratio ≥ 0.95 for 15m, severity critical, Telegram
-- [ ] **ALERT-03**: `SessionQuotaHigh` fires at ratio ≥ 0.80 for 15m, severity warning, Telegram
-- [ ] **ALERT-04**: `ClaudeUsageExporterDown` fires at `up{job="claude-usage"} == 0` for 10m, severity critical
-- [ ] **ALERT-05**: Alert rules live in new file `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml`
-- [ ] **ALERT-06**: Rules validated via `promtool test rules` in CI-style smoke test
-- [ ] **ALERT-07**: Telegram delivery proven E2E (at least one FIRING+RESOLVED cycle)
+- [ ] **VOIDNET-01**: Dashboard consumes voidnet-api admin JSON endpoints on `100.101.0.9:8081` (not HTML); voidnet-api side of this work (adding `/admin/api/*` JSON variants) is a parallel milestone in the voidnet repo
+- [ ] **VOIDNET-02**: Page `/voidnet/users` lists users with balance, status, activity; paginated; searchable by telegram handle
+- [ ] **VOIDNET-03**: User detail view shows credits history, active boxes, service list, last seen
+- [ ] **VOIDNET-04**: Adjust credits (+/- with reason) → proxy POST → audit-logged
+- [ ] **VOIDNET-05**: Ban/unban user, rename user handle, resend invite — all as audit-logged mutations
+- [ ] **VOIDNET-06**: Per-user Claude box list: shows ssh command + masked password with click-to-reveal (mirror VoidNet's existing UX pattern), port, status, host
+- [ ] **VOIDNET-07**: Trigger re-provision on a box → proxy POST → polls status until complete → updates UI
+- [ ] **VOIDNET-08**: Shared-secret auth header (`X-Admin-Token`) on all voidnet-api calls; secret lives in SOPS
 
-### Deploy (DEPLOY-*)
+### PROXMOX — LXC Operations Page
 
-- [ ] **DEPLOY-01**: Ansible playbook `ansible/playbooks/deploy-mcow-usage-monitor.yml` (clones pattern from `deploy-docker-tower.yml`): pulls repo, decrypts+pushes token file, runs `docker compose up -d`, hot-reloads Prometheus on docker-tower
-- [ ] **DEPLOY-02**: Playbook is idempotent (verified with second run — all tasks report `ok`)
-- [ ] **DEPLOY-03**: ADR D-07 written in PROJECT.md Key Decisions table documenting the ToS interpretation + endpoint-scrape choice with rationale
+- [ ] **PROXMOX-01**: Page `/proxmox` lists all LXCs on tower with: vmid, hostname, status, resource config (cpu/mem/disk), uptime
+- [ ] **PROXMOX-02**: Start / Shutdown (graceful, DEFAULT) / Restart / Hard-stop (with confirmation guard) operations on each LXC; audit-logged
+- [ ] **PROXMOX-03**: Spawn new LXC from template — form for vmid, hostname, template, resources — calls Proxmox API, polls task-id until complete, shows progress
+- [ ] **PROXMOX-04**: Destroy LXC (with confirmation guard + typed-hostname check to prevent slip); audit-logged
+- [ ] **PROXMOX-05**: LXC detail panel: config dump, recent log tail, network info
+- [ ] **PROXMOX-06**: Proxmox API token with role `dashboard-operator` (scoped to `VM.PowerMgmt`, `VM.Audit`, `Datastore.Audit`); token + CA cert in SOPS; CA cert pinned (never `NODE_TLS_REJECT_UNAUTHORIZED=0`)
 
----
+### TERM — Web Terminal
 
-## Future Requirements (deferred)
+- [ ] **TERM-01**: Page `/box/:vmid/terminal` launches xterm.js session connected via WebSocket to a dashboard-managed SSH relay to the target box
+- [ ] **TERM-02**: Feasibility spike task (Phase 8 first task): confirm node-pty allocates PTY in mcow's privileged LXC; fallback to ssh2 pure-JS pipe if node-pty fails
+- [ ] **TERM-03**: SSH credentials retrieved from VoidNet user_services table via admin API; dashboard never displays raw password to the terminal page (session-only injection)
+- [ ] **TERM-04**: Terminal session cleanup on browser disconnect; PTY killed, ssh connection closed; no zombie processes
+- [ ] **TERM-05**: Per-operator terminal session limit (max 3 concurrent) to prevent resource exhaustion
+- [ ] **TERM-06**: Every terminal-open event audit-logged with target vmid, user, start/end timestamps
 
-- Token distribution to worker hosts (Shape B — ansible push tokens to workers automatically)
-- Per-model breakdown beyond Sonnet (e.g., Opus-specific if API adds the field)
-- Cost estimation ($ spent per week at subscription rates)
-- Burn-rate prediction ("hit cap in X days at current rate")
-- Anomaly detection / spike alerting
-- Session recording (which CLI session burned the most)
+### ALERT — Alerts Panel + Rules
 
----
+- [ ] **ALERT-01**: Page `/alerts` shows current Alertmanager firing alerts with severity, summary, duration, labels
+- [ ] **ALERT-02**: Read-only for v3.0 (no ack/silence from UI) — link-out to Alertmanager web UI for those ops
+- [ ] **ALERT-03**: Prometheus alert rules for Claude Code quota (replaces v2.0 Phase 09 scope): `ClaudeWeeklyQuotaHigh` (≥0.80 for 15m), `ClaudeWeeklyQuotaCritical` (≥0.95 for 15m), `ClaudeExporterDown` (up==0 for 10m)
+- [ ] **ALERT-04**: Alert rules unit-tested via `promtool test rules` — file checked into `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml`
+- [ ] **ALERT-05**: Telegram delivery proven E2E — induced rule fire results in message landing in chat 193835258; `alertmanager_notifications_failed_total{integration="telegram"}` == 0 over smoke window
+- [ ] **ALERT-06**: Alert badge in shared nav layout (shows firing count on every page)
+
+### SEC — Security + Deploy Hardening
+
+- [ ] **SEC-01**: Rate limit at Caddy layer on `homelab.makscee.ru` (per-IP, e.g. 60 req/min for auth endpoints)
+- [ ] **SEC-02**: CSP, HSTS, X-Frame-Options headers set via Next.js middleware; strict CSP (no inline scripts); OWASP baseline
+- [ ] **SEC-03**: Exporter rebinding (v2.0 tech-debt): claude-usage-exporter listens on `100.101.0.9:9101` only (not `0.0.0.0`); runs as `nobody(65534)` with read-only token mount
+- [ ] **SEC-04**: Server-only lint rule enforces `"use server"` directive usage; prevents RSC → client secret leakage
+- [ ] **SEC-05**: Zod schema validation on every Route Handler input; Drizzle prepared statements for every query (no raw SQL)
+- [ ] **SEC-06**: GitHub OAuth state param + PKCE enforced (Auth.js default — verify)
+- [ ] **SEC-07**: Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, short TTL (8h) with rolling refresh
+- [ ] **SEC-08**: Security review phase before launch: `bun audit`, bundle analysis for secret leakage, header-spoofing integration test, Proxmox token scope audit
+
+## Future Requirements (Deferred to v3.x / later)
+
+- **UI-05**: Light/dark theme toggle
+- **DASH-06**: Custom dashboard builder (save PromQL queries → Recharts panels)
+- **TOKEN-08**: Per-token soft-limit alerting (email/Telegram at 50%, 75%)
+- **VOIDNET-09**: VoidNet impersonation mode
+- **PROXMOX-07**: Backup trigger UI (vzdump start/status)
+- **PROXMOX-08**: LXC clone from existing
+- **PROXMOX-09**: Resource adjust UI (cpu/mem live change)
+- **TERM-07**: Terminal recording / session replay
+- **ALERT-07**: In-UI silence + acknowledge
+- **SEC-09**: Fail2ban integration at Caddy
+- **SEC-10**: Age-based encrypt-at-rest for in-app secret storage
 
 ## Out of Scope
 
-- **Content tracking** — never inspect actual Claude Code conversations (privacy)
-- **Automated billing integration** — read-only monitoring, no commerce
-- **Token sharing or pooling** — one token per owner, static assignment
-- **Aggregate fleet quota management** — no global "fleet weekly cap" concept
-- **Local log tail / OpenTelemetry** — explicitly dropped in favor of endpoint-scrape (user decision 2026-04-16)
-- **Interactive /login OAuth tokens** — 4-day TTL ruled out; setup-token only
-- **Refresh token rotation logic** — setup-tokens are 1-year, re-generated manually before expiry
+- **Multi-tenant user roles** — allowlisted admins only, no viewer/admin split v3
+- **Backup management** — separate DR milestone
+- **Grafana-equivalent ad-hoc query builder** — use existing Grafana for that
+- **VoidNet portal features** — stay in VoidNet repo
+- **Animaya features** — separate milestone in animaya repo
+- **Mobile native app** — web-responsive is enough
+- **Rust → TS migration of voidnet-api core** — parallel milestone in voidnet repo; this milestone only depends on VoidNet adding JSON endpoints
+- **Python → TS migration of animaya core** — same reasoning for animaya repo
+
+## Traceability — Requirements → Phases
+
+_(populated by roadmapper)_
 
 ---
-
-## Traceability
-
-Mapped by roadmapper 2026-04-16. 33/33 REQ-IDs → exactly one phase each.
-
-| REQ-ID | Phase | Plan(s) | Notes |
-|--------|-------|---------|-------|
-| TOKEN-01 | 08 | TBD | SOPS registry file creation |
-| TOKEN-02 | 08 | TBD | Registry schema fields |
-| TOKEN-03 | 08 | TBD | Add/retire via playbook |
-| TOKEN-04 | 08 | TBD | `enabled: false` flag behavior |
-| EXP-01 | 07 | TBD | 300s jittered polling (validated in 05 spike) |
-| EXP-02 | 07 | TBD | Gauge schema lands in Prometheus |
-| EXP-03 | 07 | TBD | Error counter in Prometheus |
-| EXP-04 | 07 | TBD | Freshness timestamp gauge |
-| EXP-05 | 06 | TBD | No-token-in-labels hardening |
-| EXP-06 | 11 | TBD | Per-token isolation proven under 2-5 real tokens |
-| EXP-07 | 06 | TBD | Exponential backoff on 429 |
-| EXP-08 | 06 | TBD | Non-root container + RO mount |
-| EXP-09 | 06 | TBD | Tailnet-only bind on 9201 |
-| MON-01 | 07 | TBD | Prometheus file_sd target + scrape |
-| MON-02 | 05 | TBD | nether App Connector route |
-| MON-03 | 05 | TBD | Egress smoke test |
-| DASH-01 | 10 | TBD | Provisioned JSON dashboard |
-| DASH-02 | 10 | TBD | Token-selector variable |
-| DASH-03 | 10 | TBD | Weekly + session gauges |
-| DASH-04 | 10 | TBD | Sonnet-specific gauge |
-| DASH-05 | 10 | TBD | Historical timeseries |
-| DASH-06 | 10 | TBD | Reset countdowns |
-| DASH-07 | 10 | TBD | Exporter health panels |
-| ALERT-01 | 09 | TBD | WeeklyQuotaHigh |
-| ALERT-02 | 09 | TBD | WeeklyQuotaCritical |
-| ALERT-03 | 09 | TBD | SessionQuotaHigh |
-| ALERT-04 | 09 | TBD | ClaudeUsageExporterDown |
-| ALERT-05 | 09 | TBD | Rule file path |
-| ALERT-06 | 09 | TBD | promtool test rules |
-| ALERT-07 | 09 | TBD | Telegram FIRING+RESOLVED E2E |
-| DEPLOY-01 | 08 | TBD | Ansible playbook |
-| DEPLOY-02 | 08 | TBD | Idempotency verified |
-| DEPLOY-03 | 05 | TBD | ADR D-07 written during feasibility gate |
-
-**Coverage:** 33/33 REQ-IDs mapped to exactly one phase. No orphans. No duplicates.
-
----
-
-*Requirements defined: 2026-04-16 (v2.0 kickoff). Traceability populated 2026-04-16 by roadmapper.*
+*Total active: 45 requirements across 8 categories*
+*Created 2026-04-16 during v3.0 milestone scoping*
