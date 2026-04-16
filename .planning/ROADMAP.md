@@ -153,12 +153,23 @@ Phase 19 (Security + Launch) → depends on all others
 
 **Success Criteria** (what must be TRUE):
   1. Operator can open `https://homelab.makscee.ru` in a Tailnet browser, sign in with GitHub (`makscee`), and land on an authenticated shell with sidebar nav and top bar — a non-allowlisted GitHub account receives a 403 page
-  2. TLS certificate is auto-issued via Caddy LE DNS-01 (Cloudflare API); `curl -v https://homelab.makscee.ru` shows a valid LE cert with ≥30 days remaining
+  2. TLS certificate is auto-issued via Caddy LE HTTP-01 (standard Caddy package — mirrors `vibe.makscee.ru`); `curl -v https://homelab.makscee.ru` shows a valid LE cert with ≥30 days remaining
   3. `bun audit` reports zero HIGH/CRITICAL vulnerabilities; Next.js version is pinned to ≥15.2.4 (CVE-2025-66478 patched) and documented in `apps/admin/package.json`
   4. Response headers include `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY` — verifiable with `curl -I`
   5. `ansible-playbook ansible/playbooks/deploy-homelab-admin.yml` completes idempotently from a clean controller; second run shows all tasks `ok`
 
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 12-01-PLAN.md — Bun workspaces root + Next.js 15.2.4 scaffold + pinned versions + audit gate
+- [ ] 12-02-PLAN.md — Ansible group_vars additions (port 3847, bun_version) + collection requirements
+- [ ] 12-03-PLAN.md — mcow LXC privilege probe + STATE.md cleanup (obsolete todos closed)
+- [ ] 12-04-PLAN.md — Auth.js v5 GitHub OAuth + allowlist middleware + CSP/HSTS/XFO nonce headers
+- [ ] 12-05-PLAN.md — Base layout (sidebar + topbar) + 8 route stubs + UI-04 primitives + /api/health + server-only lint
+- [ ] 12-06-PLAN.md — docs/setup-github-oauth.md runbook + apps/admin/README.md policy gates
+- [ ] 12-07-PLAN.md — servers/mcow/homelab-admin.service systemd unit (probe-matched hardening) + inventory update
+- [ ] 12-08-PLAN.md — SOPS mcow.sops.yaml extension + Ansible decrypt/render tasks (env file mode 0600)
+- [ ] 12-09-PLAN.md — deploy-homelab-admin.yml end-to-end playbook + Caddy blockinfile template
+- [ ] 12-10-PLAN.md — Deploy execution + evidence capture + VERIFICATION.md + SEC-05 policy doc
 **UI hint**: yes
 
 ---
