@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
 status: executing
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-04-16T22:37:13.683Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-04-16T22:40:16.749Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 33
-  completed_plans: 25
-  percent: 76
+  completed_plans: 26
+  percent: 79
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 12 (infra-foundation) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-04-16
 
@@ -52,6 +52,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 12-infra-foundation]: Next.js bumped to 15.5.15 (from 15.2.4) — 15.2.x fails bun audit due to GHSA-q4gf-8mx6-v5v3 DoS CVE affecting <15.5.15
 - [Phase 12-infra-foundation]: bun.lock (text format) committed as lockfile — Bun 1.3.5 generates .lock not .lockb binary
 - [Phase 12]: bun_version pinned to 1.1.38 in group_vars/all.yml (do not bump to 1.2.x without P-05 re-validation)
+- [Phase 12]: mcow confirmed KVM — strict systemd hardening safe for Plan 07 (ProtectSystem=strict, PrivateTmp=yes); P-15 degraded path not needed
 
 ### Blockers/Concerns
 
@@ -72,6 +73,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-16T22:37:13.680Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-04-16T22:40:16.746Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None
