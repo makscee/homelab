@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
-status: executing
-stopped_at: Phase 05 context gathered
-last_updated: "2026-04-16T14:20:00.000Z"
-last_activity: 2026-04-16 -- Quick probe 260416-nyb: /api/oauth/usage feasibility BLOCKED by token scope
+status: planning
+stopped_at: Phase 05 PASSED (operational evidence) -- planning v3.0 Admin Dashboard
+last_updated: "2026-04-16T19:00:00.000Z"
+last_activity: 2026-04-16 -- Phase 05 feasibility gate PASSED on operational evidence; ADR D-07 recorded; v2.0 milestone scope superseded by v3.0 dashboard plan
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 0
-  percent: 0
+  completed_plans: 5
+  percent: 14
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 05 (feasibility-gate) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 05
-Last activity: 2026-04-16 -- Phase 05 execution started
+Phase: 05 (feasibility-gate) — COMPLETE
+Plan: 5 of 5
+Status: PASSED on operational evidence — production exporter on mcow:9101 running with 2 tokens, 0% 429, 118 successful polls
+Last activity: 2026-04-16 -- v2.0 milestone may be superseded by v3.0 Admin Dashboard (homelab.makscee.ru) covering token mgmt + VoidNet + overview
 
-Progress: [          ] 0% (0/7 v2.0 phases)
+Progress: [#         ] 14% (1/7 v2.0 phases)
 
 ## Performance Metrics
 
@@ -51,9 +51,9 @@ Progress: [          ] 0% (0/7 v2.0 phases)
 
 Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Validated status.
 
-**v2.0 pending ADR:**
+**v2.0 validated ADRs:**
 
-- **D-07 (Phase 05 output):** ToS interpretation + endpoint-scrape approach rationale — user considers monitoring-own-CC tokens in-scope; ADR must be written during Phase 05 feasibility work
+- **D-07 (Claude Code quota access strategy):** Endpoint-scrape approach validated Phase 05 via operational evidence (production exporter `mcow:9101` polling 2 tokens successfully, 0% 429 rate over 118 polls). See `.planning/phases/05-feasibility-gate/GATE-PASSED.md` and `PROJECT.md` §Key Decisions.
 
 ### Open Blockers/Concerns (carried from v1.0)
 

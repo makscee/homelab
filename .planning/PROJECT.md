@@ -106,6 +106,29 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 | Data plane on docker-tower | Prometheus + cAdvisor + media services stay co-located | Validated (v1.0) |
 | Tailscale App Connector on nether | IPv4 Telegram egress fallback (Moscow IPv6-only path blocked by Telegram) | Validated (v1.0 via E2E Telegram smoke) |
 | Token file perms `install -m 0440 root:65534` | prom/alertmanager container user is `nobody(65534)` | Validated (v1.0) |
+| D-07: Claude Code quota access strategy | Endpoint-scrape `/api/oauth/usage` with 300s+jitter cadence, halt on persistent 401/403. No official API exists. Own tokens, own homelab, own-quota reads only. ToS residual A-01 accepted: Feb 2026 OAuth-token policy is gray not red; fingerprint-minimal UA mitigates detection. | Validated (Phase 05, 2026-04-16 — production exporter `mcow:9101` polling 2 tokens with 0% 429 rate; formal 24h soak short-circuited by operational evidence) |
+
+### ADR D-07 detail (2026-04-16, Phase 05 feasibility gate)
+
+**Context.** v2.0 milestone requires per-token weekly + 5h session utilization for 2-5 OAuth tokens. No official API exposes this. `/api/oauth/usage` is the endpoint Claude Code itself consumes; schema (`five_hour.utilization`, `seven_day.utilization`, `seven_day_opus.utilization`, `resets_at`) stable since April 2025.
+
+**Decision.** Endpoint-scrape from mcow — direct Moscow ISP egress works (no App Connector needed, Plan 05-01 evidence). Cadence 300s +/-60s jitter per token, exponential backoff on 429, halt-on-persistent-401/403.
+
+**ToS reasoning.** Anthropic's Feb 2026 policy restricts OAuth tokens to "Claude Code and Claude.ai". Homelab monitor of own tokens is within-spirit (observability of own-account state, tokens still primarily consumed by Claude Code on same hosts, data never leaves Tailnet). Residual enforcement risk accepted: Anthropic may silently revoke tokens detected as non-CLI. Mitigation: fingerprint-minimal UA; halt-on-401/403 caps blast radius to one revocation per token.
+
+**Alternatives rejected.**
+- Local-log tail (ccusage-style) — ruled out by D-05-01: "find way to get same data with only auth token"
+- Claude Console Admin API — API-key-auth only, not Max subscribers
+- No monitoring — v1.0 observability requirement
+
+**Sign-off conditions that flip this decision.**
+- Anthropic explicitly prohibits `/api/oauth/usage` for non-CLI clients, OR
+- Silent token revocation with non-CLI detection as trigger, OR
+- Official quota API ships (GitHub issues #19880, #32796)
+
+**Short-circuit justification.** Formal 24h disposable soak (Plan 05-03 Task 2, Plan 05-04) skipped. Production exporter was already running when Phase 05 execution started. Live evidence (118 successful polls across 2 tokens, 0% 429 rate) supersedes throwaway soak evidence.
+
+**Operator sign-off:** Maksim Chugunov (shadeoflance@gmail.com), 2026-04-16.
 
 ## Evolution
 
