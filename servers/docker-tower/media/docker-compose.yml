@@ -1,0 +1,216 @@
+# Media stack on docker-tower (Tailnet 100.101.0.8).
+# Ported from legacy /opt/homestack/services/tower/docker-compose.yml on 2026-04-16.
+#
+# Canonical deploy path: /opt/homelab/servers/docker-tower/media/docker-compose.yml
+# Repo is source of truth — do NOT edit on host.
+#
+# Data paths (all external to this repo and /opt/homestack):
+#   /media/wdc          — movies/TV (3.7T disk)
+#   /media/sea          — music + downloads (3.7T disk)
+#   /media              — union mount of both (all *arr + jellyfin + filebrowser)
+#   /opt/docker-configs/shared/<svc>  — per-service persistent config
+#   /mnt/transcode      — tmpfs for jellyfin transcoding
+#
+# Secrets deploy (run on docker-tower before `docker compose up`):
+#   sops --decrypt --output-type dotenv /opt/homelab/secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
+#   chmod 600 /run/secrets/docker-tower.env
+#   # Extract navidrome-specific vars:
+#   grep '^ND_' /run/secrets/docker-tower.env > /run/secrets/navidrome.env
+#   chmod 600 /run/secrets/navidrome.env
+
+services:
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri  # HW transcode (Intel iGPU)
+    ports:
+      - "8096:8096"
+    volumes:
+      - /media:/media:ro
+      - /opt/docker-configs/shared/jellyfin:/config
+      - /mnt/transcode:/cache
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - JELLYFIN_FFmpeg__analyzeDuration=5000000
+      - JELLYFIN_FFmpeg__probeSize=5000000
+    networks:
+      - media
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    env_file:
+      - path: /run/secrets/navidrome.env  # ND_SPOTIFY_*, ND_LASTFM_* — from sops
+        required: true
+    environment:
+      - ND_SCANSCHEDULE=1m
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_MUSICFOLDER=/music
+      - ND_DATAFOLDER=/data
+      - ND_CONFIGFILE=/data/navidrome.toml
+      - ND_PORT=4533
+    volumes:
+      - /opt/docker-configs/shared/navidrome:/data
+      - /media/sea/music:/music
+    networks:
+      - media
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - /media:/srv
+      - /opt/docker-configs/shared/filebrowser:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - media
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    ports:
+      - "100.101.0.8:8088:8080"  # WebUI Tailnet-only
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/qbittorrent:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      - WEBUI_PORT=8080
+    networks:
+      - media
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: host  # needed for indexer port flexibility
+    restart: unless-stopped
+    volumes:
+      - /opt/docker-configs/shared/prowlarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    ports:
+      - "8989:8989"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/sonarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    ports:
+      - "7878:7878"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/radarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    ports:
+      - "8686:8686"
+    volumes:
+      - /media:/media
+      - /opt/docker-configs/shared/lidarr:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  slskd:
+    image: slskd/slskd:latest
+    container_name: slskd
+    restart: unless-stopped
+    ports:
+      - "5030:5030"       # HTTP WebUI
+      - "50300:50300"     # Soulseek peer port
+    volumes:
+      - /opt/docker-configs/shared/slskd:/app
+      - /media/sea/music/_downloads:/downloads
+      - /media/sea/music/_downloads/.incomplete:/incomplete
+      - /media/sea/music:/music
+    environment:
+      - SLSKD_REMOTE_CONFIGURATION=true
+      - SLSKD_UMASK=0022
+      - SLSKD_HTTP_PORT=5030
+      - SLSKD_SLSK_LISTEN_PORT=50300
+    networks:
+      - media
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    ports:
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Moscow
+    networks:
+      - media
+
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: dockerproxy
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "2375:2375"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - INFO=1
+      - POST=1
+      - BUILD=0
+      - SECRETS=0
+      - PRIVILEGED=0
+    networks:
+      - media
+
+networks:
+  media:
+    name: media
+    driver: bridge
