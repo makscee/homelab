@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: Claude Code Usage Monitor
-status: active
-stopped_at: roadmap created, awaiting phase 05 planning
-last_updated: "2026-04-16T12:00:00.000Z"
-last_activity: 2026-04-16 — v2.0 ROADMAP created, 7 phases (05-11), 33 REQ-IDs mapped
+milestone_name: — Claude Code Usage Monitor
+status: planning
+stopped_at: Phase 05 context gathered
+last_updated: "2026-04-16T13:30:34.995Z"
+last_activity: "2026-04-16 — v2.0 roadmap written: 7 phases, 33 requirements, 100% coverage"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -52,6 +52,7 @@ Progress: [          ] 0% (0/7 v2.0 phases)
 Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Validated status.
 
 **v2.0 pending ADR:**
+
 - **D-07 (Phase 05 output):** ToS interpretation + endpoint-scrape approach rationale — user considers monitoring-own-CC tokens in-scope; ADR must be written during Phase 05 feasibility work
 
 ### Open Blockers/Concerns (carried from v1.0)
@@ -77,6 +78,6 @@ Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Va
 
 ## Session Continuity
 
-Last session: 2026-04-16T12:00:00.000Z
-Stopped at: v2.0 ROADMAP created, awaiting `/gsd-plan-phase 05`
-Resume file: `.planning/ROADMAP.md` — Phase 05 details under "v2.0 — Claude Code Usage Monitor"
+Last session: 2026-04-16T13:30:34.974Z
+Stopped at: Phase 05 context gathered
+Resume file: .planning/phases/05-feasibility-gate/05-CONTEXT.md
