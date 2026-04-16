@@ -10,25 +10,32 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 ## Current State
 
-**v1.0 shipped 2026-04-15.** Foundations (SOPS+age, server inventories, dependency + topology maps), service documentation (Docker Compose with pinned tags, LXC configs, AmneziaWG, Tailscale provisioning), health monitoring (Prometheus + Alertmanager + cAdvisor + node-exporter across 6/6 hosts, Grafana dashboards, healthcheck CLI with promtool rule tests), and operator dashboard (Grafana + Alertmanager on mcow Tailnet-only; overview dashboard pinned as home; Telegram alert delivery proven E2E). All 18 active v1 requirements satisfied. See `.planning/milestones/v1.0-ROADMAP.md` and `.planning/MILESTONES.md`.
+**v1.0 shipped 2026-04-15.** Foundations, service docs, monitoring, operator dashboard — 18/18 active requirements. See `.planning/milestones/v1.0-ROADMAP.md`.
 
-## Current Milestone: v2.0 Claude Code Usage Monitor
+**v2.0 closed 2026-04-16 with pivot.** Feasibility gate PASSED formally (ADR D-07); exporter + Prometheus scraping running operationally on mcow. Phases 08-11 pivoted into v3.0. See `.planning/MILESTONE-CLOSE-v2.0.md`.
 
-**Goal:** Centralized SOPS-encrypted registry of 2-5 Claude Code OAuth tokens (personal + worker LXCs), with per-token weekly + 5-hour-session quota dashboard on mcow Grafana and Telegram alerts at configurable thresholds.
+## Current Milestone: v3.0 Unified Stack Migration (homelab scope)
+
+**Goal:** Build the homelab admin dashboard at `homelab.makscee.ru` using a new TypeScript/Next.js stack, consuming a shared `hub-shared/ui-kit` component library that will later be reused by VoidNet + Animaya (separate milestones in their own repos). Kill Grafana-as-dashboard.
 
 **Target features:**
-- SOPS token registry (`secrets/claude-tokens.sops.yaml`) — label, token, owner-host, subscription tier, added-on per entry
-- Multi-token Prometheus exporter on mcow — emits `claude_code_weekly_used_ratio{label}` + `claude_code_session_used_ratio{label}` + per-model breakdown if API exposes
-- Grafana dashboard with token-selector variable + per-token gauges + historical timeseries
-- Telegram alerts: `WeeklyQuotaHigh` (80%) / `WeeklyQuotaCritical` (95%), same tiers for session
-- 720h retention (matches v1.0 stack)
-- Ansible playbook for deploy (pattern from `ansible/playbooks/deploy-docker-tower.yml`)
+- Shared ui-kit repo (`hub-shared/ui-kit`) — design tokens, shadcn components extracted/adopted, referenced by homelab-admin as git submodule
+- Homelab admin Next.js app on mcow — Tailnet-only bind, auth via Tailscale identity headers, Caddy + LE DNS-01 via Cloudflare for `homelab.makscee.ru`
+- Global overview page — Prometheus HTTP client + Recharts, key homelab metrics in one view
+- Claude Code tokens page — SOPS registry CRUD + per-token graphs (consumes mcow:9101 exporter) + add/rotate flow; absorbs v2.0 Phases 08/11
+- VoidNet management page — consumes voidnet-api admin endpoints over Tailnet: users, credits, boxes
+- Proxmox ops — LXC restart/spawn/destroy, box info (ssh cmd + password view), token rotation, xterm.js web terminal
+- Alerts — Prometheus rules → Telegram (absorbs v2.0 Phase 09)
+- Ansible playbook for deploy + exporter hardening (rebind Tailnet-only, uid 65534 — v2.0 tech-debt)
+- Security review + launch
 
 **Key context:**
-- **Feasibility risk:** Anthropic has no documented OAuth-quota endpoint. Phase 1 research is non-optional; may fall back to local token counter if no stable endpoint.
-- **Subscription tier focus:** Max 20x ($100/mo, 5-hour sessions, weekly reset, ~20% Opus budget)
-- **Host:** exporter on mcow; scraped by docker-tower Prometheus over Tailnet
-- **Rotation:** manual (Shape A — edit SOPS + redeploy)
+- **Stack:** Bun + Next.js 15 + React 19 + TypeScript + Tailwind + shadcn/ui (see ADR D-08 when written)
+- **Auth:** Tailscale identity headers (`Tailscale-User-Login`), zero-config, no login form
+- **DNS/TLS:** public A-record `homelab.makscee.ru` → `100.101.0.9`, LE DNS-01 via Cloudflare API, ACL-restricted to Tailnet
+- **Repo layout:** hybrid — this repo hosts `apps/admin/` (or similar) Next.js app; `hub-shared/ui-kit` is a separate repo referenced via git submodule
+- **Scope boundary:** VoidNet + Animaya migrations are NOT part of this milestone — they are parallel milestones in their own repos that consume the ui-kit once stable
+- **Host:** runs on mcow alongside existing services, systemd-managed Bun runtime
 
 ## Deferred for Future Milestones
 
@@ -63,7 +70,12 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 ### Active
 
-(v2.0 requirements pending — will be captured in `.planning/REQUIREMENTS.md` after research phase.)
+(v3.0 requirements pending — captured in `.planning/REQUIREMENTS.md` after scope locked.)
+
+**v2.0 validated (carried forward):**
+- Direct Moscow ISP egress to api.anthropic.com confirmed (Phase 05)
+- OAuth endpoint-scrape approach for Claude Code quotas validated operationally (ADR D-07; 2 tokens live on mcow:9101)
+- Exporter + Prometheus scraping operational (Phases 06/07 short-circuit) — tech-debt carried to v3.0
 
 ### Out of Scope
 
@@ -72,7 +84,7 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 - Fully unattended zero-touch provisioning — Claude Code operates, human confirms
 - CI/CD pipelines — no reliable runner; Claude Code is the operator
 - Media content management — only the services that serve it
-- VoidNet / Animaya application code — tracked in their own workspace projects
+- VoidNet / Animaya backend application code — tracked in their own workspace projects (v3.0 homelab repo only hosts the admin dashboard that CONSUMES their APIs over Tailnet)
 - XRay/VLESS — no longer in use, only AmneziaVPN + Tailscale
 - Portainer — adds a service to maintain with no benefit
 
@@ -148,4 +160,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — v2.0 milestone started (Claude Code Usage Monitor)*
+*Last updated: 2026-04-16 — v2.0 closed with pivot; v3.0 milestone started (Unified Stack Migration — homelab admin dashboard)*

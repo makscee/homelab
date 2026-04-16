@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: — Claude Code Usage Monitor
-status: "PASSED on operational evidence — production exporter on mcow:9101 running with 2 tokens, 0% 429, 118 successful polls"
-stopped_at: Phase 05 quick probe complete — feasibility gate blocked on token scope
-last_updated: "2026-04-16T20:04:48.229Z"
-last_activity: 2026-04-16
+milestone: v3.0
+milestone_name: — Unified Stack Migration (homelab admin dashboard)
+status: planning
+stopped_at: v3.0 milestone initialized — defining requirements
+last_updated: "2026-04-16T20:30:00.000Z"
+last_activity: 2026-04-16 -- v2.0 closed with pivot; v3.0 started (Next.js admin dashboard for homelab.makscee.ru)
 progress:
-  total_phases: 7
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** Phase 05 — feasibility-gate
+**Current focus:** v3.0 Unified Stack Migration — defining requirements
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
-Status: PASSED on operational evidence — production exporter on mcow:9101 running with 2 tokens, 0% 429, 118 successful polls
-Last activity: 2026-04-16
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-16 -- v3.0 milestone started (Unified Stack Migration — homelab admin dashboard)
 
-Progress: [#         ] 14% (1/7 v2.0 phases)
+Progress: [          ] 0% — v3.0 planning
 
 ## Performance Metrics
 
