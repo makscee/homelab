@@ -19,15 +19,17 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
-### v2.0 — Claude Code Usage Monitor
+### v2.0 — Claude Code Usage Monitor (CLOSED WITH PIVOT 2026-04-16)
 
-- [x] **Phase 05: Feasibility Gate** — Go/no-go spike validating `api.anthropic.com/api/oauth/usage` is reachable, stable, and ToS-defensible before committing to implementation (completed 2026-04-16)
-- [ ] **Phase 06: Exporter Skeleton** — Single-token Python exporter runs on mcow emitting hardcoded gauge shape, proves container + network + secret-mount shape
-- [ ] **Phase 07: Prometheus Wiring** — docker-tower Prometheus scrapes the real exporter; per-token metrics flow end-to-end into TSDB
-- [ ] **Phase 08: SOPS Token Registry** — SOPS-encrypted multi-token registry replaces plaintext; Ansible playbook deploys the full path
-- [ ] **Phase 09: Alerts** — Telegram alerts fire on weekly/session thresholds + exporter health; E2E delivery proven against real rule fire
-- [ ] **Phase 10: Grafana Dashboard** — Operator-facing dashboard with token selector, gauges, historical timeseries, reset countdowns, exporter health
-- [ ] **Phase 11: Multi-token Scale-out** — 2-5 real tokens from personal + worker LXCs flow into the full stack; per-token failure isolation validated under load
+**Status:** Closed — pivoted to v3.0 Unified Stack Migration. See `.planning/MILESTONE-CLOSE-v2.0.md`.
+
+- [x] **Phase 05: Feasibility Gate** — COMPLETE formal (2026-04-16). GATE-PASSED on operational evidence, ADR D-07 locked.
+- [x] **Phase 06: Exporter Skeleton** — COMPLETE operational (2026-04-16). Python exporter running on mcow:9101 as systemd service. Tech-debt flagged for v3.0. See `06-SUMMARY-OPERATIONAL.md`.
+- [x] **Phase 07: Prometheus Wiring** — COMPLETE operational (2026-04-16). docker-tower Prometheus scraping mcow:9101, `up=1`. See `07-SUMMARY-OPERATIONAL.md`.
+- [~] **Phase 08: SOPS Token Registry** — SUPERSEDED by v3.0 Claude Tokens page (UI + SOPS backend in monorepo)
+- [~] **Phase 09: Alerts** — MOVED to v3.0 Phase 12
+- [~] **Phase 10: Grafana Dashboard** — KILLED. Replaced by v3.0 Next.js custom dashboard.
+- [~] **Phase 11: Multi-token Scale-out** — ABSORBED into v3.0 (token CRUD UI = scale-out path; 2 tokens already live operationally)
 
 ## Phase Details
 
