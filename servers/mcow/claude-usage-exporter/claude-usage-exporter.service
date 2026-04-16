@@ -1,0 +1,23 @@
+[Unit]
+Description=Claude Code Usage Exporter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/claude-usage-exporter/venv/bin/python3 /opt/claude-usage-exporter/exporter.py
+WorkingDirectory=/opt/claude-usage-exporter
+Restart=on-failure
+RestartSec=30
+User=root
+Group=root
+
+# Security
+ProtectSystem=strict
+ReadWritePaths=/opt/claude-usage-exporter
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

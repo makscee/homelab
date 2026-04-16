@@ -1,0 +1,12 @@
+{
+  "tokens": [
+    {
+      "name": "admin",
+      "token": "sk-ant-oat01-REPLACE_ME"
+    },
+    {
+      "name": "andrey",
+      "token": "sk-ant-oat01-REPLACE_ME"
+    }
+  ]
+}

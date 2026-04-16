@@ -30,6 +30,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=720h'
       - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
 
   # ── Grafana — DECOMMISSIONED 2026-04-15 ─────────────────────────────────────
   # Migrated to mcow (100.101.0.9:3000). See servers/mcow/docker-compose.monitoring.yml.

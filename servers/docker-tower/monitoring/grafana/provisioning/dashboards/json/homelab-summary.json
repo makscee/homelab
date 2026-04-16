@@ -1658,6 +1658,125 @@
         }
       ],
       "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "id": 600,
+      "title": "Claude Code Usage",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red", "value": 0.8 }
+          ]}
+        }, "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 26 },
+      "id": 601,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto", "textMode": "auto",
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto"
+      },
+      "title": "andrey — 5h",
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "expr": "claude_usage_5h_utilization{name=\"andrey\"}",
+        "legendFormat": "5h", "refId": "A"
+      }],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red", "value": 0.8 }
+          ]}
+        }, "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 26 },
+      "id": 602,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto", "textMode": "auto",
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto"
+      },
+      "title": "andrey — 7d",
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "expr": "claude_usage_7d_utilization{name=\"andrey\"}",
+        "legendFormat": "7d", "refId": "A"
+      }],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red", "value": 0.8 }
+          ]}
+        }, "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 26 },
+      "id": 603,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto", "textMode": "auto",
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto"
+      },
+      "title": "makscee — 5h",
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "expr": "claude_usage_5h_utilization{name=\"makscee\"}",
+        "legendFormat": "5h", "refId": "A"
+      }],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red", "value": 0.8 }
+          ]}
+        }, "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 26 },
+      "id": 604,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto", "textMode": "auto",
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto"
+      },
+      "title": "makscee — 7d",
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "expr": "claude_usage_7d_utilization{name=\"makscee\"}",
+        "legendFormat": "7d", "refId": "A"
+      }],
+      "type": "stat"
     }
   ],
   "refresh": "30s",

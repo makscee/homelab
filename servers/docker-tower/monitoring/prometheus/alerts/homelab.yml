@@ -87,6 +87,58 @@ groups:
         annotations:
           summary: "Alertmanager is unreachable from Prometheus"
 
+  - name: homelab.claude
+    interval: 1m
+    rules:
+
+      # --- 5h usage high ---
+      - alert: ClaudeUsage5hHigh
+        expr: claude_usage_5h_utilization > 0.8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude 5h usage {{ $value | humanizePercentage }} for {{ $labels.name }}"
+          description: "Token {{ $labels.name }} 5-hour utilization above 80% for 15 minutes."
+
+      - alert: ClaudeUsage5hCritical
+        expr: claude_usage_5h_utilization > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Claude 5h usage {{ $value | humanizePercentage }} for {{ $labels.name }}"
+          description: "Token {{ $labels.name }} 5-hour utilization above 95% — effectively rate-limited."
+
+      # --- 7d usage high ---
+      - alert: ClaudeUsage7dHigh
+        expr: claude_usage_7d_utilization > 0.8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude 7d usage {{ $value | humanizePercentage }} for {{ $labels.name }}"
+          description: "Token {{ $labels.name }} 7-day utilization above 80% for 15 minutes."
+
+      - alert: ClaudeUsage7dCritical
+        expr: claude_usage_7d_utilization > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Claude 7d usage {{ $value | humanizePercentage }} for {{ $labels.name }}"
+          description: "Token {{ $labels.name }} 7-day utilization above 95% — effectively rate-limited."
+
+      # --- Exporter health ---
+      - alert: ClaudeExporterDown
+        expr: up{job="claude-usage"} == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude usage exporter unreachable"
+          description: "Prometheus cannot scrape mcow:9101 for 10 minutes."
+
 # ---------------------------------------------------------------------------
 # DEFERRED: Certificate expiry alert
 # ---------------------------------------------------------------------------

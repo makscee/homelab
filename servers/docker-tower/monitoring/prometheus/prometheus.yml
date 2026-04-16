@@ -35,3 +35,9 @@ scrape_configs:
       - files:
           - /etc/prometheus/targets/cadvisor.yml
         refresh_interval: 5m
+
+  # Claude Code usage exporter on mcow
+  - job_name: 'claude-usage'
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['100.101.0.9:9101']
