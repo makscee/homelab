@@ -6,3 +6,18 @@ node_exporter_web_listen_address: "0.0.0.0:9100"
 #   - tower (Proxmox bare-metal): PVE firewall is disabled (verified 2026-04-14)
 #   - All scraping done from docker-tower (100.101.0.8) over Tailnet mesh
 # If per-host override is needed, add to host_vars/<host>.yml
+
+# ── v3.0 Phase 12 — homelab-admin dashboard on mcow ─────────────────────
+# Port 3847 chosen because Docker (Grafana stack) already owns 3000 on mcow.
+# App binds 127.0.0.1:3847 — Caddy reverse-proxies from homelab.makscee.ru (Tailnet-only via Tailscale ACL).
+homelab_admin_port: 3847
+homelab_admin_domain: "homelab.makscee.ru"
+homelab_admin_install_dir: "/opt/homelab-admin/app"
+homelab_admin_env_dir: "/etc/homelab-admin"
+homelab_admin_service_user: "homelab-admin"
+homelab_admin_service_group: "homelab-admin"
+
+# Bun runtime — pinned. Installed to /usr/local/bin/bun by Ansible task in Plan 09.
+# NOTE: bump this deliberately only when testing a newer Bun on mcow confirms
+# no native-module regressions (PITFALLS P-05). Latest stable at plan authoring: 1.1.38.
+bun_version: "1.1.38"
