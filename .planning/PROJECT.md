@@ -12,16 +12,31 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 **v1.0 shipped 2026-04-15.** Foundations (SOPS+age, server inventories, dependency + topology maps), service documentation (Docker Compose with pinned tags, LXC configs, AmneziaWG, Tailscale provisioning), health monitoring (Prometheus + Alertmanager + cAdvisor + node-exporter across 6/6 hosts, Grafana dashboards, healthcheck CLI with promtool rule tests), and operator dashboard (Grafana + Alertmanager on mcow Tailnet-only; overview dashboard pinned as home; Telegram alert delivery proven E2E). All 18 active v1 requirements satisfied. See `.planning/milestones/v1.0-ROADMAP.md` and `.planning/MILESTONES.md`.
 
-## Next Milestone Goals
+## Current Milestone: v2.0 Claude Code Usage Monitor
 
-**v2.0 TBD** — start with `/gsd-new-milestone`.
+**Goal:** Centralized SOPS-encrypted registry of 2-5 Claude Code OAuth tokens (personal + worker LXCs), with per-token weekly + 5-hour-session quota dashboard on mcow Grafana and Telegram alerts at configurable thresholds.
 
-Candidate themes (deferred from v1.0):
+**Target features:**
+- SOPS token registry (`secrets/claude-tokens.sops.yaml`) — label, token, owner-host, subscription tier, added-on per entry
+- Multi-token Prometheus exporter on mcow — emits `claude_code_weekly_used_ratio{label}` + `claude_code_session_used_ratio{label}` + per-model breakdown if API exposes
+- Grafana dashboard with token-selector variable + per-token gauges + historical timeseries
+- Telegram alerts: `WeeklyQuotaHigh` (80%) / `WeeklyQuotaCritical` (95%), same tiers for session
+- 720h retention (matches v1.0 stack)
+- Ansible playbook for deploy (pattern from `ansible/playbooks/deploy-docker-tower.yml`)
 
-- Disaster Recovery — rebuild scripts, backup/restore procedures, AI-readable runbooks (DR-01..04)
-- Tech-debt cleanup — DiskUsageCritical root cause, VALIDATION.md retro-flip, 03-VERIFICATION.md backfill, D-06 ADR update, nether secrets cleanup, docker-tower volume + stale compose path cleanup (scheduled 2026-04-22)
-- Drift detection (MON-04)
-- Tailscale ACL in repo (SEC-03)
+**Key context:**
+- **Feasibility risk:** Anthropic has no documented OAuth-quota endpoint. Phase 1 research is non-optional; may fall back to local token counter if no stable endpoint.
+- **Subscription tier focus:** Max 20x ($100/mo, 5-hour sessions, weekly reset, ~20% Opus budget)
+- **Host:** exporter on mcow; scraped by docker-tower Prometheus over Tailnet
+- **Rotation:** manual (Shape A — edit SOPS + redeploy)
+
+## Deferred for Future Milestones
+
+- **Disaster Recovery** — rebuild scripts, backup/restore, AI-readable runbooks (DR-01..04)
+- **Tech-debt cleanup** — VALIDATION.md retro-flip, 03-VERIFICATION.md backfill, D-06 ADR update, nether secrets cleanup, docker-tower volume cleanup (2026-04-22)
+- **Drift detection** (MON-04) — auto-catch `homestack → homelab`-style path drift (root-cause partially addressed out-of-band 2026-04-16)
+- **Tailscale ACL in repo** (SEC-03)
+- **Token distribution** (Shape B) — ansible-push tokens to worker hosts
 
 ## Requirements
 
@@ -48,7 +63,7 @@ Candidate themes (deferred from v1.0):
 
 ### Active
 
-(None — pending v2.0 scoping via `/gsd-new-milestone`.)
+(v2.0 requirements pending — will be captured in `.planning/REQUIREMENTS.md` after research phase.)
 
 ### Out of Scope
 
@@ -110,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 after v1.0 milestone*
+*Last updated: 2026-04-16 — v2.0 milestone started (Claude Code Usage Monitor)*
