@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
-status: planning
+status: executing
 stopped_at: Phase 05 context gathered
-last_updated: "2026-04-16T13:30:34.995Z"
-last_activity: "2026-04-16 — v2.0 roadmap written: 7 phases, 33 requirements, 100% coverage"
+last_updated: "2026-04-16T14:20:00.000Z"
+last_activity: 2026-04-16 -- Quick probe 260416-nyb: /api/oauth/usage feasibility BLOCKED by token scope
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** v2.0 — Claude Code Usage Monitor. Roadmap created. Phase 05 is a feasibility go/no-go gate — validate `api.anthropic.com/api/oauth/usage` is reachable from mcow via nether App Connector, survives 300s polling with <5% 429 rate, and schema matches expectations before committing to implementation work.
+**Current focus:** Phase 05 — feasibility-gate
 
 ## Current Position
 
-Phase: 05 — Feasibility Gate (not started)
-Plan: — (awaiting `/gsd-plan-phase 05`)
-Status: ROADMAP created, awaiting phase planning
-Last activity: 2026-04-16 — v2.0 roadmap written: 7 phases, 33 requirements, 100% coverage
+Phase: 05 (feasibility-gate) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 05
+Last activity: 2026-04-16 -- Phase 05 execution started
 
 Progress: [          ] 0% (0/7 v2.0 phases)
 
@@ -76,8 +76,14 @@ Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Va
 - 2026-04-22: `docker volume rm monitoring_grafana-data monitoring_alertmanager-data` on docker-tower
 - v2.0 Phase 05 first action: `curl -m 8 -sSIL https://api.anthropic.com/` from mcow to validate Moscow egress path before anything else
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260416-nyb | Feasibility probe: Claude Code OAuth token usage stats on mcow — BLOCKED (token lacks `user:profile` scope; mcow WAF geo-blocked) | 2026-04-16 | (pending) | [260416-nyb-feasibility-probe-claude-code-oauth-toke](./quick/260416-nyb-feasibility-probe-claude-code-oauth-toke/) |
+
 ## Session Continuity
 
-Last session: 2026-04-16T13:30:34.974Z
-Stopped at: Phase 05 context gathered
-Resume file: .planning/phases/05-feasibility-gate/05-CONTEXT.md
+Last session: 2026-04-16T14:20:00.000Z
+Stopped at: Phase 05 quick probe complete — feasibility gate blocked on token scope
+Resume file: .planning/quick/260416-nyb-feasibility-probe-claude-code-oauth-toke/260416-nyb-SUMMARY.md
