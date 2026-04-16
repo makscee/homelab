@@ -1,0 +1,92 @@
+---
+# Deploy media + monitoring stacks on docker-tower from /opt/homelab checkout.
+# Idempotent: safe to run repeatedly. Pulls repo, refreshes navidrome secret,
+# `docker compose up -d`, hot-reloads Prometheus if repo changed.
+#
+# Run:
+#   cd ansible && ansible-playbook playbooks/deploy-docker-tower.yml
+#
+# Prereqs on controller:
+#   - sops + age installed (age key at ~/.config/sops/age/keys.txt)
+#   - SSH access to root@100.101.0.8 (Tailnet)
+
+- name: Deploy docker-tower stack (media + monitoring)
+  hosts: docker-tower
+  gather_facts: false
+  vars:
+    homelab_repo: https://github.com/makscee/homelab.git
+    homelab_path: /opt/homelab
+    stack_path: "{{ homelab_path }}/servers/docker-tower"
+    sops_file: "{{ playbook_dir }}/../../secrets/docker-tower.sops.yaml"
+
+  tasks:
+
+    # ── Secrets: decrypt on controller, push file to host ───────────────────
+    - name: Decrypt navidrome env vars locally
+      delegate_to: localhost
+      ansible.builtin.shell:
+        cmd: "sops --decrypt --output-type dotenv {{ sops_file }} | grep '^ND_'"
+      register: nav_env
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Ensure /run/secrets exists on host
+      ansible.builtin.file:
+        path: /run/secrets
+        state: directory
+        mode: '0755'
+
+    - name: Write /run/secrets/navidrome.env on host
+      ansible.builtin.copy:
+        content: "{{ nav_env.stdout }}\n"
+        dest: /run/secrets/navidrome.env
+        mode: '0600'
+        owner: root
+        group: root
+      no_log: true
+      register: nav_secret
+
+    # ── Repo: git pull ──────────────────────────────────────────────────────
+    - name: Pull latest from homelab repo
+      ansible.builtin.git:
+        repo: "{{ homelab_repo }}"
+        dest: "{{ homelab_path }}"
+        version: main
+        update: true
+      register: git_result
+
+    # ── Compose up ──────────────────────────────────────────────────────────
+    - name: Compose up — media stack
+      ansible.builtin.command:
+        cmd: docker compose -f media/docker-compose.yml up -d --remove-orphans
+        chdir: "{{ stack_path }}"
+      register: media_up
+      changed_when: "'Started' in media_up.stderr or 'Recreated' in media_up.stderr or 'Created' in media_up.stderr"
+
+    - name: Compose up — monitoring stack
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
+        chdir: "{{ stack_path }}"
+      register: monitoring_up
+      changed_when: "'Started' in monitoring_up.stderr or 'Recreated' in monitoring_up.stderr or 'Created' in monitoring_up.stderr"
+
+    # ── Hot-reload Prometheus if repo changed (rules/targets/scrape config) ─
+    - name: Reload Prometheus config
+      ansible.builtin.uri:
+        url: http://localhost:9090/-/reload
+        method: POST
+        status_code: 200
+      when: git_result.changed
+
+    # ── Smoke checks ────────────────────────────────────────────────────────
+    - name: Probe Prometheus rules endpoint
+      ansible.builtin.uri:
+        url: http://localhost:9090/api/v1/rules
+        return_content: false
+        status_code: 200
+
+    - name: Probe Jellyfin health
+      ansible.builtin.uri:
+        url: http://localhost:8096/health
+        status_code: 200
