@@ -63,9 +63,12 @@ Progress: [          ] 0% — v3.0 not started
 ### Pending Todos
 
 - 2026-04-22: docker-tower volume cleanup (grafana + alertmanager data volumes)
-- Before Phase 12: verify Cloudflare API token exists in secrets/ (zone:dns:edit for makscee.ru)
-- Before Phase 12: confirm tailscale-nginx-auth socket path on mcow (`/run/tailscale/` or `/var/run/tailscale/`)
-- Before Phase 12: confirm mcow LXC privilege level (privileged/unprivileged)
+
+### Resolved Pre-Phase-12 Todos (closed 2026-04-17 by Plan 12-03)
+
+- ~~Before Phase 12: verify Cloudflare API token exists~~ — OBSOLETE. Phase 12 CONTEXT.md D-12-12 switched from LE DNS-01 to LE HTTP-01 (mirrors `vibe.makscee.ru`); no Cloudflare API integration needed.
+- ~~Before Phase 12: confirm tailscale-nginx-auth socket path on mcow~~ — OBSOLETE. Phase 12 CONTEXT.md D-12-06 switched from Tailscale header auth to GitHub OAuth (Auth.js v5); tailscale-nginx-auth not used.
+- ~~Before Phase 12: confirm mcow LXC privilege level~~ — RESOLVED. mcow is KVM (not LXC). See `servers/mcow/lxc-probe.md`; strict hardening block wired into Plan 12-07.
 
 ## Session Continuity
 
