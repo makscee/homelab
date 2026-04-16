@@ -1,72 +1,115 @@
-# Research Summary — Homelab Infrastructure-as-Code
+# v3.0 Research Summary
+
+Synthesis of STACK.md + FEATURES.md + ARCHITECTURE.md + PITFALLS.md for v3.0 Unified Stack Migration (homelab admin dashboard scope).
 
 ## Executive Summary
 
-Reproducibility-first IaC repository for a 6-server homelab (Moscow + Netherlands) with Proxmox LXCs, Docker Compose stacks, and Tailscale mesh. Claude Code is the primary operator.
+The v3.0 homelab admin dashboard is an **ops-focused, mutation-capable internal tool** — not a visualization dashboard. It proxies writes to four backend systems (SOPS registry, VoidNet API, Proxmox REST API, Alertmanager) and reads from two metric sources (Prometheus, claude-usage-exporter). No equivalent self-hosted tool (Grafana, Homarr, Beszel) covers this combination, justifying a custom build.
 
-## Recommended Stack
+Stack is fully locked: **Bun + Next.js 15 + React 19 + TypeScript + Tailwind + shadcn/ui + Caddy**, with `bun:sqlite` + Drizzle for the audit log. Recommended build order is dependency-driven: infrastructure (OS user, Caddy, DNS-01 TLS, Tailscale nginx-auth socket) must land before a single authenticated page works.
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Configuration management | Ansible 2.17+ | No cloud resources, no state files needed; handles LXC + Docker in one tool |
-| Docker module | `community.docker` v2 (`docker_compose_v2`) | V1 module removed in collection 4.0.0 |
-| Proxmox module | `community.proxmox` | New dedicated collection; replaces `community.general.proxmox` |
-| Secrets | SOPS + age | Encrypts in-place in YAML/ENV; no external service; fits hub-level architecture |
-| Tailscale | `artis3n.tailscale` role | Handles node provisioning |
-| Monitoring | Prometheus + Grafana + node-exporter | Docker Compose deployed; cAdvisor for container metrics |
-| NOT using | Terraform, Kubernetes, Portainer | Overkill at 6-node scale with AI operator |
+## Stack (Bun-Native)
 
-## Table Stakes Features
+| Layer | Package | Version | Rationale |
+|-------|---------|---------|-----------|
+| Runtime | Bun | latest stable 2026-04 | native TS, integrated test runner |
+| Framework | Next.js | 15.2.4 (pinned CVE-2025-66478 patched) | App Router, RSC, Turbopack |
+| UI | React 19.2.5 + shadcn/ui + Tailwind | — | owned-source components AI edits directly |
+| DB | Drizzle + bun:sqlite | 0.45.2 | avoid better-sqlite3 native build breakage |
+| Charts | Recharts | 3.8.1 | shadcn blocks built on Recharts |
+| Telegram | grammY | 1.42.0 | Bun-native, HTTP-only for alerts |
+| Validation | Zod | pin 3.24.x | Zod 4 + shadcn forms needs spike |
+| Proxy/TLS | Caddy + caddy-dns/cloudflare | xcaddy build | single binary, DNS-01 native |
+| Prometheus query | raw fetch + PromQL | — | prometheus-query npm unverified on Bun |
+| SSH | ssh2 (npm) | — | fallback if node-pty LXC spike fails |
+| Web terminal | xterm.js + ssh2/node-pty | — | see P-04 spike |
+| SOPS writes | spawnSync('sops', ...) | CLI subprocess | sops-age npm is decrypt-only |
 
-1. Server inventory with hardware specs, roles, IPs
-2. Docker Compose files per service (pinned image tags)
-3. Per-server rebuild scripts
-4. Proxmox LXC configuration dumps
-5. Tailscale mesh setup
-6. VPN configuration (nether — AmneziaWG, XRay/VLESS)
-7. Secrets reference model (SOPS + age at hub level)
-8. Backup/restore procedures for stateful data
-9. AI-readable runbooks (exact commands, hostnames, expected outputs)
-10. Service dependency map
+## Feature Table Stakes (v3.0 must-have)
 
-## Key Architecture Decisions
+**Global Overview** — host stats (CPU/mem/disk/containers) + Claude usage summary + alert count + 30s SWR refresh
 
-- **Hybrid directory layout**: Primary axis by server (`hosts/<server>/`), secondary by service type; `inventory/` as cross-host ground truth
-- **6 top-level directories**: `inventory/`, `hosts/`, `network/`, `monitoring/`, `runbooks/`, `scripts/`
-- **Secrets at hub level**: Only stubs/variable names in homelab repo
-- **AI-operator runbook format**: Numbered steps, explicit hostnames, expected outputs, defined stop conditions
+**Claude Tokens** (absorbs v2.0 Phase 08+11) — SOPS registry CRUD + per-token gauges + add/rotate/delete/rename + masked password UX (mirror VoidNet)
 
-## Critical Pitfalls
+**VoidNet Management** (proxies voidnet-api) — user list + credits adjust + ban/unban + rename + box list w/ ssh+password (masked) + re-provision
 
-1. **Secrets leakage** — Must establish `.gitignore` and SOPS pattern before any config is committed
-2. **Repo-vs-reality drift** — Running containers diverge from committed Compose files via manual hotfixes
-3. **Stateful data ≠ infrastructure** — Jellyfin metadata, *arr DBs, VoidNet SQLite need explicit backup paths
-4. **LXC config blind spot** — Proxmox LXC settings not captured by Docker Compose; need `pct config` dumps
-5. **Runbook ambiguity** — Instructions that humans interpret with judgment become literal commands for AI operator
-6. **nether is SPOF** — Sole Netherlands VPN node; needs Phase 1 priority
+**Proxmox Ops** — LXC list + start/`/shutdown` (graceful default) / restart + info panel + token rotation flow
 
-## Suggested Phase Order
+**Cross-cutting:** audit log (SQLite row per mutation + viewer) + Tailscale identity auth + read-only Alertmanager consumer
 
-1. **Inventory & Foundations** — secrets pattern, LXC configs, nether VPN, node-exporter on all hosts
-2. **Service Documentation** — Docker Compose files, per-service BACKUP.md for stateful volumes
-3. **Provisioning & Runbooks** — Ansible playbooks, deploy scripts, AI-readable runbooks
-4. **Monitoring Stack** — Prometheus + Grafana + cAdvisor after hosts are stable
-5. **Operational Polish** — drift detection, topology diagram, update runbook, deployment logs
+## Differentiators (if time)
 
-## Research Confidence
+xterm.js web terminal for SSH-in (XL, last phase), in-UI token rotation, per-box live Claude logs, settings page
 
-| Area | Level |
-|------|-------|
-| Ansible as primary tool | HIGH |
-| SOPS + age for secrets | HIGH |
-| Secrets/drift/stateful pitfalls | HIGH |
-| Directory structure | MEDIUM |
-| community.proxmox maturity | MEDIUM |
-| AI-operator runbook patterns | LOW (emerging) |
+## Anti-features (explicitly OUT)
 
-## Open Questions
+Grafana-equivalent ad-hoc query builder, multi-tenant roles, backup mgmt, VoidNet portal features
 
-- Monitoring host placement: which server runs Grafana/Prometheus?
-- Tailscale ACL policy: managed in repo or externally?
-- Backup target destination: not yet specified
-- nether VPN config paths: verify against running server
+## Critical Path Build Order
+
+```
+[Phase 1: Infra Foundation]       blocks everything
+    OS user, Caddy xcaddy, LE DNS-01, nginx-auth socket,
+    Next.js scaffold 127.0.0.1, middleware auth, shadcn init
+
+[Phase 2: Global Overview]        validates stack (reads-only)
+    Prometheus proxy → Recharts
+
+[Phase 3: Claude Tokens]          highest operator value
+    SOPS write spike + Zod 4 spike (blocking)
+    Registry CRUD, per-token gauges
+
+[Phase 4: Audit Log]              MUST land before phases 5-7 writes
+    SQLite table + middleware + viewer
+
+[Phase 5: VoidNet]      ─┐
+[Phase 6: Proxmox]       ├─ parallel-safe after Phase 4
+[Phase 7: Alerts]       ─┘
+
+[Phase 8: Web Terminal]           XL, highest risk, last
+    node-pty LXC spike (blocking), xterm.js + ssh2 PTY relay
+
+[Phase 9: Security + Deploy Hardening]
+    Exporter rebind (v2.0 tech-debt), bun audit, bundle analysis,
+    header-spoofing integration test, cert renewal alerts
+```
+
+## Top Pitfalls
+
+**HIGH — must address in Phase 1:**
+- **P-01 CVE-2025-66478** — Next.js RSC RCE, exploited. Pin to patched 15.x.
+- **P-02 Tailscale header spoofing** — bind 127.0.0.1 + `tailscale whois` re-verification on mutations.
+- **P-04 node-pty in LXC** — feasibility spike before any terminal code.
+- **P-05 Bun native module compat** — `bun install` on mcow before committing.
+- **P-06 Proxmox TLS** — CA cert pinning, NOT `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+**AI-agent specific (P-16 to P-20):**
+- Secret leakage via RSC → client (server-only lint rule, "use server" discipline)
+- SQL injection via raw Drizzle (prepared statements enforced)
+- Next.js 15 SSR/CSR confusion (docs in CLAUDE.md)
+- Proxmox `/stop` (hard-kill) vs `/shutdown` (graceful) confusion — mcow runs SQLite
+
+## Things Already Decided — DO NOT Re-research
+
+Caddy, Drizzle+bun:sqlite, grammY, systemd, bun test + Playwright, Recharts via shadcn, raw fetch for Proxmox, ssh2 for terminal, Tailscale identity via nginx-auth socket, LE DNS-01 (not HTTP-01), hybrid repo (this repo has `apps/admin/`, `hub-shared/ui-kit` is separate submodule)
+
+## Open Questions — Need Operator Input Before Phases
+
+1. **Cloudflare API token** — exists in `secrets/`? (zone:dns:edit for `makscee.ru`)
+2. **tailscale-nginx-auth socket path** — `/run/tailscale/` or `/var/run/tailscale/`? (`ls` on mcow)
+3. **mcow LXC privilege** — privileged/unprivileged? (`lxc-info -n 200` on tower)
+4. **voidnet-api admin surface** — JSON API or HTMX-HTML only?
+5. **voidnet-api port** on mcow?
+6. **hub-shared/ui-kit** — scaffold in Phase 1 or defer?
+7. **Proxmox API token** — one-time manual creation with `dashboard-operator` role
+
+## Confidence
+
+MVP phases (1-7): **HIGH**. Web terminal (8): **MEDIUM** pending LXC PTY spike. Security (9): **HIGH**.
+
+## Phase Count
+
+**9 phases** recommended. Maps to build order above. Each feature phase has one backend dependency; parallel-safe after Phase 4.
+
+---
+*Synthesized 2026-04-16 from 4 parallel researchers.*
