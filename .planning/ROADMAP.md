@@ -3,7 +3,8 @@
 ## Milestones
 
 - **v1.0 Homelab IaC** — Phases 1-4 (shipped 2026-04-15) — see `.planning/milestones/v1.0-ROADMAP.md`
-- **v2.0 Claude Code Usage Monitor** — Phases 05-11 (active) — see below
+- **v2.0 Claude Code Usage Monitor** — Phases 05-11 (closed with pivot 2026-04-16) — see below
+- **v3.0 Unified Stack Migration** — Phases 12-19 (active) — homelab admin dashboard at `homelab.makscee.ru`
 
 ## Phases
 
@@ -27,9 +28,32 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 06: Exporter Skeleton** — COMPLETE operational (2026-04-16). Python exporter running on mcow:9101 as systemd service. Tech-debt flagged for v3.0. See `06-SUMMARY-OPERATIONAL.md`.
 - [x] **Phase 07: Prometheus Wiring** — COMPLETE operational (2026-04-16). docker-tower Prometheus scraping mcow:9101, `up=1`. See `07-SUMMARY-OPERATIONAL.md`.
 - [~] **Phase 08: SOPS Token Registry** — SUPERSEDED by v3.0 Claude Tokens page (UI + SOPS backend in monorepo)
-- [~] **Phase 09: Alerts** — MOVED to v3.0 Phase 12
+- [~] **Phase 09: Alerts** — MOVED to v3.0 Phase 17
 - [~] **Phase 10: Grafana Dashboard** — KILLED. Replaced by v3.0 Next.js custom dashboard.
 - [~] **Phase 11: Multi-token Scale-out** — ABSORBED into v3.0 (token CRUD UI = scale-out path; 2 tokens already live operationally)
+
+### v3.0 — Unified Stack Migration (Active)
+
+**Milestone Goal:** Build the homelab admin dashboard at `homelab.makscee.ru` — a mutation-capable internal tool that proxies writes to SOPS, VoidNet API, Proxmox REST API, and Alertmanager, while reading from Prometheus + claude-usage-exporter. Kill Grafana-as-dashboard.
+
+**Dependency graph:**
+```
+Phase 12 (Infra Foundation) → all downstream phases
+Phase 13 (Tokens) → depends on Phase 12
+Phase 14 (Overview + Audit Log) → depends on Phase 13
+Phases 15, 16, 17 (VoidNet, Proxmox, Alerts) → parallel-safe after Phase 14
+Phase 18 (Web Terminal) → depends on Phase 16 (needs Proxmox LXC context)
+Phase 19 (Security + Launch) → depends on all others
+```
+
+- [ ] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers
+- [ ] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt)
+- [ ] **Phase 14: Global Overview + Audit Log** - First dashboard page with Prometheus data, audit log infrastructure for all writes
+- [ ] **Phase 15: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 14)
+- [ ] **Phase 16: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 14)
+- [ ] **Phase 17: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 14)
+- [ ] **Phase 18: Web Terminal** - xterm.js + ssh2 PTY relay; node-pty feasibility spike required first
+- [ ] **Phase 19: Security Review + Launch** - Hardening, audit, ui-kit extraction finalization, launch checklist
 
 ## Phase Details
 
@@ -118,18 +142,187 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: TBD
 **UI hint**: no
 
+---
+
+### Phase 12: Infra Foundation
+
+**Goal**: The admin dashboard skeleton is deployed on mcow, reachable at `homelab.makscee.ru` over Tailnet only, secured by GitHub OAuth, with hardened HTTP headers and all secrets in SOPS — every subsequent phase can ship a page into this shell without touching infrastructure.
+
+**Depends on**: Phase 11 (v2.0 closed)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-06, INFRA-07, INFRA-08, UI-03, UI-04, SEC-02, SEC-04, SEC-05, SEC-06, SEC-07
+
+**Success Criteria** (what must be TRUE):
+  1. Operator can open `https://homelab.makscee.ru` in a Tailnet browser, sign in with GitHub (`makscee`), and land on an authenticated shell with sidebar nav and top bar — a non-allowlisted GitHub account receives a 403 page
+  2. TLS certificate is auto-issued via Caddy LE DNS-01 (Cloudflare API); `curl -v https://homelab.makscee.ru` shows a valid LE cert with ≥30 days remaining
+  3. `bun audit` reports zero HIGH/CRITICAL vulnerabilities; Next.js version is pinned to ≥15.2.4 (CVE-2025-66478 patched) and documented in `apps/admin/package.json`
+  4. Response headers include `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY` — verifiable with `curl -I`
+  5. `ansible-playbook ansible/playbooks/deploy-homelab-admin.yml` completes idempotently from a clean controller; second run shows all tasks `ok`
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 13: Claude Tokens Page
+
+**Goal**: Operator can manage all Claude Code tokens from the web UI — view live utilization gauges, add/rotate/disable/delete tokens via SOPS backend writes — and the v2.0 exporter tech-debt is paid (Tailnet-only bind, uid 65534).
+
+**Rationale for early placement:** Tokens page delivers the highest operator value (replaces manual SOPS edits), absorbs v2.0 Phases 08 + 11, and closes the SEC-03 tech-debt before it drifts further. SOPS write spike + Zod 4 compatibility check are first tasks of this phase (see PITFALLS.md P-03).
+
+**Depends on**: Phase 12
+**Requirements**: TOKEN-01, TOKEN-02, TOKEN-03, TOKEN-04, TOKEN-05, TOKEN-06, TOKEN-07, SEC-03
+
+**Success Criteria** (what must be TRUE):
+  1. Page `/tokens` loads the encrypted token registry and displays each entry's label, owner host, tier, added date, and enabled state — works even when SOPS write path is unavailable (degraded mode disables CRUD, shows existing entries)
+  2. Operator can add a new `sk-ant-oat01-*` token via the form; token is never reflected in HTML responses, never written to logs, and appears in the SOPS registry on the next page load with live gauges populated from Prometheus
+  3. Rotate, disable/enable, rename, and delete operations each complete without page reload and each produce an audit log row (readable in the audit log once Phase 14 ships)
+  4. Per-token 7-day history chart (Recharts) renders from Prometheus range query with a visible timeseries — no "No data" empty state when exporter is healthy
+  5. `curl http://100.101.0.9:9101/metrics` from outside Tailnet fails; `curl http://100.101.0.9:9101/metrics` from a Tailnet host returns metrics; exporter process runs as uid 65534
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 14: Global Overview + Audit Log
+
+**Goal**: The `/` dashboard page shows a live snapshot of all 6 Tailnet hosts' health and Claude usage summary, and the audit log infrastructure is in place — every mutation route in any subsequent phase can be wrapped with one import.
+
+**Rationale:** Overview validates the full Prometheus read stack (SWR + server-side Route Handler + Recharts) before any write phases build on it. Audit log infrastructure MUST land in this phase so Phases 15-17 can ship audit-logged writes on day one.
+
+**Depends on**: Phase 13
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, INFRA-05
+
+**Success Criteria** (what must be TRUE):
+  1. Page `/` shows a stat row per host (6 total) with CPU %, memory %, disk %, and container count — data is live from Prometheus, not hardcoded
+  2. Claude usage summary (per-token 5h + 7d utilization gauges) renders on the overview with a link to `/tokens`; alert firing count with severity breakdown appears with a link to `/alerts`
+  3. All data auto-refreshes every 30s via SWR; a simulated Prometheus outage shows a stale/error state rather than a crash or blank page
+  4. Prometheus credentials and URLs are absent from any client-side bundle (verify via browser DevTools network tab — no direct Prometheus calls from the browser)
+  5. SQLite `audit_log` table exists; a manual test mutation produces a row with `user`, `action`, `target`, `payload_json`, and `created_at` fields correctly populated
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 15: VoidNet Management
+
+**Goal**: Operator can manage VoidNet users and Claude boxes from the admin dashboard — view user list, adjust credits, ban/unban, and inspect per-user boxes with masked SSH credentials — all writes audit-logged.
+
+**Depends on**: Phase 14
+**Note:** This phase is **parallel-safe with Phases 16 and 17** — all three can execute concurrently after Phase 14 completes. VoidNet JSON admin endpoints must exist on `voidnet-api` before this phase ships (parallel milestone in voidnet repo).
+**Requirements**: VOIDNET-01, VOIDNET-02, VOIDNET-03, VOIDNET-04, VOIDNET-05, VOIDNET-06, VOIDNET-07, VOIDNET-08
+
+**Success Criteria** (what must be TRUE):
+  1. Page `/voidnet/users` loads a paginated, searchable list of users from `voidnet-api` admin JSON endpoints — search by Telegram handle returns filtered results in <500ms
+  2. Operator can open a user detail view showing credits history, active boxes, service list, and last seen — each Claude box row shows ssh command + masked password with click-to-reveal
+  3. Credit adjustment (+/- with reason) and ban/unban operations each produce an audit log row; the voidnet-api state reflects the change on the next page load
+  4. Re-provision trigger on a box polls until completion and updates the box status in the UI — no manual refresh required
+  5. All voidnet-api calls use the `X-Admin-Token` header sourced from SOPS; a request without the correct header is rejected by voidnet-api (verifiable in network tab)
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 16: Proxmox Ops
+
+**Goal**: Operator can manage LXC containers on tower from the admin dashboard — view all containers, start/shutdown/restart with graceful default, spawn new containers, and inspect config — all destructive operations guarded and audit-logged.
+
+**Depends on**: Phase 14
+**Note:** This phase is **parallel-safe with Phases 15 and 17** — all three can execute concurrently after Phase 14 completes.
+**Requirements**: PROXMOX-01, PROXMOX-02, PROXMOX-03, PROXMOX-04, PROXMOX-05, PROXMOX-06
+
+**Success Criteria** (what must be TRUE):
+  1. Page `/proxmox` lists all LXCs on tower with vmid, hostname, status, cpu/mem/disk config, and uptime — data sourced from Proxmox REST API, not hardcoded
+  2. Start, Shutdown (graceful, default), Restart, and Hard-stop operations each work; Hard-stop requires a confirmation guard and produces an audit log row; Shutdown uses Proxmox `/shutdown` endpoint (not `/stop`)
+  3. Spawn-new-LXC form completes end-to-end — operator fills vmid/hostname/template/resources, Proxmox task-id is polled, progress shown, new container appears in the list on completion
+  4. Destroy LXC requires typed-hostname confirmation before executing; operation is audit-logged; destroyed container disappears from the list
+  5. Proxmox API calls use a token with `dashboard-operator` role (scoped to `VM.PowerMgmt`, `VM.Audit`, `Datastore.Audit`); CA cert is pinned from SOPS — `NODE_TLS_REJECT_UNAUTHORIZED` is never set to `0`
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 17: Alerts Panel + Rules
+
+**Goal**: Operator can see all current Alertmanager firing alerts on `/alerts`, Claude quota alert rules are deployed and unit-tested, and Telegram delivery is proven end-to-end — absorbing v2.0 Phase 09 scope entirely.
+
+**Depends on**: Phase 14
+**Note:** This phase is **parallel-safe with Phases 15 and 16** — all three can execute concurrently after Phase 14 completes.
+**Requirements**: ALERT-01, ALERT-02, ALERT-03, ALERT-04, ALERT-05, ALERT-06
+
+**Success Criteria** (what must be TRUE):
+  1. Page `/alerts` shows all current Alertmanager firing alerts with severity, summary, duration, and labels — page is read-only with a link-out to Alertmanager web UI for ack/silence
+  2. Alert badge in the shared nav layout shows the current firing count on every page — updates on each 30s SWR refresh cycle
+  3. Alert rule file contains `ClaudeWeeklyQuotaHigh` (≥0.80 for 15m), `ClaudeWeeklyQuotaCritical` (≥0.95 for 15m), and `ClaudeExporterDown` (up==0 for 10m); `promtool test rules` passes with unit tests covering threshold boundary and `for:` duration behavior
+  4. Deliberately-induced rule fire results in a Telegram message landing in chat 193835258; `alertmanager_notifications_failed_total{integration="telegram"}` stays 0 across the smoke window (FIRING + RESOLVED cycle both delivered)
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 18: Web Terminal
+
+**Goal**: Operator can open an in-browser SSH terminal to any Proxmox LXC via xterm.js — session is auth-gated, resource-limited, audit-logged, and cleans up on disconnect.
+
+**Rationale for last placement:** Web terminal is the highest-risk feature (XL scope, node-pty LXC compatibility unknown). The node-pty feasibility spike is the mandatory first task of this phase — if node-pty fails in mcow's LXC, the fallback is a pure-JS ssh2 pipe. Only attempt after all other features are stable.
+
+**Depends on**: Phase 16 (needs Proxmox LXC context + SSH credential retrieval pattern)
+**Requirements**: TERM-01, TERM-02, TERM-03, TERM-04, TERM-05, TERM-06
+
+**Success Criteria** (what must be TRUE):
+  1. Feasibility spike result is documented: either node-pty allocates a PTY in mcow's LXC (preferred) or the ssh2 pure-JS pipe fallback is selected — decision recorded before any terminal UI ships
+  2. Page `/box/:vmid/terminal` opens an xterm.js session connected to the target LXC via WebSocket + SSH relay; operator can run interactive commands (e.g., `top`, `bash`)
+  3. Closing the browser tab or navigating away kills the PTY and closes the SSH connection within 5 seconds — `ps aux` on mcow shows no zombie SSH processes after disconnect
+  4. Concurrent terminal limit of 3 sessions is enforced — a 4th open attempt is rejected with a clear error message
+  5. Every terminal-open event produces an audit log row with target vmid, user, and timestamps; terminal-close timestamp is recorded on disconnect
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 19: Security Review + Launch
+
+**Goal**: The dashboard passes a security review (bundle analysis, header audit, Proxmox token scope check, bun audit), the shared ui-kit repo is fully extracted and wired as a git submodule, and the app is ready for ongoing operator use.
+
+**Depends on**: Phase 18 (all features complete)
+**Requirements**: UI-01, UI-02, SEC-01, SEC-08
+
+**Success Criteria** (what must be TRUE):
+  1. `hub-shared/ui-kit` repo exists with Tailwind config, CSS variable theme tokens, base shadcn component set, and a README — homelab admin consumes it as a git submodule at `vendor/ui-kit/`
+  2. `bun audit` reports zero HIGH/CRITICAL vulnerabilities; browser DevTools network analysis confirms no secret values (tokens, API keys, session cookies) appear in any client-side bundle or XHR response body
+  3. Caddy rate limiting is active on `homelab.makscee.ru` auth endpoints (60 req/min per-IP); header-spoofing integration test confirms a request with a forged `Tailscale-User-Login` header is rejected before any handler runs
+  4. Proxmox API token scope is audited to confirm it holds only `VM.PowerMgmt`, `VM.Audit`, `Datastore.Audit` — no broader permissions; audit findings documented in `apps/admin/docs/security-audit.md`
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
-| Phase                      | Milestone | Plans Complete | Status       | Completed   |
-| -------------------------- | --------- | -------------- | ------------ | ----------- |
-| 1. Foundations             | v1.0      | 3/3            | Complete     | 2026-04-13  |
-| 2. Service Documentation   | v1.0      | 6/6            | Complete     | 2026-04-14  |
-| 3. Health Monitoring       | v1.0      | 5/5            | Complete     | 2026-04-15  |
-| 4. Operator Dashboard      | v1.0      | 4/4            | Complete     | 2026-04-15  |
-| 05. Feasibility Gate       | v2.0      | 5/5 | Complete    | 2026-04-16 |
-| 06. Exporter Skeleton      | v2.0      | 0/0            | Not started  | -           |
-| 07. Prometheus Wiring      | v2.0      | 0/0            | Not started  | -           |
-| 08. SOPS Token Registry    | v2.0      | 0/0            | Not started  | -           |
-| 09. Alerts                 | v2.0      | 0/0            | Not started  | -           |
-| 10. Grafana Dashboard      | v2.0      | 0/0            | Not started  | -           |
-| 11. Multi-token Scale-out  | v2.0      | 0/0            | Not started  | -           |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundations | v1.0 | 3/3 | Complete | 2026-04-13 |
+| 2. Service Documentation | v1.0 | 6/6 | Complete | 2026-04-14 |
+| 3. Health Monitoring | v1.0 | 5/5 | Complete | 2026-04-15 |
+| 4. Operator Dashboard | v1.0 | 4/4 | Complete | 2026-04-15 |
+| 05. Feasibility Gate | v2.0 | 5/5 | Complete | 2026-04-16 |
+| 06. Exporter Skeleton | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 07. Prometheus Wiring | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 08. SOPS Token Registry | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 09. Alerts | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 10. Grafana Dashboard | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
+| 12. Infra Foundation | v3.0 | 0/? | Not started | - |
+| 13. Claude Tokens Page | v3.0 | 0/? | Not started | - |
+| 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
+| 15. VoidNet Management | v3.0 | 0/? | Not started | - |
+| 16. Proxmox Ops | v3.0 | 0/? | Not started | - |
+| 17. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
+| 18. Web Terminal | v3.0 | 0/? | Not started | - |
+| 19. Security Review + Launch | v3.0 | 0/? | Not started | - |

@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: — Unified Stack Migration (homelab admin dashboard)
+milestone_name: Unified Stack Migration (homelab admin dashboard)
 status: planning
-stopped_at: v3.0 milestone initialized — defining requirements
-last_updated: "2026-04-16T20:30:00.000Z"
-last_activity: 2026-04-16 -- v2.0 closed with pivot; v3.0 started (Next.js admin dashboard for homelab.makscee.ru)
+stopped_at: v3.0 roadmap created — 8 phases (12-19), ready to plan Phase 12
+last_updated: "2026-04-16T21:00:00.000Z"
+last_activity: 2026-04-16 -- v3.0 roadmap written (ROADMAP.md + REQUIREMENTS.md traceability)
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,69 +21,50 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** v3.0 Unified Stack Migration — defining requirements
+**Current focus:** v3.0 Phase 12 — Infra Foundation (Next.js scaffold, GitHub OAuth, Caddy, secrets)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-16 -- v3.0 milestone started (Unified Stack Migration — homelab admin dashboard)
+Phase: 12 of 19 (Infra Foundation)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-04-16 — v3.0 roadmap created, 8 phases (12-19), 58 requirements mapped
 
-Progress: [          ] 0% — v3.0 planning
+Progress: [          ] 0% — v3.0 not started
 
 ## Performance Metrics
 
 **v1.0 reference (shipped 2026-04-15):**
-
 - Total plans completed: 23
 - Timeline: 2026-04-10 → 2026-04-15 (6 days)
-- Git: 116 commits, 190 files changed (+44,833 / -2)
 
-**v2.0 targets:**
-
-- 7 phases (05-11), 33 requirements across 6 categories (TOKEN, EXP, MON, DASH, ALERT, DEPLOY)
-- Phase 05 is a go/no-go gate — milestone may halt here if feasibility fails (pivot to local-log approach, replan, or abandon)
+**v3.0 scope:** 8 phases (12-19), 58 requirements across 9 categories
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. v1.0 decisions are in Validated status.
+- **D-07 (Claude quota access):** Endpoint-scrape validated Phase 05 — production exporter mcow:9101 polling 2 tokens, 0% 429 rate. See PROJECT.md §Key Decisions.
+- **v3.0 stack locked:** Bun + Next.js 15.2.4 (CVE-2025-66478 pin) + React 19 + Tailwind + shadcn/ui + Caddy + Drizzle + bun:sqlite. See research/STACK.md.
+- **Auth switched:** Tailscale identity headers dropped in favor of GitHub OAuth (Auth.js v5) — eliminates header-spoofing risk (P-02). See PITFALLS.md.
+- **Parallel phases:** 15 (VoidNet), 16 (Proxmox), 17 (Alerts) are parallel-safe after Phase 14 completes.
 
-**v2.0 validated ADRs:**
+### Blockers/Concerns
 
-- **D-07 (Claude Code quota access strategy):** Endpoint-scrape approach validated Phase 05 via operational evidence (production exporter `mcow:9101` polling 2 tokens successfully, 0% 429 rate over 118 polls). See `.planning/phases/05-feasibility-gate/GATE-PASSED.md` and `PROJECT.md` §Key Decisions.
-
-### Open Blockers/Concerns (carried from v1.0)
-
-- ~~DiskUsageCritical persistent on tower + docker-tower~~ — root cause fixed 2026-04-16 (path drift `/opt/homestack` → `/opt/homelab`, rule threshold raised to 0.98)
-- ~~stale compose path cleanup~~ — `/opt/homestack` + `/opt/docker-tower-api` deleted 2026-04-16
-- docker-tower cleanup scheduled 2026-04-22: `docker volume rm monitoring_{grafana,alertmanager}-data` after 7-day rollback window expires
-- nether secrets cleanup — `GF_SECURITY_ADMIN_*` unreferenced post-decommission (v1.0 tech-debt)
-- D-06 ADR update pending (v1.0 tech-debt)
-- Backup target destination not yet specified — needed before DR phases (future milestone)
-
-### v2.0 Risks
-
-- **Feasibility (Phase 05 dominant):** Anthropic `/api/oauth/usage` is undocumented, has known 429-storm bug, and ToS-adjacent (Feb 2026 policy restricts OAuth tokens to Claude Code + Claude.ai). Phase 05 is the go/no-go gate.
-- **Egress (Phase 05 pre-work):** Moscow ISP behavior vs `api.anthropic.com` unverified. Base rate says assume hostile (Telegram v1.0 precedent). First Phase 05 action must be `ssh root@mcow 'curl -m 8 -sSIL https://api.anthropic.com/'` BEFORE writing exporter code.
-- **Secret leakage (Phases 06-08):** v1.0 S-03 bug replay risk — token file perms `install -m 0440 root:65534` lesson must transfer verbatim.
-- **Alert flap (Phase 09):** Weekly reset boundary triggers HIGH→RESOLVE→HIGH flap; `for: 15m` + hysteresis mandatory.
+- Phase 13 first task: SOPS write spike (`spawnSync('sops', ...)`) + Zod 4 + shadcn forms compat check — must resolve before token CRUD ships
+- Phase 15 (VoidNet): blocked on voidnet-api adding JSON admin endpoints (parallel milestone in voidnet repo)
+- Phase 18 (Terminal): node-pty LXC feasibility spike is mandatory first task — fallback to ssh2 pure-JS pipe if PTY allocation fails in mcow LXC
+- docker-tower cleanup: `docker volume rm monitoring_{grafana,alertmanager}-data` scheduled 2026-04-22
 
 ### Pending Todos
 
-- 2026-04-22: `docker volume rm monitoring_grafana-data monitoring_alertmanager-data` on docker-tower
-- v2.0 Phase 05 first action: `curl -m 8 -sSIL https://api.anthropic.com/` from mcow to validate Moscow egress path before anything else
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260416-nyb | Feasibility probe: Claude Code OAuth token usage stats on mcow — BLOCKED (token lacks `user:profile` scope; mcow WAF geo-blocked) | 2026-04-16 | (pending) | [260416-nyb-feasibility-probe-claude-code-oauth-toke](./quick/260416-nyb-feasibility-probe-claude-code-oauth-toke/) |
+- 2026-04-22: docker-tower volume cleanup (grafana + alertmanager data volumes)
+- Before Phase 12: verify Cloudflare API token exists in secrets/ (zone:dns:edit for makscee.ru)
+- Before Phase 12: confirm tailscale-nginx-auth socket path on mcow (`/run/tailscale/` or `/var/run/tailscale/`)
+- Before Phase 12: confirm mcow LXC privilege level (privileged/unprivileged)
 
 ## Session Continuity
 
-Last session: 2026-04-16T14:20:00.000Z
-Stopped at: Phase 05 quick probe complete — feasibility gate blocked on token scope
-Resume file: .planning/quick/260416-nyb-feasibility-probe-claude-code-oauth-toke/260416-nyb-SUMMARY.md
+Last session: 2026-04-16
+Stopped at: v3.0 roadmap created — ROADMAP.md written with Phases 12-19, REQUIREMENTS.md traceability updated
+Resume file: None — next action is `/gsd-plan-phase 12`

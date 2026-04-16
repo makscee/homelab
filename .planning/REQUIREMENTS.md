@@ -118,8 +118,67 @@
 
 ## Traceability — Requirements → Phases
 
-_(populated by roadmapper)_
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | Phase 12 | Pending |
+| INFRA-02 | Phase 12 | Pending |
+| INFRA-03 | Phase 12 | Pending |
+| INFRA-04 | Phase 12 | Pending |
+| INFRA-05 | Phase 14 | Pending |
+| INFRA-06 | Phase 12 | Pending |
+| INFRA-07 | Phase 12 | Pending |
+| INFRA-08 | Phase 12 | Pending |
+| UI-01 | Phase 19 | Pending |
+| UI-02 | Phase 19 | Pending |
+| UI-03 | Phase 12 | Pending |
+| UI-04 | Phase 12 | Pending |
+| DASH-01 | Phase 14 | Pending |
+| DASH-02 | Phase 14 | Pending |
+| DASH-03 | Phase 14 | Pending |
+| DASH-04 | Phase 14 | Pending |
+| DASH-05 | Phase 14 | Pending |
+| TOKEN-01 | Phase 13 | Pending |
+| TOKEN-02 | Phase 13 | Pending |
+| TOKEN-03 | Phase 13 | Pending |
+| TOKEN-04 | Phase 13 | Pending |
+| TOKEN-05 | Phase 13 | Pending |
+| TOKEN-06 | Phase 13 | Pending |
+| TOKEN-07 | Phase 13 | Pending |
+| VOIDNET-01 | Phase 15 | Pending |
+| VOIDNET-02 | Phase 15 | Pending |
+| VOIDNET-03 | Phase 15 | Pending |
+| VOIDNET-04 | Phase 15 | Pending |
+| VOIDNET-05 | Phase 15 | Pending |
+| VOIDNET-06 | Phase 15 | Pending |
+| VOIDNET-07 | Phase 15 | Pending |
+| VOIDNET-08 | Phase 15 | Pending |
+| PROXMOX-01 | Phase 16 | Pending |
+| PROXMOX-02 | Phase 16 | Pending |
+| PROXMOX-03 | Phase 16 | Pending |
+| PROXMOX-04 | Phase 16 | Pending |
+| PROXMOX-05 | Phase 16 | Pending |
+| PROXMOX-06 | Phase 16 | Pending |
+| TERM-01 | Phase 18 | Pending |
+| TERM-02 | Phase 18 | Pending |
+| TERM-03 | Phase 18 | Pending |
+| TERM-04 | Phase 18 | Pending |
+| TERM-05 | Phase 18 | Pending |
+| TERM-06 | Phase 18 | Pending |
+| ALERT-01 | Phase 17 | Pending |
+| ALERT-02 | Phase 17 | Pending |
+| ALERT-03 | Phase 17 | Pending |
+| ALERT-04 | Phase 17 | Pending |
+| ALERT-05 | Phase 17 | Pending |
+| ALERT-06 | Phase 17 | Pending |
+| SEC-01 | Phase 19 | Pending |
+| SEC-02 | Phase 12 | Pending |
+| SEC-03 | Phase 13 | Pending |
+| SEC-04 | Phase 12 | Pending |
+| SEC-05 | Phase 12 | Pending |
+| SEC-06 | Phase 12 | Pending |
+| SEC-07 | Phase 12 | Pending |
+| SEC-08 | Phase 19 | Pending |
 
 ---
-*Total active: 45 requirements across 8 categories*
-*Created 2026-04-16 during v3.0 milestone scoping*
+*Total active: 58 requirements across 9 categories (INFRA, UI, DASH, TOKEN, VOIDNET, PROXMOX, TERM, ALERT, SEC)*
+*Roadmap created 2026-04-16 — v3.0 Phases 12-19*
