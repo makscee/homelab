@@ -1,0 +1,35 @@
+== Baseline capture: 2026-04-16 ==
+== Operator: Claude Code (local → Tailnet SSH) ==
+
+=== nether (100.101.0.3) — tailscale status + serve ===
+100.101.0.3     nether              nether.twin-pogona.ts.net  linux    idle; offers exit node
+---
+No serve config
+
+=== mcow (100.101.0.9) — tailscale status + egress probes ===
+100.101.0.9     mcow                mcow.twin-pogona.ts.net  linux    -
+100.76.57.114   animaya-admin       tagged-devices           linux    -
+100.119.15.122  animaya-dev         tagged-devices           linux    -
+100.69.206.61   animaya-eva         tagged-devices           linux    -
+100.110.2.43    artems-macbook-pro  gevergeorgia@            macOS    offline, last seen 5m ago
+100.99.133.9    cc-worker           makscee@                 linux    -
+100.101.0.6     docker-firebat      tagged-devices           linux    offline, last seen 24d ago
+100.101.0.8     docker-tower        tagged-devices           linux    active; relay "nue", tx 1127214328 rx 17136819832
+100.101.0.2     firebat-lab         tagged-devices           linux    offline, last seen 24d ago
+100.101.0.1     macbook-air-3       makscee@                 macOS    active; direct 95.24.193.227:9619, tx 169185828 rx 59244112
+100.103.60.48   mi-11               makscee@                 android  offline, last seen 8d ago
+100.101.0.3     nether              tagged-devices           linux    active; offers exit node; direct 77.239.110.57:41641, tx 214683408 rx 229774012
+100.102.180.98  starter             tagged-devices           linux    -
+100.88.0.3      test-206            makscee@                 linux    offline, last seen 1d ago
+100.101.0.7     tower               tagged-devices           linux    active; direct 95.31.38.176:20536, tx 125785364 rx 153789184
+---
+telegram-ipv4=302
+anthropic-baseline=404
+
+== Analysis ==
+- Telegram IPv4 (149.154.167.99): 302 — reachable (redirect expected, connectivity confirmed)
+- Anthropic API (api.anthropic.com): 404 — REACHABLE directly from Moscow ISP
+  404 = TLS handshake succeeded + HTTP response received (root URL returns 404, expected)
+  SURPRISE: Moscow ISP does NOT block api.anthropic.com unlike Telegram
+- nether shows as exit node only, no app-connector keyword in status output
+- App Connector extension for Anthropic may be unnecessary — direct egress works
