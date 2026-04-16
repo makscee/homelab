@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
-import { isLoginAllowed } from "./lib/auth-allowlist";
+import { isLoginAllowed } from "./lib/auth-allowlist.server";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
