@@ -161,7 +161,7 @@ Phase 19 (Security + Launch) → depends on all others
 **Plans**: 10 plans
 Plans:
 - [x] 12-01-PLAN.md — Bun workspaces root + Next.js 15.2.4 scaffold + pinned versions + audit gate
-- [ ] 12-02-PLAN.md — Ansible group_vars additions (port 3847, bun_version) + collection requirements
+- [x] 12-02-PLAN.md — Ansible group_vars additions (port 3847, bun_version) + collection requirements
 - [ ] 12-03-PLAN.md — mcow LXC privilege probe + STATE.md cleanup (obsolete todos closed)
 - [ ] 12-04-PLAN.md — Auth.js v5 GitHub OAuth + allowlist middleware + CSP/HSTS/XFO nonce headers
 - [ ] 12-05-PLAN.md — Base layout (sidebar + topbar) + 8 route stubs + UI-04 primitives + /api/health + server-only lint
@@ -329,7 +329,7 @@ Plans:
 | 09. Alerts | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 10. Grafana Dashboard | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
-| 12. Infra Foundation | v3.0 | 1/10 | In Progress|  |
+| 12. Infra Foundation | v3.0 | 2/10 | In Progress|  |
 | 13. Claude Tokens Page | v3.0 | 0/? | Not started | - |
 | 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
 | 15. VoidNet Management | v3.0 | 0/? | Not started | - |
