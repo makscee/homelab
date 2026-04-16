@@ -21,7 +21,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v2.0 — Claude Code Usage Monitor
 
-- [ ] **Phase 05: Feasibility Gate** — Go/no-go spike validating `api.anthropic.com/api/oauth/usage` is reachable, stable, and ToS-defensible before committing to implementation
+- [x] **Phase 05: Feasibility Gate** — Go/no-go spike validating `api.anthropic.com/api/oauth/usage` is reachable, stable, and ToS-defensible before committing to implementation (completed 2026-04-16)
 - [ ] **Phase 06: Exporter Skeleton** — Single-token Python exporter runs on mcow emitting hardcoded gauge shape, proves container + network + secret-mount shape
 - [ ] **Phase 07: Prometheus Wiring** — docker-tower Prometheus scrapes the real exporter; per-token metrics flow end-to-end into TSDB
 - [ ] **Phase 08: SOPS Token Registry** — SOPS-encrypted multi-token registry replaces plaintext; Ansible playbook deploys the full path
@@ -124,7 +124,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 2. Service Documentation   | v1.0      | 6/6            | Complete     | 2026-04-14  |
 | 3. Health Monitoring       | v1.0      | 5/5            | Complete     | 2026-04-15  |
 | 4. Operator Dashboard      | v1.0      | 4/4            | Complete     | 2026-04-15  |
-| 05. Feasibility Gate       | v2.0      | 0/0            | Not started  | -           |
+| 05. Feasibility Gate       | v2.0      | 5/5 | Complete    | 2026-04-16 |
 | 06. Exporter Skeleton      | v2.0      | 0/0            | Not started  | -           |
 | 07. Prometheus Wiring      | v2.0      | 0/0            | Not started  | -           |
 | 08. SOPS Token Registry    | v2.0      | 0/0            | Not started  | -           |
