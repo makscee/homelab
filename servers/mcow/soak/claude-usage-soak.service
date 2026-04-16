@@ -1,0 +1,18 @@
+[Unit]
+Description=Claude Code /api/oauth/usage feasibility soak (Phase 05)
+Documentation=https://github.com/makscee/homelab/blob/main/servers/mcow/soak/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/claude-usage-soak/env
+ExecStart=/usr/local/sbin/claude-usage-soak/soak.sh
+Nice=10
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log /var/lib/claude-usage-soak
+NoNewPrivileges=yes
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,13 @@
+[Unit]
+Description=Trigger Claude usage soak every ~300s (jittered +/-60s)
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=300s
+RandomizedDelaySec=60s
+AccuracySec=1s
+Unit=claude-usage-soak.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target
