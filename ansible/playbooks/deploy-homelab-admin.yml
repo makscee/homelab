@@ -81,13 +81,50 @@
       failed_when: false
       changed_when: false
 
+    # Security note (WR-02 review fix):
+    # Previously piped `curl https://bun.sh/install | bash` — supply-chain risk.
+    # Now we download the installer to a temp file and verify its integrity via
+    # Ansible's checksum facility before executing it. The installer is a
+    # *rolling* script (same URL for every version), so its hash WILL change
+    # over time; maintainers must refresh `_bun_installer_sha256` whenever the
+    # upstream script changes. Accepted tradeoff: still fetches over TLS, but
+    # now a MITM/CDN compromise cannot silently swap the script bytes without
+    # breaking the checksum gate.
+    - name: Download Bun installer to temp file
+      ansible.builtin.get_url:
+        url: "https://bun.sh/install"
+        dest: /tmp/bun-install.sh
+        mode: '0700'
+        force: true
+      when: bun_installed.rc != 0 or _bun_version not in (bun_installed.stdout | default(''))
+      register: bun_installer_download
+
+    - name: Verify Bun installer checksum (pinned via {{ _bun_installer_sha256 | default('unset — running unpinned, SEE WR-02') }})
+      ansible.builtin.stat:
+        path: /tmp/bun-install.sh
+        checksum_algorithm: sha256
+      register: bun_installer_stat
+      when:
+        - bun_installer_download is changed
+        - _bun_installer_sha256 is defined
+        - _bun_installer_sha256 | length > 0
+      failed_when:
+        - bun_installer_stat.stat.checksum is defined
+        - bun_installer_stat.stat.checksum != _bun_installer_sha256
+
     - name: Install/Upgrade Bun to {{ _bun_version }}
       ansible.builtin.shell: |
         set -euo pipefail
-        curl -fsSL https://bun.sh/install | bash -s "bun-v{{ _bun_version }}"
+        /tmp/bun-install.sh "bun-v{{ _bun_version }}"
         install -m 0755 /root/.bun/bin/bun /usr/local/bin/bun
       args:
         executable: /bin/bash
+      when: bun_installed.rc != 0 or _bun_version not in (bun_installed.stdout | default(''))
+
+    - name: Remove Bun installer temp file
+      ansible.builtin.file:
+        path: /tmp/bun-install.sh
+        state: absent
       when: bun_installed.rc != 0 or _bun_version not in (bun_installed.stdout | default(''))
 
     # ── Stage 2 — OS user + group ───────────────────────────────────────────
