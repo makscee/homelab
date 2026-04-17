@@ -64,10 +64,19 @@ export class CsrfError extends Error {
  * Throws `CsrfError` on any failure; Route Handlers translate to HTTP 403.
  */
 export function verifyCsrf(req: NextRequest): void {
-  // Step 1 — Origin check. `null`/missing Origin is tolerated for same-origin
-  // navigation edge cases; when present it MUST match.
-  const origin = req.headers.get("origin");
-  if (origin && origin !== EXPECTED_ORIGIN) {
+  // Step 1 — Origin (or Referer fallback) MUST be present and match
+  // EXPECTED_ORIGIN. Modern browsers always emit Origin on mutation
+  // requests; tolerating a missing value only widens the attack surface
+  // to non-browser forgery. Referer is accepted as a fallback for
+  // legacy clients/proxies that strip Origin, stripped to scheme+host
+  // before comparison. See WR-04.
+  const rawOrigin =
+    req.headers.get("origin") ?? req.headers.get("referer");
+  if (!rawOrigin) {
+    throw new CsrfError("origin missing");
+  }
+  const originOnly = rawOrigin.replace(/^(https?:\/\/[^/]+).*$/, "$1");
+  if (originOnly !== EXPECTED_ORIGIN) {
     throw new CsrfError("bad origin");
   }
 

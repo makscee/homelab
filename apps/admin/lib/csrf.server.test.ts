@@ -90,6 +90,32 @@ describe("verifyCsrf", () => {
     });
     expect(() => verifyCsrf(req)).toThrow(CsrfError);
   });
+
+  test("rejects when Origin and Referer are both missing (WR-04)", () => {
+    const req = buildReq({
+      origin: null,
+      cookie: goodToken,
+      header: goodToken,
+    });
+    expect(() => verifyCsrf(req)).toThrow(CsrfError);
+  });
+
+  test("accepts Referer fallback when Origin missing and referer matches", () => {
+    // Build a request whose Origin header is absent but Referer is set to
+    // the expected origin + a path. The verifier must strip the path and
+    // compare scheme+host only.
+    const headers = new Headers();
+    headers.set("referer", `${EXPECTED_ORIGIN}/tokens`);
+    headers.set(CSRF_HEADER_NAME, goodToken);
+    headers.set("cookie", `${CSRF_COOKIE_NAME}=${goodToken}`);
+    const req = new NextRequest(
+      new Request(`${EXPECTED_ORIGIN}/api/tokens`, {
+        method: "POST",
+        headers,
+      }),
+    );
+    expect(() => verifyCsrf(req)).not.toThrow();
+  });
 });
 
 describe("csrf.shared.ts is neutral (no server-only)", () => {
