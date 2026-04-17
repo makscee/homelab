@@ -6,6 +6,7 @@ import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { rotateToken, TokenNotFoundError } from "@/lib/token-registry.server";
+import { logAudit } from "@/lib/audit.server";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,17 @@ export async function POST(
 
   try {
     const result = await rotateToken(id, parsed.data.value, session.user.login);
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      undefined;
+    logAudit({
+      action: "token.rotate",
+      target: id,
+      payload: { rotated_at: result.rotated_at },
+      user: session.user.login,
+      ip,
+    });
     return NextResponse.json({ ok: true, token: result });
   } catch (e) {
     if (e instanceof TokenNotFoundError) {

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 
 import {
   listTokens,
@@ -11,7 +11,6 @@ import {
   type PublicTokenEntry,
 } from "./token-registry.server";
 import { SopsUnavailableError, type TokenRegistry, type TokenEntry } from "./sops.server";
-import * as audit from "./audit.server";
 
 // --------------------------------------------------------------------------
 // In-memory sops double. Installed via DI hook; restored after each test so
@@ -105,39 +104,22 @@ describe("listTokens", () => {
 });
 
 describe("addToken", () => {
-  test("generates uuid id + added_at, appends to registry, emits audit", async () => {
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const result = await addToken(
-        {
-          label: "new",
-          value: "sk-ant-oat01-ABCDEF",
-          tier: "pro",
-          owner_host: "mcow",
-          notes: "seed",
-        },
-        "makscee",
-      );
-      expect((result as PublicTokenEntry).label).toBe("new");
-      expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-      expect(typeof result.added_at).toBe("string");
-      expect(sopsState.store.tokens.length).toBe(1);
-      expect(sopsState.replaceCalls).toBe(1);
-
-      expect(emitSpy).toHaveBeenCalledTimes(1);
-      const event = emitSpy.mock.calls[0][0] as {
-        action: string;
-        actor: string;
-        diff: Record<string, { after?: unknown }>;
-      };
-      expect(event.action).toBe("token.add");
-      expect(event.actor).toBe("makscee");
-      expect(event.diff.label?.after).toBe("new");
-      expect(event.diff.enabled?.after).toBe(true);
-      expect(event.diff.value?.after).toBe("[NEW]");
-    } finally {
-      emitSpy.mockRestore();
-    }
+  test("generates uuid id + added_at, appends to registry", async () => {
+    const result = await addToken(
+      {
+        label: "new",
+        value: "sk-ant-oat01-ABCDEF",
+        tier: "pro",
+        owner_host: "mcow",
+        notes: "seed",
+      },
+      "makscee",
+    );
+    expect((result as PublicTokenEntry).label).toBe("new");
+    expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    expect(typeof result.added_at).toBe("string");
+    expect(sopsState.store.tokens.length).toBe(1);
+    expect(sopsState.replaceCalls).toBe(1);
   });
 
   test("throws on duplicate label (non-deleted collision)", async () => {
@@ -163,67 +145,31 @@ describe("addToken", () => {
 });
 
 describe("rotateToken", () => {
-  test("atomically swaps value + sets rotated_at; audit redacts value", async () => {
+  test("atomically swaps value + sets rotated_at", async () => {
     const e = seedToken({ id: "33333333-3333-4333-8333-333333333333", label: "r" });
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const out = await rotateToken(e.id, "sk-ant-oat01-NEWVAL", "makscee");
-      expect(out.rotated_at).toBeDefined();
-      expect(sopsState.store.tokens[0].value).toBe("sk-ant-oat01-NEWVAL");
-      expect(sopsState.replaceCalls).toBe(1);
-      expect(emitSpy).toHaveBeenCalledTimes(1);
-      const event = emitSpy.mock.calls[0][0] as {
-        action: string;
-        diff: Record<string, { before?: unknown; after?: unknown }>;
-      };
-      expect(event.action).toBe("token.rotate");
-      expect(event.diff.value?.before).toBe("[ROTATED]");
-      expect(event.diff.value?.after).toBe("[ROTATED]");
-      expect(event.diff.rotated_at?.after).toBeDefined();
-    } finally {
-      emitSpy.mockRestore();
-    }
+    const out = await rotateToken(e.id, "sk-ant-oat01-NEWVAL", "makscee");
+    expect(out.rotated_at).toBeDefined();
+    expect(sopsState.store.tokens[0].value).toBe("sk-ant-oat01-NEWVAL");
+    expect(sopsState.replaceCalls).toBe(1);
   });
 });
 
 describe("toggleEnabled", () => {
-  test("flips enabled bool; audit shows before/after", async () => {
+  test("flips enabled bool", async () => {
     const e = seedToken({ id: "44444444-4444-4444-8444-444444444444", enabled: true });
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const out = await toggleEnabled(e.id, false, "u");
-      expect(out.enabled).toBe(false);
-      expect(sopsState.replaceCalls).toBe(1);
-      expect(emitSpy).toHaveBeenCalledTimes(1);
-      const ev = emitSpy.mock.calls[0][0] as {
-        action: string;
-        diff: Record<string, { before?: unknown; after?: unknown }>;
-      };
-      expect(ev.action).toBe("token.toggle");
-      expect(ev.diff.enabled).toEqual({ before: true, after: false });
-    } finally {
-      emitSpy.mockRestore();
-    }
+    const out = await toggleEnabled(e.id, false, "u");
+    expect(out.enabled).toBe(false);
+    expect(sopsState.replaceCalls).toBe(1);
   });
 });
 
 describe("renameToken", () => {
-  test("updates label when no collision", async () => {
+  test("updates label when no collision; returns oldLabel for audit", async () => {
     const e = seedToken({ id: "55555555-5555-4555-8555-555555555555", label: "old" });
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const out = await renameToken(e.id, "new-label", "u");
-      expect(out.label).toBe("new-label");
-      expect(sopsState.replaceCalls).toBe(1);
-      const ev = emitSpy.mock.calls[0][0] as {
-        action: string;
-        diff: Record<string, { before?: unknown; after?: unknown }>;
-      };
-      expect(ev.action).toBe("token.rename");
-      expect(ev.diff.label).toEqual({ before: "old", after: "new-label" });
-    } finally {
-      emitSpy.mockRestore();
-    }
+    const out = await renameToken(e.id, "new-label", "u");
+    expect(out.token.label).toBe("new-label");
+    expect(out.oldLabel).toBe("old");
+    expect(sopsState.replaceCalls).toBe(1);
   });
 
   test("throws on collision with another non-deleted label", async () => {
@@ -238,67 +184,36 @@ describe("renameToken", () => {
 });
 
 describe("softDeleteToken", () => {
-  test("sets deleted_at without removing entry; audit action=token.delete", async () => {
+  test("sets deleted_at without removing entry", async () => {
     const e = seedToken({ id: "88888888-8888-4888-8888-888888888888" });
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      await softDeleteToken(e.id, "u");
-      expect(sopsState.store.tokens.length).toBe(1);
-      expect(sopsState.store.tokens[0].deleted_at).toBeDefined();
-      expect(sopsState.replaceCalls).toBe(1);
-      const ev = emitSpy.mock.calls[0][0] as { action: string };
-      expect(ev.action).toBe("token.delete");
-    } finally {
-      emitSpy.mockRestore();
-    }
+    await softDeleteToken(e.id, "u");
+    expect(sopsState.store.tokens.length).toBe(1);
+    expect(sopsState.store.tokens[0].deleted_at).toBeDefined();
+    expect(sopsState.replaceCalls).toBe(1);
   });
 });
 
 describe("invariants across all mutations", () => {
   test("each mutation calls replaceRegistry exactly once", async () => {
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const e = seedToken({ id: "99999999-9999-4999-8999-999999999999", label: "invar" });
+    const e = seedToken({ id: "99999999-9999-4999-8999-999999999999", label: "invar" });
 
-      await addToken(
-        { label: "addc", value: "sk-ant-oat01-A", tier: "pro", owner_host: "mcow" },
-        "u",
-      );
-      expect(sopsState.replaceCalls).toBe(1);
+    await addToken(
+      { label: "addc", value: "sk-ant-oat01-A", tier: "pro", owner_host: "mcow" },
+      "u",
+    );
+    expect(sopsState.replaceCalls).toBe(1);
 
-      await rotateToken(e.id, "sk-ant-oat01-R", "u");
-      expect(sopsState.replaceCalls).toBe(2);
+    await rotateToken(e.id, "sk-ant-oat01-R", "u");
+    expect(sopsState.replaceCalls).toBe(2);
 
-      await toggleEnabled(e.id, false, "u");
-      expect(sopsState.replaceCalls).toBe(3);
+    await toggleEnabled(e.id, false, "u");
+    expect(sopsState.replaceCalls).toBe(3);
 
-      await renameToken(e.id, "renamed", "u");
-      expect(sopsState.replaceCalls).toBe(4);
+    await renameToken(e.id, "renamed", "u");
+    expect(sopsState.replaceCalls).toBe(4);
 
-      await softDeleteToken(e.id, "u");
-      expect(sopsState.replaceCalls).toBe(5);
-    } finally {
-      emitSpy.mockRestore();
-    }
-  });
-
-  test("each mutation emits exactly one audit event", async () => {
-    const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
-    try {
-      const e = seedToken({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", label: "au" });
-
-      await addToken(
-        { label: "au2", value: "sk-ant-oat01-A", tier: "pro", owner_host: "mcow" },
-        "u",
-      );
-      await rotateToken(e.id, "sk-ant-oat01-R", "u");
-      await toggleEnabled(e.id, false, "u");
-      await renameToken(e.id, "au-renamed", "u");
-      await softDeleteToken(e.id, "u");
-      expect(emitSpy).toHaveBeenCalledTimes(5);
-    } finally {
-      emitSpy.mockRestore();
-    }
+    await softDeleteToken(e.id, "u");
+    expect(sopsState.replaceCalls).toBe(5);
   });
 
   test("throws SopsUnavailableError before any write when sopsAvailable() is false", async () => {

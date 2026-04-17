@@ -6,6 +6,7 @@ import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { renameToken, TokenNotFoundError } from "@/lib/token-registry.server";
+import { logAudit } from "@/lib/audit.server";
 
 export const runtime = "nodejs";
 
@@ -58,8 +59,19 @@ export async function POST(
   }
 
   try {
-    const result = await renameToken(id, parsed.data.label, session.user.login);
-    return NextResponse.json({ ok: true, token: result });
+    const { token, oldLabel } = await renameToken(id, parsed.data.label, session.user.login);
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      undefined;
+    logAudit({
+      action: "token.rename",
+      target: id,
+      payload: { from: oldLabel, to: parsed.data.label },
+      user: session.user.login,
+      ip,
+    });
+    return NextResponse.json({ ok: true, token });
   } catch (e) {
     if (e instanceof TokenNotFoundError) {
       return NextResponse.json({ error: "not found" }, { status: 404 });

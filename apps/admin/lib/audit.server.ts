@@ -37,35 +37,4 @@ export function logAudit({ action, target, payload, user, ip }: AuditInput): voi
   );
 }
 
-// --------------------------------------------------------------------------
-// TEMP compat shim — Phase 13 call-sites still use emitAudit(). Removed in Plan 03.
-// PLAN-03-MIGRATE
-// --------------------------------------------------------------------------
-
-export type AuditAction =
-  | "token.add"
-  | "token.rotate"
-  | "token.toggle"
-  | "token.rename"
-  | "token.delete";
-
-export type AuditDiff = Record<string, { before?: unknown; after?: unknown }>;
-
-export type AuditEvent = {
-  ts: string;
-  actor: string;
-  action: AuditAction;
-  token_id: string;
-  diff: AuditDiff;
-};
-
-export function emitAudit(
-  event: Omit<AuditEvent, "ts"> & { ts?: string },
-): void {
-  logAudit({
-    action: event.action,
-    target: event.token_id,
-    payload: event.diff,
-    user: event.actor,
-  });
-}
+// emitAudit compat shim removed in Plan 03 — all call-sites migrated to logAudit() in route handlers.

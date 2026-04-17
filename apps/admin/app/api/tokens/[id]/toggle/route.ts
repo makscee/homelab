@@ -6,6 +6,7 @@ import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { toggleEnabled, TokenNotFoundError } from "@/lib/token-registry.server";
+import { logAudit } from "@/lib/audit.server";
 
 export const runtime = "nodejs";
 
@@ -55,6 +56,17 @@ export async function POST(
 
   try {
     const result = await toggleEnabled(id, parsed.data.enabled, session.user.login);
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      undefined;
+    logAudit({
+      action: "token.toggle",
+      target: id,
+      payload: { enabled: parsed.data.enabled },
+      user: session.user.login,
+      ip,
+    });
     return NextResponse.json({ ok: true, token: result });
   } catch (e) {
     if (e instanceof TokenNotFoundError) {

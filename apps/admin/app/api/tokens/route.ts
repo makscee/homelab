@@ -6,6 +6,7 @@ import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { addToken } from "@/lib/token-registry.server";
+import { logAudit } from "@/lib/audit.server";
 
 // sops spawns child processes — the Edge runtime cannot do that, so pin
 // this handler to Node. Every other route in this tree does the same.
@@ -59,6 +60,22 @@ export async function POST(req: NextRequest) {
   // 5. Execute.
   try {
     const result = await addToken(parsed.data, session.user.login);
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      undefined;
+    logAudit({
+      action: "token.add",
+      target: result.id,
+      payload: {
+        label: parsed.data.label,
+        owner_host: parsed.data.owner_host,
+        tier: parsed.data.tier,
+        enabled: true,
+      },
+      user: session.user.login,
+      ip,
+    });
     return NextResponse.json({ ok: true, token: result });
   } catch (e) {
     const raw = e instanceof Error ? e.message : "server error";

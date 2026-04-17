@@ -8,7 +8,7 @@ import {
   type TokenEntry,
   type TokenRegistry,
 } from "./sops.server";
-import { emitAudit, type AuditDiff } from "./audit.server";
+// emitAudit removed — audit calls moved to route handlers in Plan 03 (PLAN-03-MIGRATE)
 
 // --------------------------------------------------------------------------
 // Dependency injection for tests
@@ -174,18 +174,7 @@ export async function addToken(
     },
   );
 
-  const diff: AuditDiff = {
-    label: { after: entry.label },
-    tier: { after: entry.tier },
-    owner_host: { after: entry.owner_host },
-    enabled: { after: true },
-    // `value` is a tracked redaction key; passing a sentinel keeps the
-    // before/after shape uniform with other mutations without any risk of
-    // plaintext leaking — audit.server.ts forces [REDACTED] regardless.
-    value: { after: "[NEW]" },
-  };
-  emitAudit({ actor, action: "token.add", token_id: entry.id, diff });
-
+  // logAudit() called by the route handler (with IP) — Plan 03
   return toPublic(entry);
 }
 
@@ -199,28 +188,17 @@ export async function rotateToken(
     throw new Error("invalid token format");
   }
 
-  const { entry, prevRotated } = await sops().mutateRegistry<{
-    entry: TokenEntry;
-    prevRotated: string | undefined;
-  }>(REGISTRY_PATH, async (reg) => {
-    const e = findEntry(reg, id);
-    const previous = e.rotated_at;
-    e.value = newValue;
-    e.rotated_at = new Date().toISOString();
-    return { next: reg, result: { entry: e, prevRotated: previous } };
-  });
-
-  emitAudit({
-    actor,
-    action: "token.rotate",
-    token_id: id,
-    diff: {
-      // Sentinels; audit.server also force-redacts `value` entries.
-      value: { before: "[ROTATED]", after: "[ROTATED]" },
-      rotated_at: { before: prevRotated, after: entry.rotated_at },
+  const entry = await sops().mutateRegistry<TokenEntry>(
+    REGISTRY_PATH,
+    async (reg) => {
+      const e = findEntry(reg, id);
+      e.value = newValue;
+      e.rotated_at = new Date().toISOString();
+      return { next: reg, result: e };
     },
-  });
+  );
 
+  // logAudit() called by the route handler (with IP) — Plan 03
   return toPublic(entry);
 }
 
@@ -231,23 +209,16 @@ export async function toggleEnabled(
 ): Promise<PublicTokenEntry> {
   requireSops();
 
-  const { entry, before } = await sops().mutateRegistry<{
-    entry: TokenEntry;
-    before: boolean;
-  }>(REGISTRY_PATH, async (reg) => {
-    const e = findEntry(reg, id);
-    const prev = e.enabled;
-    e.enabled = enabled;
-    return { next: reg, result: { entry: e, before: prev } };
-  });
+  const entry = await sops().mutateRegistry<TokenEntry>(
+    REGISTRY_PATH,
+    async (reg) => {
+      const e = findEntry(reg, id);
+      e.enabled = enabled;
+      return { next: reg, result: e };
+    },
+  );
 
-  emitAudit({
-    actor,
-    action: "token.toggle",
-    token_id: id,
-    diff: { enabled: { before, after: enabled } },
-  });
-
+  // logAudit() called by the route handler (with IP) — Plan 03
   return toPublic(entry);
 }
 
@@ -255,46 +226,32 @@ export async function renameToken(
   id: string,
   newLabel: string,
   actor: string,
-): Promise<PublicTokenEntry> {
+): Promise<{ token: PublicTokenEntry; oldLabel: string }> {
   requireSops();
 
-  const { entry, before } = await sops().mutateRegistry<{
+  const { entry, oldLabel } = await sops().mutateRegistry<{
     entry: TokenEntry;
-    before: string;
+    oldLabel: string;
   }>(REGISTRY_PATH, async (reg) => {
     const e = findEntry(reg, id);
     ensureUniqueLabel(reg, newLabel, id);
     const prev = e.label;
     e.label = newLabel;
-    return { next: reg, result: { entry: e, before: prev } };
+    return { next: reg, result: { entry: e, oldLabel: prev } };
   });
 
-  emitAudit({
-    actor,
-    action: "token.rename",
-    token_id: id,
-    diff: { label: { before, after: newLabel } },
-  });
-
-  return toPublic(entry);
+  // logAudit() called by the route handler (with IP, oldLabel) — Plan 03
+  return { token: toPublic(entry), oldLabel };
 }
 
 export async function softDeleteToken(id: string, actor: string): Promise<void> {
   requireSops();
 
-  const deletedAt = await sops().mutateRegistry<string>(
-    REGISTRY_PATH,
-    async (reg) => {
-      const e = findEntry(reg, id);
-      e.deleted_at = new Date().toISOString();
-      return { next: reg, result: e.deleted_at };
-    },
-  );
-
-  emitAudit({
-    actor,
-    action: "token.delete",
-    token_id: id,
-    diff: { deleted_at: { after: deletedAt } },
+  await sops().mutateRegistry<void>(REGISTRY_PATH, async (reg) => {
+    const e = findEntry(reg, id);
+    e.deleted_at = new Date().toISOString();
+    return { next: reg, result: undefined };
   });
+
+  // logAudit() called by the route handler (with IP) — Plan 03
 }
