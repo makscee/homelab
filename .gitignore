@@ -46,3 +46,4 @@ apps/*/.turbo
 apps/*/next-env.d.ts
 apps/*/.env.local
 apps/*/.env.*.local
+apps/*/tsconfig.tsbuildinfo
