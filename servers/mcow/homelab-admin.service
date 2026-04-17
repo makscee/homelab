@@ -1,0 +1,39 @@
+# mcow LXC privilege: N/A (KVM virtual machine, not LXC)   (per servers/mcow/lxc-probe.md, Plan 12-03)
+# Hardening block selected: full strict (ProtectSystem=strict + PrivateTmp=yes + ProtectKernelTunables=yes)
+# P-15 degraded path does NOT apply — mcow is KVM with full Ubuntu 24.04 kernel.
+
+[Unit]
+Description=Homelab Admin Dashboard (Next.js on Bun)
+Documentation=https://github.com/makscee/homelab/tree/main/apps/admin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab-admin
+Group=homelab-admin
+WorkingDirectory=/opt/homelab-admin/app
+EnvironmentFile=/etc/homelab-admin/env
+Environment=NODE_ENV=production
+Environment=PORT=3847
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/local/bin/bun run start
+Restart=on-failure
+RestartSec=5s
+# Resource limits — tune after 24h soak (Plan 10 + Phase 17 metrics)
+LimitNOFILE=65536
+
+# ── Hardening ────────────────────────────────────────────────────────────
+# mcow is a KVM VM (systemd-detect-virt=kvm, kernel 6.8.0-107-generic).
+# Full strict hardening is safe — no LXC user-namespace constraints apply.
+# Block transcribed from lxc-probe.md "Active recommendation" (Plan 12-03).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ReadWritePaths=/opt/homelab-admin/app/.next /tmp
+
+[Install]
+WantedBy=multi-user.target
