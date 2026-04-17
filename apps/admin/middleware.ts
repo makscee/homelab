@@ -7,7 +7,7 @@ const { auth } = NextAuth(authConfig);
 const PUBLIC_PATHS = new Set<string>(["/login", "/403", "/api/health"]);
 const isApiAuthPath = (p: string) => p.startsWith("/api/auth/");
 const isStaticAsset = (p: string) =>
-  p.startsWith("/_next/") || p === "/favicon.ico" || /\.[a-z0-9]+$/i.test(p);
+  p.startsWith("/_next/") || p === "/favicon.ico";
 
 /**
  * Edge-safe allowlist check — reads the same env var as lib/auth-allowlist.ts
