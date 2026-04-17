@@ -11,10 +11,11 @@ import type {
 /**
  * Per-row view model for the tokens table. Pure data — no JSX, no icons.
  *
- * `pct5h` / `pct7d` are stored in the 0-100 space coming off the exporter
- * metric families `claude_usage_5h_pct` / `claude_usage_7d_pct`. `null`
- * signals "no Prometheus sample for this label yet" (new token, exporter
- * down, or the label hasn't polled once).
+ * `pct5h` / `pct7d` are stored in the 0-100 space. The exporter emits
+ * `claude_usage_5h_utilization` / `claude_usage_7d_utilization` as 0..1
+ * fractions; the caller multiplies by 100 in PromQL before passing samples
+ * here. `null` signals "no Prometheus sample for this label yet" (new token,
+ * exporter down, or the label hasn't polled once).
  */
 export type TokenRow = {
   entry: PublicTokenEntry;
@@ -83,22 +84,16 @@ export function humanizeResetSeconds(s: number | null | undefined): string {
 // Internal lookup helpers
 // -------------------------------------------------------------------------
 
+// Exporter labels each metric series with `name` (not `label`) — see
+// servers/mcow/claude-usage-exporter/exporter.py. The registry's display
+// field is still called `label`; we match exporter-side `name` against
+// registry-side `label` because the exporter sources its `name` value from
+// the same registry `label` field.
 function sampleByLabel(
   samples: PromInstantSample[],
   label: string,
 ): number | null {
-  const match = samples.find((s) => s.labels.label === label);
-  return match ? match.value : null;
-}
-
-function resetByWindow(
-  samples: PromInstantSample[],
-  label: string,
-  window: string,
-): number | null {
-  const match = samples.find(
-    (s) => s.labels.label === label && s.labels.window === window,
-  );
+  const match = samples.find((s) => s.labels.name === label);
   return match ? match.value : null;
 }
 
@@ -106,7 +101,7 @@ function sparklineByLabel(
   series: PromRangeSeries[],
   label: string,
 ): Array<[number, number]> {
-  const match = series.find((s) => s.labels.label === label);
+  const match = series.find((s) => s.labels.name === label);
   return match ? match.samples : [];
 }
 
@@ -124,23 +119,21 @@ export function buildTokenRows(input: {
   entries: PublicTokenEntry[];
   pct5hSamples: PromInstantSample[];
   pct7dSamples: PromInstantSample[];
-  resetSamples: PromInstantSample[];
+  // Reset samples are seconds-until-reset (exporter publishes an absolute
+  // Unix-seconds timestamp; caller subtracts `time()` in PromQL before
+  // passing them here). Separate 5h vs 7d families — the exporter emits
+  // `claude_usage_5h_reset_timestamp` and `claude_usage_7d_reset_timestamp`
+  // as distinct metrics rather than one metric with a `window` label.
+  reset5hSamples: PromInstantSample[];
+  reset7dSamples: PromInstantSample[];
   sparklines: PromRangeSeries[];
 }): TokenRow[] {
   return input.entries.map((entry) => ({
     entry,
     pct5h: sampleByLabel(input.pct5hSamples, entry.label),
     pct7d: sampleByLabel(input.pct7dSamples, entry.label),
-    resetSecondsFiveHour: resetByWindow(
-      input.resetSamples,
-      entry.label,
-      "five_hour",
-    ),
-    resetSecondsSevenDay: resetByWindow(
-      input.resetSamples,
-      entry.label,
-      "seven_day",
-    ),
+    resetSecondsFiveHour: sampleByLabel(input.reset5hSamples, entry.label),
+    resetSecondsSevenDay: sampleByLabel(input.reset7dSamples, entry.label),
     sparkline: sparklineByLabel(input.sparklines, entry.label),
   }));
 }

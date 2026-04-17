@@ -34,7 +34,10 @@ export default async function TokenDetailPage({ params }: Params) {
   // are quotes — which can't appear in a valid label. Belt-and-suspenders:
   // escape just in case the registry was hand-edited out-of-band.
   const safeLabel = entry.label.replace(/"/g, '\\"');
-  const promql = `claude_usage_7d_pct{label="${safeLabel}"}`;
+  // Exporter publishes `claude_usage_7d_utilization` (0..1) with a `name`
+  // label (see servers/mcow/claude-usage-exporter/exporter.py). Multiply by
+  // 100 so DetailChart keeps operating in the 0..100 space.
+  const promql = `claude_usage_7d_utilization{name="${safeLabel}"} * 100`;
   const series = await queryRange(promql, sevenDaysAgo, now, 3600, {
     revalidateSec: 60,
   }).catch(() => []);

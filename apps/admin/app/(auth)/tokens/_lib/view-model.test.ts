@@ -42,15 +42,16 @@ const series = (
 // -------------------------------------------------------------------------
 
 describe("buildTokenRows", () => {
-  test("Test 1: matches entries to instant samples by labels.label", () => {
+  test("Test 1: matches entries to instant samples by labels.name", () => {
     const entries = [entry({ label: "makscee-personal" })];
-    const pct5hSamples = [sample({ label: "makscee-personal" }, 62)];
-    const pct7dSamples = [sample({ label: "makscee-personal" }, 44)];
+    const pct5hSamples = [sample({ name: "makscee-personal" }, 62)];
+    const pct7dSamples = [sample({ name: "makscee-personal" }, 44)];
     const rows = buildTokenRows({
       entries,
       pct5hSamples,
       pct7dSamples,
-      resetSamples: [],
+      reset5hSamples: [],
+      reset7dSamples: [],
       sparklines: [],
     });
     expect(rows).toHaveLength(1);
@@ -62,27 +63,29 @@ describe("buildTokenRows", () => {
     const entries = [entry({ label: "brand-new-token" })];
     const rows = buildTokenRows({
       entries,
-      pct5hSamples: [sample({ label: "other-label" }, 50)],
+      pct5hSamples: [sample({ name: "other-label" }, 50)],
       pct7dSamples: [],
-      resetSamples: [],
+      reset5hSamples: [],
+      reset7dSamples: [],
       sparklines: [],
     });
     expect(rows[0]!.pct5h).toBeNull();
     expect(rows[0]!.pct7d).toBeNull();
   });
 
-  test("Test 3: reset seconds keyed by {label, window}", () => {
+  test("Test 3: reset seconds sourced from separate 5h/7d sample arrays", () => {
     const entries = [entry({ label: "tok-a" })];
-    const resetSamples = [
-      sample({ label: "tok-a", window: "five_hour" }, 3600),
-      sample({ label: "tok-a", window: "seven_day" }, 86400),
-      sample({ label: "tok-other", window: "five_hour" }, 999),
+    const reset5hSamples = [
+      sample({ name: "tok-a" }, 3600),
+      sample({ name: "tok-other" }, 999),
     ];
+    const reset7dSamples = [sample({ name: "tok-a" }, 86400)];
     const rows = buildTokenRows({
       entries,
       pct5hSamples: [],
       pct7dSamples: [],
-      resetSamples,
+      reset5hSamples,
+      reset7dSamples,
       sparklines: [],
     });
     expect(rows[0]!.resetSecondsFiveHour).toBe(3600);
@@ -95,7 +98,7 @@ describe("buildTokenRows", () => {
       entry({ id: "b", label: "no-series" }),
     ];
     const sparklines = [
-      series({ label: "has-series" }, [
+      series({ name: "has-series" }, [
         [1700000000, 20],
         [1700003600, 30],
       ]),
@@ -104,7 +107,8 @@ describe("buildTokenRows", () => {
       entries,
       pct5hSamples: [],
       pct7dSamples: [],
-      resetSamples: [],
+      reset5hSamples: [],
+      reset7dSamples: [],
       sparklines,
     });
     expect(rows[0]!.sparkline).toEqual([
@@ -141,7 +145,7 @@ describe("thresholdClass", () => {
   });
 
   test("Test 9b: percentages (0-100 range) auto-normalized", () => {
-    // Callers may pass 62 (from metric `claude_usage_5h_pct` stored as 0-100) or 0.62 (0-1).
+    // Callers may pass 62 (from `claude_usage_5h_utilization * 100`, stored as 0-100) or 0.62 (0-1).
     expect(thresholdClass(62)).toBe("safe");
     expect(thresholdClass(85)).toBe("warn");
     expect(thresholdClass(96)).toBe("critical");

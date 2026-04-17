@@ -19,11 +19,20 @@ export default async function TokensPage() {
 
   // Run Prometheus queries in parallel; any individual failure degrades to
   // an empty result set so the page still renders (threat T-13-04-03).
-  const [pct5h, pct7d, resets, sparklines] = await Promise.all([
-    queryInstant("claude_usage_5h_pct").catch(() => []),
-    queryInstant("claude_usage_7d_pct").catch(() => []),
-    queryInstant("claude_usage_reset_seconds").catch(() => []),
-    queryRange("claude_usage_7d_pct", sevenDaysAgo, now, 3600, {
+  //
+  // Exporter (servers/mcow/claude-usage-exporter/exporter.py) publishes:
+  //   - claude_usage_5h_utilization / claude_usage_7d_utilization (0..1)
+  //   - claude_usage_5h_reset_timestamp / claude_usage_7d_reset_timestamp
+  //     (absolute Unix seconds) — convert to seconds-until-reset via `- time()`
+  //   - label `name` (not `label`)
+  // Multiply utilization by 100 here so the view-model keeps operating in the
+  // 0..100 space it already assumes.
+  const [pct5h, pct7d, reset5h, reset7d, sparklines] = await Promise.all([
+    queryInstant("claude_usage_5h_utilization * 100").catch(() => []),
+    queryInstant("claude_usage_7d_utilization * 100").catch(() => []),
+    queryInstant("claude_usage_5h_reset_timestamp - time()").catch(() => []),
+    queryInstant("claude_usage_7d_reset_timestamp - time()").catch(() => []),
+    queryRange("claude_usage_7d_utilization * 100", sevenDaysAgo, now, 3600, {
       revalidateSec: 60,
     }).catch(() => []),
   ]);
@@ -32,7 +41,8 @@ export default async function TokensPage() {
     entries,
     pct5hSamples: pct5h,
     pct7dSamples: pct7d,
-    resetSamples: resets,
+    reset5hSamples: reset5h,
+    reset7dSamples: reset7d,
     sparklines,
   });
 
