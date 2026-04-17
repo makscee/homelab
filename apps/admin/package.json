@@ -6,7 +6,8 @@
     "dev": "next dev -p 3847 -H 127.0.0.1",
     "build": "next build",
     "start": "next start -p 3847 -H 127.0.0.1",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "bun test"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

@@ -22,8 +22,13 @@ const FIXTURE_DIR = path.join(process.cwd(), "lib", "__fixtures__");
 const FIXTURE_REGISTRY_SOPS = path.join(FIXTURE_DIR, "claude-tokens.test.sops.yaml");
 const FIXTURE_REGISTRY_PLAIN = path.join(FIXTURE_DIR, "claude-tokens.test.plain.yaml");
 
+// Age recipient used by the repo-wide .sops.yaml rule. Passing it explicitly
+// keeps the fixture path out from under the `secrets/` creation-rule regex.
+const AGE_RECIPIENT =
+  "age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp";
+
 /**
- * Create a SOPS-encrypted fixture using the repo's default .sops.yaml recipient.
+ * Create a SOPS-encrypted fixture using the repo's age recipient.
  * This runs real sops so the fixture matches production encryption.
  */
 function createEncryptedFixture(plaintextYaml: string, targetPath: string): void {
@@ -33,7 +38,14 @@ function createEncryptedFixture(plaintextYaml: string, targetPath: string): void
   try {
     const res = realSpawnSync(
       "sops",
-      ["-e", "--input-type", "yaml", "--output-type", "yaml", tmpPlain],
+      [
+        "-e",
+        "--config", "/dev/null",
+        "--age", AGE_RECIPIENT,
+        "--input-type", "yaml",
+        "--output-type", "yaml",
+        tmpPlain,
+      ],
       { encoding: "utf-8" },
     );
     if (res.status !== 0) {
@@ -59,20 +71,15 @@ beforeAll(() => {
     enabled: true
     added_at: "${now}"
 `;
-  fs.writeFileSync(
-    path.dirname(FIXTURE_REGISTRY_PLAIN) + "/.gitignore",
-    "*\n",
-  );
+  fs.mkdirSync(FIXTURE_DIR, { recursive: true });
+  fs.writeFileSync(path.join(FIXTURE_DIR, ".gitignore"), "*\n");
   fs.writeFileSync(FIXTURE_REGISTRY_PLAIN, plaintext);
   createEncryptedFixture(plaintext, FIXTURE_REGISTRY_SOPS);
 });
 
 afterAll(() => {
   _setSpawnSyncForTest(null);
-  try { fs.unlinkSync(FIXTURE_REGISTRY_SOPS); } catch {}
-  try { fs.unlinkSync(FIXTURE_REGISTRY_PLAIN); } catch {}
-  try { fs.unlinkSync(path.dirname(FIXTURE_REGISTRY_PLAIN) + "/.gitignore"); } catch {}
-  try { fs.rmdirSync(FIXTURE_DIR); } catch {}
+  try { fs.rmSync(FIXTURE_DIR, { recursive: true, force: true }); } catch {}
 });
 
 describe("sopsAvailable()", () => {
@@ -193,6 +200,11 @@ describe("setRegistryField() mutex", () => {
 describe("replaceRegistry()", () => {
   test("writes plaintext to tmp, runs sops -e -i, atomically renames to target", async () => {
     _setSpawnSyncForTest(null);
+    // tmp-dir path does not match .sops.yaml creation rules, so pass the
+    // recipient explicitly via env (module reads it dynamically).
+    const prevRecipients = process.env.SOPS_AGE_RECIPIENTS;
+    process.env.SOPS_AGE_RECIPIENTS =
+      "age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp";
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sops-test-"));
     const target = path.join(tmpDir, "out.sops.yaml");
     try {
@@ -221,6 +233,8 @@ describe("replaceRegistry()", () => {
       expect(back.tokens[0].enabled).toBe(false);
     } finally {
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+      if (prevRecipients === undefined) delete process.env.SOPS_AGE_RECIPIENTS;
+      else process.env.SOPS_AGE_RECIPIENTS = prevRecipients;
     }
   });
 });
