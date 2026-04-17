@@ -230,8 +230,8 @@
 
     - name: Fail if health body.ok != true
       ansible.builtin.fail:
-        msg: "Health check returned 200 but body.ok != true: {{ health_local.json }}"
-      when: not (health_local.json.ok | default(false))
+        msg: "Health check returned 200 but body.ok != true: {{ health_local.json | default({}) }}"
+      when: not ansible_check_mode and not (health_local.json.ok | default(false))
 
     # ── Stage 12 — Caddy block (additive via blockinfile; authors SEC-02 layer) ─
     - name: Render Caddy site-block template locally
@@ -287,6 +287,6 @@
     - name: Summary
       ansible.builtin.debug:
         msg:
-          - "Local  /api/health → {{ health_local.status }} ok={{ health_local.json.ok }}"
-          - "Public /api/health → {{ health_public.status }} ok={{ health_public.json.ok }}"
+          - "Local  /api/health → {{ health_local.status | default('(check-mode)') }} ok={{ health_local.json.ok | default('(check-mode)') }}"
+          - "Public /api/health → {{ health_public.status | default('(check-mode)') }} ok={{ health_public.json.ok | default('(check-mode)') }}"
           - "Commit: {{ homelab_admin_commit_sha }}"

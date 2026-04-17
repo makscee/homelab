@@ -1,0 +1,186 @@
+
+PLAY [Pre-deploy gate — bun audit on controller] *******************************
+
+TASK [Run bun audit (HIGH/CRITICAL aborts deploy)] *****************************
+skipping: [localhost]
+
+TASK [Show bun audit summary] **************************************************
+ok: [localhost] => {
+    "audit_result.stdout_lines": []
+}
+
+PLAY [Deploy homelab-admin to mcow] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Host 'mcow' is using the discovered Python interpreter at '/usr/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [mcow]
+
+TASK [Check current Bun version on mcow] ***************************************
+skipping: [mcow]
+
+TASK [Install/Upgrade Bun to 1.1.38] *******************************************
+skipping: [mcow]
+
+TASK [Ensure homelab-admin group exists] ***************************************
+ok: [mcow]
+
+TASK [Ensure homelab-admin user exists] ****************************************
+ok: [mcow]
+
+TASK [Ensure /opt/homelab-admin exists] ****************************************
+ok: [mcow]
+
+TASK [Ensure /opt/homelab-admin/app exists] ************************************
+ok: [mcow]
+
+TASK [Plumb secrets from SOPS to /etc/homelab-admin/env] ***********************
+included: /Users/admin/hub/workspace/homelab/ansible/playbooks/tasks/homelab-admin-secrets.yml for mcow
+
+TASK [Decrypt homelab_admin secrets locally] ***********************************
+ok: [mcow -> localhost]
+
+TASK [Parse decrypted homelab_admin secrets] ***********************************
+ok: [mcow]
+
+TASK [Ensure /etc/homelab-admin env directory exists on target] ****************
+ok: [mcow]
+
+TASK [Render /etc/homelab-admin/env on target] *********************************
+changed: [mcow]
+
+TASK [Drop in-memory secret facts after writing env file] **********************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: Importing 'to_text' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+[DEPRECATION WARNING]: The `ansible.module_utils.common._collections_compat` module is deprecated. This feature will be removed from ansible-core version 2.24. Use `collections.abc` from the Python standard library instead.
+ok: [mcow]
+
+TASK [Sync apps/admin source to /opt/homelab-admin/app] ************************
+[DEPRECATION WARNING]: Importing 'to_bytes' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+[DEPRECATION WARNING]: Importing 'to_native' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+.d..t.og. ./
+.f....og. .env.example
+.f....og. README.md
+.f....og. auth.config.ts
+.f....og. auth.ts
+.f....og. components.json
+.f....og. eslint.config.mjs
+.f....og. middleware.ts
+.f....og. next-env.d.ts
+.f....og. next.config.mjs
+.f....og. package.json
+.f....og. postcss.config.mjs
+.f....og. tailwind.config.ts
+.f....og. tsconfig.json
+.d....og. app/
+.f....og. app/error.tsx
+.f....og. app/globals.css
+.f....og. app/layout.tsx
+.f....og. app/loading.tsx
+.f....og. app/not-found.tsx
+.d....og. app/(auth)/
+.f....og. app/(auth)/layout.tsx
+.f....og. app/(auth)/page.tsx
+.d....og. app/(auth)/alerts/
+.f....og. app/(auth)/alerts/page.tsx
+.d....og. app/(auth)/box/
+.d....og. app/(auth)/box/[vmid]/
+.d....og. app/(auth)/box/[vmid]/terminal/
+.f....og. app/(auth)/box/[vmid]/terminal/page.tsx
+.d....og. app/(auth)/proxmox/
+.f....og. app/(auth)/proxmox/page.tsx
+.d....og. app/(auth)/tokens/
+.f....og. app/(auth)/tokens/page.tsx
+.d....og. app/(auth)/voidnet/
+.d....og. app/(auth)/voidnet/users/
+.f....og. app/(auth)/voidnet/users/page.tsx
+.d....og. app/(public)/
+.f....og. app/(public)/layout.tsx
+.d....og. app/(public)/403/
+.f....og. app/(public)/403/page.tsx
+.d....og. app/(public)/login/
+.f....og. app/(public)/login/page.tsx
+.d....og. app/api/
+.d....og. app/api/auth/
+.d....og. app/api/auth/[...nextauth]/
+.f....og. app/api/auth/[...nextauth]/route.ts
+.d....og. app/api/health/
+.f....og. app/api/health/route.ts
+.d....og. components/
+.d....og. components/common/
+.f....og. components/common/coming-soon.tsx
+.d....og. components/layout/
+.f....og. components/layout/nav-items.ts
+.f....og. components/layout/sidebar.tsx
+.f....og. components/layout/topbar.tsx
+.d....og. components/ui/
+.f....og. components/ui/avatar.tsx
+.f....og. components/ui/button.tsx
+.f....og. components/ui/card.tsx
+.f....og. components/ui/dropdown-menu.tsx
+.f....og. components/ui/skeleton.tsx
+.d....og. lib/
+.f....og. lib/auth-allowlist.server.ts
+.f....og. lib/utils.ts
+.d....og. types/
+.f....og. types/next-auth.d.ts
+changed: [mcow]
+
+TASK [Chown install dir to homelab-admin] **************************************
+ok: [mcow]
+
+TASK [Install deps with frozen lockfile] ***************************************
+skipping: [mcow]
+
+TASK [Snapshot previous build] *************************************************
+skipping: [mcow]
+
+TASK [bun run build] ***********************************************************
+skipping: [mcow]
+
+TASK [Install homelab-admin.service unit] **************************************
+ok: [mcow]
+
+TASK [Apply systemd changes before smoke] **************************************
+
+RUNNING HANDLER [Restart homelab-admin] ****************************************
+changed: [mcow]
+
+TASK [Ensure homelab-admin is enabled and started] *****************************
+ok: [mcow]
+
+TASK [Smoke — /api/health on 127.0.0.1:3847] ***********************************
+skipping: [mcow]
+
+TASK [Fail if health body.ok != true] ******************************************
+skipping: [mcow]
+
+TASK [Render Caddy site-block template locally] ********************************
+ok: [mcow -> localhost]
+
+TASK [Read rendered Caddy block into variable] *********************************
+ok: [mcow -> localhost]
+
+TASK [Ensure /var/log/caddy exists on mcow] ************************************
+ok: [mcow]
+
+TASK [Patch /etc/caddy/Caddyfile with homelab-admin site block] ****************
+ok: [mcow]
+
+TASK [Apply Caddy reload before external smoke] ********************************
+
+TASK [Smoke — /api/health via https://homelab.makscee.ru] **********************
+skipping: [mcow]
+
+TASK [Summary] *****************************************************************
+ok: [mcow] => {
+    "msg": [
+        "Local  /api/health → (check-mode) ok=(check-mode)",
+        "Public /api/health → (check-mode) ok=(check-mode)",
+        "Commit: 4591056"
+    ]
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+mcow                       : ok=21   changed=3    unreachable=0    failed=0    skipped=8    rescued=0    ignored=0   
+

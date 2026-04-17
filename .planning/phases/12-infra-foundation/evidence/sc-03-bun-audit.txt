@@ -1,0 +1,3 @@
+[0m[1mbun audit [0m[2mv1.3.5 (1e86cebd)[0m
+audit_exit:0
+    "next": "15.5.15",

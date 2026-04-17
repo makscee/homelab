@@ -1,0 +1,120 @@
+
+PLAY [Pre-deploy gate — bun audit on controller] *******************************
+
+TASK [Run bun audit (HIGH/CRITICAL aborts deploy)] *****************************
+ok: [localhost]
+
+TASK [Show bun audit summary] **************************************************
+ok: [localhost] => {
+    "audit_result.stdout_lines": []
+}
+
+PLAY [Deploy homelab-admin to mcow] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Host 'mcow' is using the discovered Python interpreter at '/usr/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [mcow]
+
+TASK [Check current Bun version on mcow] ***************************************
+ok: [mcow]
+
+TASK [Install/Upgrade Bun to 1.1.38] *******************************************
+skipping: [mcow]
+
+TASK [Ensure homelab-admin group exists] ***************************************
+ok: [mcow]
+
+TASK [Ensure homelab-admin user exists] ****************************************
+ok: [mcow]
+
+TASK [Ensure /opt/homelab-admin exists] ****************************************
+ok: [mcow]
+
+TASK [Ensure /opt/homelab-admin/app exists] ************************************
+ok: [mcow]
+
+TASK [Plumb secrets from SOPS to /etc/homelab-admin/env] ***********************
+included: /Users/admin/hub/workspace/homelab/ansible/playbooks/tasks/homelab-admin-secrets.yml for mcow
+
+TASK [Decrypt homelab_admin secrets locally] ***********************************
+ok: [mcow -> localhost]
+
+TASK [Parse decrypted homelab_admin secrets] ***********************************
+ok: [mcow]
+
+TASK [Ensure /etc/homelab-admin env directory exists on target] ****************
+ok: [mcow]
+
+TASK [Render /etc/homelab-admin/env on target] *********************************
+changed: [mcow]
+
+TASK [Drop in-memory secret facts after writing env file] **********************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: Importing 'to_text' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+[DEPRECATION WARNING]: The `ansible.module_utils.common._collections_compat` module is deprecated. This feature will be removed from ansible-core version 2.24. Use `collections.abc` from the Python standard library instead.
+ok: [mcow]
+
+TASK [Sync apps/admin source to /opt/homelab-admin/app] ************************
+[DEPRECATION WARNING]: Importing 'to_bytes' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+[DEPRECATION WARNING]: Importing 'to_native' from 'ansible.module_utils._text' is deprecated. This feature will be removed from ansible-core version 2.24. Use ansible.module_utils.common.text.converters instead.
+changed: [mcow]
+
+TASK [Chown install dir to homelab-admin] **************************************
+changed: [mcow]
+
+TASK [Install deps with frozen lockfile] ***************************************
+changed: [mcow]
+
+TASK [Snapshot previous build] *************************************************
+ok: [mcow]
+
+TASK [bun run build] ***********************************************************
+changed: [mcow]
+
+TASK [Install homelab-admin.service unit] **************************************
+ok: [mcow]
+
+TASK [Apply systemd changes before smoke] **************************************
+
+RUNNING HANDLER [Restart homelab-admin] ****************************************
+changed: [mcow]
+
+TASK [Ensure homelab-admin is enabled and started] *****************************
+ok: [mcow]
+
+TASK [Smoke — /api/health on 127.0.0.1:3847] ***********************************
+ok: [mcow]
+
+TASK [Fail if health body.ok != true] ******************************************
+skipping: [mcow]
+
+TASK [Render Caddy site-block template locally] ********************************
+ok: [mcow -> localhost]
+
+TASK [Read rendered Caddy block into variable] *********************************
+ok: [mcow -> localhost]
+
+TASK [Ensure /var/log/caddy exists on mcow] ************************************
+ok: [mcow]
+
+TASK [Patch /etc/caddy/Caddyfile with homelab-admin site block] ****************
+ok: [mcow]
+
+TASK [Apply Caddy reload before external smoke] ********************************
+
+TASK [Smoke — /api/health via https://homelab.makscee.ru] **********************
+ok: [mcow]
+
+TASK [Summary] *****************************************************************
+ok: [mcow] => {
+    "msg": [
+        "Local  /api/health → 200 ok=True",
+        "Public /api/health → 200 ok=True",
+        "Commit: 4591056"
+    ]
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+mcow                       : ok=27   changed=6    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+

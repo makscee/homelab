@@ -1,0 +1,34 @@
+HTTP/2 307 
+alt-svc: h3=":443"; ma=2592000
+content-security-policy: default-src 'self'; script-src 'self' 'nonce-1kZWg84lcdf6cuWsX5xUIQ==' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+date: Fri, 17 Apr 2026 07:44:00 GMT
+location: https://homelab.makscee.ru/login
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+set-cookie: __Host-authjs.csrf-token=8b9a5f0e2578d2af28fbe18601059aab5b23ff1faf411e2b79004f963c255993%7C5484cbc6d6e11124afa1a2de9a35790cce9214bc4316a56c1ba0914ebbec836d; Path=/; HttpOnly; Secure; SameSite=Lax
+set-cookie: __Secure-authjs.callback-url=https%3A%2F%2Fhomelab.makscee.ru; Path=/; HttpOnly; Secure; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY
+
+HTTP/2 200 
+alt-svc: h3=":443"; ma=2592000
+cache-control: s-maxage=31536000
+content-security-policy: default-src 'self'; script-src 'self' 'nonce-yeTDFnpwa3iHyQ3p3nU/lw==' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+content-type: text/html; charset=utf-8
+date: Fri, 17 Apr 2026 07:44:00 GMT
+etag: "ioiyxfme215f3"
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+set-cookie: __Host-authjs.csrf-token=05fc20e03b6451aebd448ba768363e02b207cafcfc704af0e5fcf6d99593af3c%7C0aada290d042fb72d044fd8ca479d2a5bc3a549032d68e2d5e08d3f4fbcea646; Path=/; HttpOnly; Secure; SameSite=Lax
+set-cookie: __Secure-authjs.callback-url=https%3A%2F%2Fhomelab.makscee.ru; Path=/; HttpOnly; Secure; SameSite=Lax
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nextjs-cache: HIT
+x-nextjs-prerender: 1
+x-nextjs-prerender: 1
+x-nextjs-stale-time: 300
+content-length: 7025
+

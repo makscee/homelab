@@ -1,0 +1,4 @@
+notBefore=Apr 17 06:44:58 2026 GMT
+notAfter=Jul 16 06:44:57 2026 GMT
+issuer=C = US, O = Let's Encrypt, CN = E7
+subject=CN = homelab.makscee.ru
