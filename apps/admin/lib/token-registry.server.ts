@@ -23,6 +23,12 @@ type SopsImpl = {
   sopsAvailable: () => boolean;
   decryptRegistry: (path?: string) => Promise<TokenRegistry>;
   replaceRegistry: (path: string, next: TokenRegistry) => Promise<void>;
+  mutateRegistry: <T>(
+    path: string,
+    mutator: (
+      current: TokenRegistry,
+    ) => Promise<{ next: TokenRegistry; result: T }>,
+  ) => Promise<T>;
 };
 
 let sopsImpl: SopsImpl | null = null;
@@ -113,6 +119,14 @@ export async function getTokenById(
   return e ? toPublic(e) : null;
 }
 
+// All mutation paths below hold the sops.server mutex across the full
+// decrypt → mutate → write cycle via `mutateRegistry`. Prior code did
+// `decrypt` outside the mutex and only took the lock around `replaceRegistry`,
+// which left a TOCTOU window where two concurrent addToken/renameToken
+// callers could both read the same registry, both pass `ensureUniqueLabel`,
+// then serialize through the write lock with the later write silently
+// clobbering the earlier one (data loss / duplicate label). See WR-01.
+
 export async function addToken(
   input: {
     label: string;
@@ -127,22 +141,25 @@ export async function addToken(
   if (!VALUE_REGEX.test(input.value)) {
     throw new Error("invalid token format");
   }
-  const reg = await sops().decryptRegistry();
-  ensureUniqueLabel(reg, input.label);
 
-  const entry: TokenEntry = {
-    id: randomUUID(),
-    label: input.label,
-    value: input.value,
-    tier: input.tier,
-    owner_host: input.owner_host,
-    enabled: true,
-    added_at: new Date().toISOString(),
-    notes: input.notes,
-  };
-
-  const next: TokenRegistry = { tokens: [...reg.tokens, entry] };
-  await sops().replaceRegistry(REGISTRY_PATH, next);
+  const entry = await sops().mutateRegistry<TokenEntry>(
+    REGISTRY_PATH,
+    async (reg) => {
+      ensureUniqueLabel(reg, input.label);
+      const created: TokenEntry = {
+        id: randomUUID(),
+        label: input.label,
+        value: input.value,
+        tier: input.tier,
+        owner_host: input.owner_host,
+        enabled: true,
+        added_at: new Date().toISOString(),
+        notes: input.notes,
+      };
+      const next: TokenRegistry = { tokens: [...reg.tokens, created] };
+      return { next, result: created };
+    },
+  );
 
   const diff: AuditDiff = {
     label: { after: entry.label },
@@ -168,13 +185,17 @@ export async function rotateToken(
   if (!VALUE_REGEX.test(newValue)) {
     throw new Error("invalid token format");
   }
-  const reg = await sops().decryptRegistry();
-  const e = findEntry(reg, id);
-  const prevRotated = e.rotated_at;
-  e.value = newValue;
-  e.rotated_at = new Date().toISOString();
 
-  await sops().replaceRegistry(REGISTRY_PATH, reg);
+  const { entry, prevRotated } = await sops().mutateRegistry<{
+    entry: TokenEntry;
+    prevRotated: string | undefined;
+  }>(REGISTRY_PATH, async (reg) => {
+    const e = findEntry(reg, id);
+    const previous = e.rotated_at;
+    e.value = newValue;
+    e.rotated_at = new Date().toISOString();
+    return { next: reg, result: { entry: e, prevRotated: previous } };
+  });
 
   emitAudit({
     actor,
@@ -183,11 +204,11 @@ export async function rotateToken(
     diff: {
       // Sentinels; audit.server also force-redacts `value` entries.
       value: { before: "[ROTATED]", after: "[ROTATED]" },
-      rotated_at: { before: prevRotated, after: e.rotated_at },
+      rotated_at: { before: prevRotated, after: entry.rotated_at },
     },
   });
 
-  return toPublic(e);
+  return toPublic(entry);
 }
 
 export async function toggleEnabled(
@@ -196,12 +217,16 @@ export async function toggleEnabled(
   actor: string,
 ): Promise<PublicTokenEntry> {
   requireSops();
-  const reg = await sops().decryptRegistry();
-  const e = findEntry(reg, id);
-  const before = e.enabled;
-  e.enabled = enabled;
 
-  await sops().replaceRegistry(REGISTRY_PATH, reg);
+  const { entry, before } = await sops().mutateRegistry<{
+    entry: TokenEntry;
+    before: boolean;
+  }>(REGISTRY_PATH, async (reg) => {
+    const e = findEntry(reg, id);
+    const prev = e.enabled;
+    e.enabled = enabled;
+    return { next: reg, result: { entry: e, before: prev } };
+  });
 
   emitAudit({
     actor,
@@ -210,7 +235,7 @@ export async function toggleEnabled(
     diff: { enabled: { before, after: enabled } },
   });
 
-  return toPublic(e);
+  return toPublic(entry);
 }
 
 export async function renameToken(
@@ -219,13 +244,17 @@ export async function renameToken(
   actor: string,
 ): Promise<PublicTokenEntry> {
   requireSops();
-  const reg = await sops().decryptRegistry();
-  const e = findEntry(reg, id);
-  ensureUniqueLabel(reg, newLabel, id);
-  const before = e.label;
-  e.label = newLabel;
 
-  await sops().replaceRegistry(REGISTRY_PATH, reg);
+  const { entry, before } = await sops().mutateRegistry<{
+    entry: TokenEntry;
+    before: string;
+  }>(REGISTRY_PATH, async (reg) => {
+    const e = findEntry(reg, id);
+    ensureUniqueLabel(reg, newLabel, id);
+    const prev = e.label;
+    e.label = newLabel;
+    return { next: reg, result: { entry: e, before: prev } };
+  });
 
   emitAudit({
     actor,
@@ -234,21 +263,25 @@ export async function renameToken(
     diff: { label: { before, after: newLabel } },
   });
 
-  return toPublic(e);
+  return toPublic(entry);
 }
 
 export async function softDeleteToken(id: string, actor: string): Promise<void> {
   requireSops();
-  const reg = await sops().decryptRegistry();
-  const e = findEntry(reg, id);
-  e.deleted_at = new Date().toISOString();
 
-  await sops().replaceRegistry(REGISTRY_PATH, reg);
+  const deletedAt = await sops().mutateRegistry<string>(
+    REGISTRY_PATH,
+    async (reg) => {
+      const e = findEntry(reg, id);
+      e.deleted_at = new Date().toISOString();
+      return { next: reg, result: e.deleted_at };
+    },
+  );
 
   emitAudit({
     actor,
     action: "token.delete",
     token_id: id,
-    diff: { deleted_at: { after: e.deleted_at } },
+    diff: { deleted_at: { after: deletedAt } },
   });
 }

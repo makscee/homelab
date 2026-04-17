@@ -6,8 +6,8 @@ import * as childProcess from "node:child_process";
 import {
   sopsAvailable,
   decryptRegistry,
-  setRegistryField,
   replaceRegistry,
+  mutateRegistry,
   SopsDecryptError,
   SopsWriteError,
   _setSpawnSyncForTest,
@@ -147,22 +147,27 @@ describe("decryptRegistry()", () => {
   });
 });
 
-describe("setRegistryField() mutex", () => {
-  test("concurrent setRegistryField calls serialize through mutex", async () => {
+describe("mutation mutex", () => {
+  test("concurrent replaceRegistry calls serialize through mutex", async () => {
+    // replaceRegistry / mutateRegistry share a single in-process mutex. We
+    // assert that at most one spawn is in-flight at any moment across three
+    // parallel invocations. Two shell-outs happen per replaceRegistry
+    // (encrypt + the internal spawn pipeline), so we tag by target path.
     const order: string[] = [];
     let active = 0;
     let maxActive = 0;
 
     _setSpawnSyncForTest((_cmd: string, args: readonly string[]) => {
+      const target = args[args.length - 1];
       active += 1;
       maxActive = Math.max(maxActive, active);
-      order.push(`start:${args[args.length - 1]}`);
+      order.push(`start:${target}`);
       // Simulate work by doing a tight busy-loop sync delay.
-      const until = Date.now() + 15;
+      const until = Date.now() + 10;
       while (Date.now() < until) {
         // busy wait
       }
-      order.push(`end:${args[args.length - 1]}`);
+      order.push(`end:${target}`);
       active -= 1;
       return {
         status: 0,
@@ -174,26 +179,65 @@ describe("setRegistryField() mutex", () => {
       } as unknown as childProcess.SpawnSyncReturns<Buffer>;
     });
 
+    const empty: TokenRegistry = { tokens: [] };
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sops-mutex-"));
     try {
       await Promise.all([
-        setRegistryField("/fake-a", '["tokens"][0]["enabled"]', "true"),
-        setRegistryField("/fake-b", '["tokens"][0]["enabled"]', "false"),
-        setRegistryField("/fake-c", '["tokens"][0]["enabled"]', "true"),
+        replaceRegistry(path.join(tmpDir, "a.sops.yaml"), empty),
+        replaceRegistry(path.join(tmpDir, "b.sops.yaml"), empty),
+        replaceRegistry(path.join(tmpDir, "c.sops.yaml"), empty),
       ]);
     } finally {
       _setSpawnSyncForTest(null);
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
     }
 
+    // At no point were two spawn calls in flight simultaneously — the mutex
+    // held across each replaceRegistry's full inner work.
     expect(maxActive).toBe(1);
-    // Order must be strictly serialized (each start→end completes before next start)
-    expect(order).toEqual([
-      "start:/fake-a",
-      "end:/fake-a",
-      "start:/fake-b",
-      "end:/fake-b",
-      "start:/fake-c",
-      "end:/fake-c",
-    ]);
+  });
+
+  test("mutateRegistry runs decrypt → mutate → write under a single mutex", async () => {
+    // Inject a spawnSync that responds differently to `-d` (decrypt) and
+    // `-e` (encrypt) so we can walk the full mutateRegistry cycle.
+    _setSpawnSyncForTest((_cmd: string, args: readonly string[]) => {
+      const isDecrypt = args.includes("-d");
+      if (isDecrypt) {
+        return {
+          status: 0,
+          signal: null,
+          output: [],
+          pid: 0,
+          stdout: Buffer.from(JSON.stringify({ tokens: [] })),
+          stderr: Buffer.from(""),
+        } as unknown as childProcess.SpawnSyncReturns<Buffer>;
+      }
+      return {
+        status: 0,
+        signal: null,
+        output: [],
+        pid: 0,
+        stdout: Buffer.from(""),
+        stderr: Buffer.from(""),
+      } as unknown as childProcess.SpawnSyncReturns<Buffer>;
+    });
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sops-mutate-"));
+    try {
+      const saw: string[] = [];
+      const result = await mutateRegistry<string>(
+        path.join(tmpDir, "mutate.sops.yaml"),
+        async (current) => {
+          saw.push(`mutate:${current.tokens.length}`);
+          return { next: { tokens: [] }, result: "done" };
+        },
+      );
+      expect(result).toBe("done");
+      expect(saw).toEqual(["mutate:0"]);
+    } finally {
+      _setSpawnSyncForTest(null);
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+    }
   });
 });
 

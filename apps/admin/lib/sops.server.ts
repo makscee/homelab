@@ -186,94 +186,98 @@ export async function decryptRegistry(
 }
 
 /**
- * Set a single field in the SOPS-encrypted registry.
- * Serialized through in-process mutex (T-13-01-02).
- *
- * @param registryPath path to the .sops.yaml file
- * @param jsonPath SOPS --set path expression, e.g. `["tokens"][0]["enabled"]`
- * @param value JSON-encoded new value (quotes already applied by caller
- *              for strings; booleans/numbers must be bare).
- */
-export function setRegistryField(
-  registryPath: string,
-  jsonPath: string,
-  value: string,
-): Promise<void> {
-  return withMutex(async () => {
-    // Guard against shell metacharacters / command injection (T-13-01-04).
-    // argv-style spawn avoids the shell, but we still reject suspicious input.
-    if (!/^(\[[^\[\]]+\])+$/.test(jsonPath)) {
-      throw new SopsWriteError(
-        registryPath,
-        "invalid jsonPath shape; expected repeated [key] segments",
-      );
-    }
-    const setArg = `${jsonPath} ${value}`;
-    const res = spawn(
-      SOPS_BIN,
-      ["--set", setArg, registryPath],
-      { stdio: "pipe" },
-    );
-    if (res.status !== 0) {
-      const stderr = (res.stderr ?? Buffer.from("")).toString("utf-8");
-      throw new SopsWriteError(registryPath, stderr);
-    }
-  });
-}
-
-/**
  * Replace the entire registry with `next`, using a tmp-file + atomic rename.
  * Serialized through in-process mutex. Validates `next` against Zod before
  * writing anything.
+ *
+ * NOTE: For mutations that decrypt, mutate, and re-encrypt, prefer
+ * `mutateRegistry` — it holds the mutex across the entire read-modify-write
+ * window and closes the TOCTOU race that `decrypt → replaceRegistry` has when
+ * two callers race (both read the same state, both pass their own uniqueness
+ * checks, then serialize through the write mutex with the later write
+ * silently clobbering the earlier one).
  */
 export function replaceRegistry(
   registryPath: string,
   next: TokenRegistry,
 ): Promise<void> {
+  return withMutex(() => writeRegistryLocked(registryPath, next));
+}
+
+/**
+ * Run a decrypt → mutate → encrypt cycle while holding the in-process mutex,
+ * closing the TOCTOU race described above. The mutator receives the current
+ * registry and must return the next state (async allowed so mutators can do
+ * uniqueness lookups against the freshly-decrypted state without fear of an
+ * interleaved peer).
+ *
+ * The mutator MUST be pure w.r.t. I/O against the registry file; perform all
+ * on-disk registry reads/writes through this helper. Calling decryptRegistry
+ * or replaceRegistry from inside the mutator will deadlock.
+ */
+export function mutateRegistry<T>(
+  registryPath: string,
+  mutator: (current: TokenRegistry) => Promise<{ next: TokenRegistry; result: T }>,
+): Promise<T> {
   return withMutex(async () => {
-    // Validate up-front so invalid input cannot leak to disk.
-    TokenRegistrySchema.parse(next);
-
-    const tmpPath = `${registryPath}.tmp`;
-    // Ensure containing directory exists.
-    const dir = path.dirname(registryPath);
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-    } catch {
-      // best-effort
-    }
-
-    try {
-      // Write plaintext JSON at 0o600 — temp on-disk window is the only time
-      // plaintext hits persistent storage (T-13-01-05 accepted residual).
-      fs.writeFileSync(tmpPath, JSON.stringify(next), { mode: 0o600 });
-
-      // Encrypt in-place. `--input-type json --output-type yaml` forces a
-      // YAML .sops.yaml result even though the tmp file has .tmp extension.
-      const encryptArgs = [
-        "-e", "-i",
-        "--input-type", "json",
-        "--output-type", "yaml",
-      ];
-      const recipients = getAgeRecipients();
-      if (recipients) {
-        // When recipients are passed explicitly, also bypass .sops.yaml
-        // creation_rules (sops errors if a config is found but no rule
-        // matches the path, even when --age is set).
-        encryptArgs.push("--config", "/dev/null", "--age", recipients);
-      }
-      encryptArgs.push(tmpPath);
-      const res = spawn(SOPS_BIN, encryptArgs, { stdio: "pipe" });
-      if (res.status !== 0) {
-        const stderr = (res.stderr ?? Buffer.from("")).toString("utf-8");
-        throw new SopsWriteError(registryPath, stderr);
-      }
-      // Atomic rename (same-filesystem).
-      fs.renameSync(tmpPath, registryPath);
-    } catch (e) {
-      // Best-effort cleanup — never leave plaintext tmp behind.
-      try { fs.rmSync(tmpPath, { force: true }); } catch {}
-      throw e;
-    }
+    // decryptRegistry is a pure read (no mutex), so calling it while we
+    // hold the mutex is safe — no deadlock, no nested lock acquisition.
+    const current = await decryptRegistry(registryPath);
+    const { next, result } = await mutator(current);
+    await writeRegistryLocked(registryPath, next);
+    return result;
   });
+}
+
+// Internal: the body of replaceRegistry, callable while already holding the
+// mutex. NEVER call this directly from outside the module — it bypasses the
+// serialization guarantee.
+async function writeRegistryLocked(
+  registryPath: string,
+  next: TokenRegistry,
+): Promise<void> {
+  // Validate up-front so invalid input cannot leak to disk.
+  TokenRegistrySchema.parse(next);
+
+  const tmpPath = `${registryPath}.tmp`;
+  // Ensure containing directory exists.
+  const dir = path.dirname(registryPath);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    // best-effort
+  }
+
+  try {
+    // Write plaintext JSON at 0o600 — temp on-disk window is the only time
+    // plaintext hits persistent storage (T-13-01-05 accepted residual).
+    fs.writeFileSync(tmpPath, JSON.stringify(next), { mode: 0o600 });
+
+    // Encrypt in-place. `--input-type json --output-type yaml` forces a
+    // YAML .sops.yaml result even though the tmp file has .tmp extension.
+    const encryptArgs = [
+      "-e", "-i",
+      "--input-type", "json",
+      "--output-type", "yaml",
+    ];
+    const recipients = getAgeRecipients();
+    if (recipients) {
+      // When recipients are passed explicitly, also bypass .sops.yaml
+      // creation_rules (sops errors if a config is found but no rule
+      // matches the path, even when --age is set).
+      encryptArgs.push("--config", "/dev/null", "--age", recipients);
+    }
+    encryptArgs.push(tmpPath);
+    const res = spawn(SOPS_BIN, encryptArgs, { stdio: "pipe" });
+    if (res.status !== 0) {
+      const stderr = (res.stderr ?? Buffer.from("")).toString("utf-8");
+      throw new SopsWriteError(registryPath, stderr);
+    }
+    // Atomic rename (same-filesystem).
+    fs.renameSync(tmpPath, registryPath);
+  } catch (e) {
+    // Best-effort cleanup — never leave plaintext tmp behind.
+    try { fs.rmSync(tmpPath, { force: true }); } catch {}
+    throw e;
+  }
 }

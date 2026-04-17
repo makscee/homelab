@@ -35,15 +35,31 @@ function installFake(): void {
     decryptCalls: 0,
     available: true,
   };
+  const decryptRegistry = async (_path?: string) => {
+    sopsState.decryptCalls += 1;
+    return JSON.parse(JSON.stringify(sopsState.store)) as TokenRegistry;
+  };
+  const replaceRegistry = async (_path: string, next: TokenRegistry) => {
+    sopsState.replaceCalls += 1;
+    sopsState.store = JSON.parse(JSON.stringify(next)) as TokenRegistry;
+  };
   _setSopsImplForTest({
     sopsAvailable: () => sopsState.available,
-    decryptRegistry: async (_path?: string) => {
-      sopsState.decryptCalls += 1;
-      return JSON.parse(JSON.stringify(sopsState.store)) as TokenRegistry;
-    },
-    replaceRegistry: async (_path: string, next: TokenRegistry) => {
-      sopsState.replaceCalls += 1;
-      sopsState.store = JSON.parse(JSON.stringify(next)) as TokenRegistry;
+    decryptRegistry,
+    replaceRegistry,
+    // The fake mutateRegistry performs the same read → mutate → write
+    // sequence as the real one, serially. Tests don't assert concurrent
+    // mutex semantics (those belong to sops.server.test.ts); here we just
+    // need to keep replaceCalls / decryptCalls accounting in sync with the
+    // production code path.
+    mutateRegistry: async <T,>(
+      path: string,
+      mutator: (current: TokenRegistry) => Promise<{ next: TokenRegistry; result: T }>,
+    ): Promise<T> => {
+      const current = await decryptRegistry(path);
+      const { next, result } = await mutator(current);
+      await replaceRegistry(path, next);
+      return result;
     },
   });
 }
