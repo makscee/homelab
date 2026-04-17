@@ -3,7 +3,7 @@ phase: 13
 plan: 02
 subsystem: exporter
 tags: [exporter, ansible, security, tech-debt]
-status: awaiting-checkpoint
+status: complete
 dependency_graph:
   requires:
     - "secrets/claude-tokens.sops.yaml (Plan 13-01)"
@@ -39,10 +39,10 @@ decisions:
   - "poll_all_tokens tolerates both Phase-13 schema (label/value) and legacy v2 schema (name/token) via _name_and_value adapter"
 metrics:
   tasks_planned: 4
-  tasks_completed: 3
-  checkpoint_pending: 1
+  tasks_completed: 4
+  checkpoint_pending: 0
   files_touched: 7
-  commits: 4
+  commits: 5
 ---
 
 # Phase 13 Plan 02: exporter rebind + hot-reload Summary
@@ -61,7 +61,7 @@ Phase 13 UI SOPS writes surfacing in metrics without Ansible redeploy
 | T2a: RED — failing pytest suite | `9483f5e` | Done |
 | T2b: GREEN — argparse + _reload_registry_if_changed + _redact | `ac04415` | Done |
 | T3: Ansible playbook (idempotent, no_log, Phase 12 SOPS pattern) | `ff44223` | Done |
-| T4: Deploy + operational verification on mcow | — | **Awaiting human checkpoint** |
+| T4: Deploy + operational verification on mcow | `f968442` | Done |
 
 ## Verification evidence (controller-side)
 
@@ -124,12 +124,33 @@ None. Every gauge/counter is wired to live data or sourced from
 `state['tokens']`. The decrypted registry file is the only runtime data
 dependency and is created by Task 3's Ansible handler.
 
-## Awaiting operator (Task 4)
+## Deploy verification (Task 4 — completed)
 
-See the checkpoint message returned to the orchestrator. On operator
-approval with pasted command outputs, this Summary's frontmatter flips to
-`status: complete` and metrics are finalized (commit hashes for deploy-time
-changes, if any, appended).
+Deployed to mcow 2026-04-17. Playbook needed three correctness fixes before
+first successful converge (commit `f968442`):
+1. `vars_files: ../group_vars/all.yml` — with inventory under `inventory/`
+   and playbook under `playbooks/`, neither sibling triggers auto-discovery
+   of `group_vars/all.yml`. Explicit load required.
+2. Alias `claude_usage_exporter.*` at play scope — Ansible 2.20 strict
+   task-arg finalization refuses nested dict keys in task args.
+3. apt install `python3-prometheus-client` + purge stale
+   `/opt/claude-usage-exporter/venv` — system python now used; rsync
+   `delete: true` had orphaned the prior venv.
+4. `synchronize` ran with `owner/group/perms: false` + explicit
+   `chown -R root:root` + `find chmod` — mac uid 501/staff was leaking
+   onto mcow.
+
+Operational evidence:
+
+| Check | Result |
+|-------|--------|
+| `systemctl is-active claude-usage-exporter` | `active` |
+| `ps uid` | `65534 nobody` ✓ |
+| `ss -tlnp :9101` | `LISTEN 100.101.0.9:9101` (Tailnet-only) ✓ |
+| Tailnet curl from docker-tower | `# HELP claude_usage_5h_utilization …` + families registered ✓ |
+| mtime touch + 35s wait | `INFO registry reloaded: 0 enabled tokens` ✓ |
+| `journalctl ... grep -c sk-ant-oat01-` | `0` ✓ |
+| Idempotency (2nd play run) | 2 tasks changed (rsync no-op-but-reports-changed + restart handler) — acceptable; no file diffs. |
 
 ## Self-Check
 
@@ -143,4 +164,4 @@ All four produced commits are reachable from `main`:
 Files created/modified all exist on disk. Task 2 pytest suite green (5/5).
 Task 3 ansible-playbook --syntax-check exits 0.
 
-**Self-Check: PASSED (T1-T3). T4 pending operator deploy.**
+**Self-Check: PASSED (T1-T4). Deploy green on mcow.**
