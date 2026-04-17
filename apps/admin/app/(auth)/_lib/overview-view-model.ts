@@ -22,10 +22,25 @@ export type HostRow = {
   stale: StaleLevel;
 };
 
+export type ClaudeUsageEntry = {
+  label: string;
+  /** 5h session utilization ratio 0..1, or null if no sample yet. */
+  session: number | null;
+  /** 7d weekly utilization ratio 0..1, or null if no sample yet. */
+  weekly: number | null;
+};
+
 export type OverviewResponse = {
   ts: number; // server unix_ms
   prometheusHealthy: boolean;
   hosts: HostRow[];
+  /**
+   * One entry per Claude token label seen in Prometheus. Derived from
+   * `claude_code_session_used_ratio{label=...}` ∪
+   * `claude_code_weekly_used_ratio{label=...}`. Sorted by label for stable
+   * render order.
+   */
+  claude: ClaudeUsageEntry[];
 };
 
 // -------------------------------------------------------------------------
