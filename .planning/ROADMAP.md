@@ -190,7 +190,13 @@ Plans:
   4. Per-token 7-day history chart (Recharts) renders from Prometheus range query with a visible timeseries — no "No data" empty state when exporter is healthy
   5. `curl http://100.101.0.9:9101/metrics` from outside Tailnet fails; `curl http://100.101.0.9:9101/metrics` from a Tailnet host returns metrics; exporter process runs as uid 65534
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 13-01-sops-zod-spike-PLAN.md — SOPS write spike (P-03) + Zod v4/shadcn-form compat + sops.server.ts mutex wrapper + seed registry
+- [ ] 13-02-exporter-rebind-PLAN.md — Tailnet-only bind + uid 65534 + mtime-poll registry reload + idempotent Ansible (SEC-03)
+- [ ] 13-03-backend-libs-PLAN.md — prometheus.server.ts + audit.server.ts + token-registry CRUD + CSRF helper + 5 API routes
+- [ ] 13-04-tokens-list-page-PLAN.md — /tokens RSC: list, inline bars, sparkline, empty+degraded+loading states
+- [ ] 13-05-mutations-and-detail-PLAN.md — Add/Rotate/Rename/Toggle/Delete dialogs + /tokens/[id] detail with Recharts chart
 **UI hint**: yes
 
 ---
