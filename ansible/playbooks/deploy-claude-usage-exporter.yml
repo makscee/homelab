@@ -22,10 +22,17 @@
 - name: Deploy claude-usage-exporter to mcow
   hosts: mcow
   become: true
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/all.yml"
   vars:
     exporter_src: "{{ playbook_dir }}/../../servers/mcow/claude-usage-exporter"
     unit_src: "{{ playbook_dir }}/../../servers/mcow/systemd/claude-usage-exporter.service"
     sops_file: "{{ playbook_dir }}/../../secrets/claude-tokens.sops.yaml"
+    # Ansible 2.20 strict task-arg finalization cannot resolve nested dict keys
+    # (claude_usage_exporter.state_dir) directly in task args. Alias at play scope.
+    _state_dir: "{{ claude_usage_exporter.state_dir }}"
+    _install_dir: "{{ claude_usage_exporter.install_dir }}"
+    _read_path: "{{ claude_usage_exporter.read_path }}"
 
   handlers:
     - name: reload systemd
@@ -40,7 +47,7 @@
   tasks:
     - name: Ensure state dir exists (owned by nobody)
       ansible.builtin.file:
-        path: "{{ claude_usage_exporter.state_dir }}"
+        path: "{{ _state_dir }}"
         state: directory
         owner: nobody
         group: nogroup
@@ -48,17 +55,32 @@
 
     - name: Ensure install dir exists (root-owned, read-only to nobody)
       ansible.builtin.file:
-        path: "{{ claude_usage_exporter.install_dir }}"
+        path: "{{ _install_dir }}"
         state: directory
         owner: root
         group: root
         mode: "0755"
 
-    - name: Rsync exporter source to mcow
+    - name: Install python3-prometheus-client (system-wide, required by exporter.py)
+      ansible.builtin.apt:
+        name: python3-prometheus-client
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Remove stale venv from prior install (no longer used — system python)
+      ansible.builtin.file:
+        path: "{{ _install_dir }}/venv"
+        state: absent
+
+    - name: Rsync exporter source to mcow (no owner/perm preservation from mac)
       ansible.posix.synchronize:
         src: "{{ exporter_src }}/"
-        dest: "{{ claude_usage_exporter.install_dir }}/"
+        dest: "{{ _install_dir }}/"
         delete: true
+        owner: false
+        group: false
+        perms: false
         rsync_opts:
           - "--exclude=__pycache__"
           - "--exclude=*.pyc"
@@ -67,6 +89,17 @@
           - "--exclude=.pytest_cache"
           - "--exclude=.gitignore"
       notify: restart claude-usage-exporter
+
+    - name: Normalize install dir ownership to root:root (rsync preserves mac uid/gid)
+      ansible.builtin.command:
+        cmd: "chown -R root:root {{ _install_dir }}"
+      register: _chown_out
+      changed_when: false
+
+    - name: Normalize install dir file modes (files 0644, dirs 0755)
+      ansible.builtin.command:
+        cmd: "find {{ _install_dir }} -type f -exec chmod 0644 {} + -o -type d -exec chmod 0755 {} +"
+      changed_when: false
 
     - name: Install systemd unit file
       ansible.builtin.copy:
@@ -90,7 +123,7 @@
     - name: Render decrypted registry on mcow (nobody-readable, 0440)
       ansible.builtin.copy:
         content: "{{ decrypted_registry.stdout }}"
-        dest: "{{ claude_usage_exporter.read_path }}"
+        dest: "{{ _read_path }}"
         owner: nobody
         group: nogroup
         mode: "0440"
