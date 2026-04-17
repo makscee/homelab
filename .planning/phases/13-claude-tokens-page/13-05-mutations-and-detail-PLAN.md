@@ -204,7 +204,7 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
          label: LabelSchema,
          owner_host: OwnerHostSchema,
          tier: TierSchema,
-         notes: z.string().max(256).optional(),
+         notes: z.string().max(500).optional(),  // matches server InputSchema in Plan 13-03 Task 5
        });
 
        export const RotateTokenSchema = z.object({ value: ValueSchema });
@@ -213,9 +213,10 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
 
     4. Create `apps/admin/app/(auth)/tokens/_lib/api-client.ts`:
        ```typescript
-       // Client-only — never import in a .server.ts file
-       import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/lib/csrf.server';
-       // ^ safe: only the constant names are imported; verifyCsrf itself isn't called here
+       // Client-only — never import in a .server.ts file.
+       // IMPORTANT: Imports from csrf.shared (neutral module), NOT csrf.server.
+       // csrf.server has `import 'server-only'` which breaks client bundles.
+       import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/lib/csrf.shared';
 
        function getCsrf(): string {
          const match = document.cookie
@@ -258,7 +259,7 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
          return send(`/api/tokens/${id}`, { method: 'DELETE' });
        }
        ```
-       NOTE: Importing constant-only from `csrf.server.ts` is safe; the `server-only` marker throws only on runtime execution of server-only code. If the build complains, move the 2 constants (`CSRF_COOKIE_NAME`, `CSRF_HEADER_NAME`) to a separate `lib/csrf.shared.ts` file that is neutral (no `server-only` import) and re-export from both.
+       NOTE: csrf.shared.ts is introduced in Plan 13-03 Task 4 as a neutral (no 'server-only') constants module. Plan 13-03 Task 4 csrf.server.ts re-exports the same constants, so server code keeps working. Client code MUST import from csrf.shared to avoid pulling a server-only module into the client bundle.
 
     5. Install sonner (if Plan 13-01 spike didn't already):
        ```bash
@@ -276,7 +277,10 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
     - grep `httpOnly: false` in csrf-cookie.server.ts returns 1 line (documented non-HttpOnly for double-submit)
     - api-client.ts exists; grep `apiAddToken` / `apiRotateToken` / `apiToggleEnabled` / `apiRenameToken` / `apiDeleteToken` — each returns 1 line
     - grep `CSRF_HEADER_NAME` in api-client.ts returns at least 1 line
+    - grep `from '@/lib/csrf.shared'` in api-client.ts returns 1 line (imports from shared module, NOT csrf.server)
+    - grep `from '@/lib/csrf.server'` in api-client.ts returns 0 lines (server-only module must not leak into client bundle)
     - schemas.ts exists; grep `AddTokenSchema` returns 1 line
+    - grep `notes: z.string().max(500)` in schemas.ts returns 1 line (matches server AddTokenSchema)
     - `apps/admin/components/ui/sonner.tsx` exists
     - `cd apps/admin && bun run build` exits 0
   </acceptance_criteria>
@@ -309,6 +313,7 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
     import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
     import { Input } from '@/components/ui/input';
     import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    import { Textarea } from '@/components/ui/textarea';
     import { Button } from '@/components/ui/button';
     import { AddTokenSchema } from '../_lib/schemas';
     import { apiAddToken } from '../_lib/api-client';
@@ -406,6 +411,21 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField control={form.control} name="notes" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Free-form notes about this token"
+                        maxLength={500}
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>Up to 500 characters. Stored alongside the token in the SOPS registry; never displayed outside the admin UI.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                   <Button type="submit" disabled={submitting}>Add token</Button>
@@ -484,7 +504,90 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
     ```
 
     **RenameTokenDialog.tsx** (UI-SPEC §Row actions — rename; current value pre-filled):
-    Similar shape. Title `Rename token`, field `Label` pre-filled with current label, confirm button `Save`, success toast `Token renamed to "{new_label}".`
+    ```tsx
+    'use client';
+    import { useState } from 'react';
+    import { useRouter } from 'next/navigation';
+    import { useForm } from 'react-hook-form';
+    import { zodResolver } from '@hookform/resolvers/zod';
+    import { toast } from 'sonner';
+    import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+    import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+    import { Input } from '@/components/ui/input';
+    import { Button } from '@/components/ui/button';
+    import { RenameTokenSchema } from '../_lib/schemas';
+    import { apiRenameToken } from '../_lib/api-client';
+
+    type Props = {
+      id: string;
+      currentLabel: string;                 // pre-fills the form and used in dialog title
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    };
+
+    export function RenameTokenDialog({ id, currentLabel, open, onOpenChange }: Props) {
+      const router = useRouter();
+      const [submitting, setSubmitting] = useState(false);
+      const form = useForm({
+        resolver: zodResolver(RenameTokenSchema),
+        defaultValues: { label: currentLabel },
+        values: { label: currentLabel },   // re-syncs pre-fill when parent passes a new currentLabel
+      });
+
+      async function onSubmit(values: { label: string }) {
+        if (values.label === currentLabel) {
+          onOpenChange(false);
+          return;
+        }
+        setSubmitting(true);
+        try {
+          await apiRenameToken(id, values.label);
+          toast.success(`Token renamed to "${values.label}".`);
+          form.reset({ label: values.label });
+          onOpenChange(false);
+          router.refresh();
+        } catch (e: any) {
+          if (e.message?.includes('duplicate label')) {
+            toast.error('A token with that label already exists.');
+          } else {
+            toast.error('Rename failed. Label not changed.');
+          }
+        } finally {
+          setSubmitting(false);
+        }
+      }
+
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename token</DialogTitle>
+              <DialogDescription>
+                Rename &ldquo;{currentLabel}&rdquo;. Metric labels update on the next exporter poll.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="label" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Label</FormLabel>
+                    <FormControl><Input autoFocus {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                  <Button type="submit" disabled={submitting}>Save</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+    ```
+
+    NOTE on prop name: the prop is `currentLabel` (NOT `label`). This matches how `RowActions.tsx` (Task 3) instantiates the dialog: `<RenameTokenDialog id={id} currentLabel={label} open=... onOpenChange=... />`. The internal form field is also named `label` to match `RenameTokenSchema` and the server contract.
 
     **DeleteTokenDialog.tsx** (UI-SPEC §Row actions — delete; AlertDialog with typed-label confirm):
     ```tsx
@@ -564,7 +667,15 @@ queryRange('claude_usage_7d_pct{label="<label>"}', 7daysAgo, now, 3600, { revali
     - grep `Rotate token` in RotateTokenDialog.tsx returns 1 line (title)
     - grep `exporter reloads within 60 seconds` in RotateTokenDialog.tsx returns 1 line (case-insensitive ok)
     - grep `variant="destructive"` in RotateTokenDialog.tsx returns 1 line (confirm button)
-    - grep `Rename token` in RenameTokenDialog.tsx returns 1 line
+    - grep `Rename token` in RenameTokenDialog.tsx returns 1 line (dialog title)
+    - grep `currentLabel` in RenameTokenDialog.tsx returns at least 2 lines (prop in type + used in JSX and defaultValues)
+    - grep `currentLabel: string` in RenameTokenDialog.tsx returns 1 line (Props type declares the prop)
+    - grep `apiRenameToken` in RenameTokenDialog.tsx returns 1 line (wired to api-client, no placeholder)
+    - grep `Token renamed to` in RenameTokenDialog.tsx returns 1 line (UI-SPEC success toast)
+    - grep `name="notes"` in AddTokenDialog.tsx returns 1 line (Notes FormField per D-13-13 + D-13-11)
+    - grep `<Textarea` in AddTokenDialog.tsx returns 1 line (Notes renders a textarea, matches 500-char schema)
+    - grep `maxLength=\{500\}` in AddTokenDialog.tsx returns 1 line (client max matches server AddTokenSchema.notes)
+    - grep `Notes (optional)` in AddTokenDialog.tsx returns 1 line (form label copy)
     - grep `Type` + `to confirm` in DeleteTokenDialog.tsx returns at least 1 line
     - grep `disabled=\{!match` in DeleteTokenDialog.tsx returns 1 line (typed-label gate)
     - `cd apps/admin && bun run build` exits 0

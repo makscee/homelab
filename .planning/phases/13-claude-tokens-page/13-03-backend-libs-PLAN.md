@@ -16,6 +16,7 @@ files_modified:
   - apps/admin/app/api/tokens/[id]/rotate/route.ts
   - apps/admin/app/api/tokens/[id]/toggle/route.ts
   - apps/admin/app/api/tokens/[id]/rename/route.ts
+  - apps/admin/lib/csrf.shared.ts
   - apps/admin/lib/csrf.server.ts
 autonomous: true
 requirements:
@@ -38,7 +39,11 @@ must_haves:
     - "All mutation API routes reject requests without a valid same-origin + CSRF header combination"
     - "Token values never appear in any API response body or error message"
     - "API routes return 503 when sopsAvailable() is false (degraded mode)"
+    - "CSRF constants live in csrf.shared.ts (no server-only marker) so client code can import them without breaking the build"
   artifacts:
+    - path: "apps/admin/lib/csrf.shared.ts"
+      provides: "Neutral constants module — CSRF_COOKIE_NAME, CSRF_HEADER_NAME, EXPECTED_ORIGIN — safe to import from client code"
+      exports: ["CSRF_COOKIE_NAME", "CSRF_HEADER_NAME", "EXPECTED_ORIGIN"]
     - path: "apps/admin/lib/prometheus.server.ts"
       provides: "Typed fetch wrappers for /api/v1/query and /api/v1/query_range"
       exports: ["queryInstant", "queryRange", "PromInstantResult", "PromRangeResult"]
@@ -80,13 +85,21 @@ must_haves:
       to: "http://mcow:9090/api/v1/query"
       via: "server-side fetch"
       pattern: "api/v1/query"
+    - from: "apps/admin/lib/csrf.server.ts"
+      to: "apps/admin/lib/csrf.shared.ts"
+      via: "re-export of constants"
+      pattern: "from './csrf.shared'"
+    - from: "client code (api-client.ts in Plan 13-05)"
+      to: "apps/admin/lib/csrf.shared.ts"
+      via: "import constants (no server-only violation)"
+      pattern: "csrf.shared"
 ---
 
 <objective>
-Build the backend layer consumed by Plans 13-04 (list/read page) and 13-05 (mutation dialogs): high-level token registry CRUD, Prometheus query wrappers, structured audit event emission, CSRF defense, and the API Route Handlers that back each mutation. All mutations must flow through one audit-wrapped codepath; all responses must be free of token values; all routes must degrade cleanly when SOPS is unavailable.
+Build the backend layer consumed by Plans 13-04 (list/read page) and 13-05 (mutation dialogs): high-level token registry CRUD, Prometheus query wrappers, structured audit event emission, CSRF defense (split into shared constants + server helper), and the API Route Handlers that back each mutation. All mutations must flow through one audit-wrapped codepath; all responses must be free of token values; all routes must degrade cleanly when SOPS is unavailable.
 
 Purpose: Isolate business logic + IO from UI so the UI plan stays thin and the checker can verify security properties against this plan alone.
-Output: 3 lib modules, 1 CSRF helper, 5 Route Handlers, and tests for each lib.
+Output: 3 lib modules, 1 CSRF constants shared module, 1 CSRF server helper, 5 Route Handlers, and tests for each lib.
 </objective>
 
 <execution_context>
@@ -127,6 +140,11 @@ export function requireAllowlistedUser(): Promise<{ login: string }>;
 
 Public API exports this plan adds:
 ```typescript
+// lib/csrf.shared.ts (NEW — neutral, no 'server-only' marker)
+export const CSRF_COOKIE_NAME: string;
+export const CSRF_HEADER_NAME: string;
+export const EXPECTED_ORIGIN: string;
+
 // lib/token-registry.server.ts
 export type PublicTokenEntry = Omit<TokenEntry, 'value'>;
 // ^ value is NEVER returned to clients
@@ -533,8 +551,8 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
 </task>
 
 <task type="auto" tdd="true">
-  <name>Task 4: CSRF double-submit cookie helper</name>
-  <files>apps/admin/lib/csrf.server.ts, apps/admin/lib/csrf.server.test.ts</files>
+  <name>Task 4: CSRF double-submit cookie helper (split: shared constants + server verifier)</name>
+  <files>apps/admin/lib/csrf.shared.ts, apps/admin/lib/csrf.server.ts, apps/admin/lib/csrf.server.test.ts</files>
   <read_first>
     - apps/admin/middleware.ts (existing auth middleware, origin/cookie patterns)
     - apps/admin/auth.ts (Auth.js session cookie name — usually `next-auth.session-token`)
@@ -547,18 +565,35 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     - Test 4: verifyCsrf rejects when header missing
     - Test 5: verifyCsrf rejects when values differ
     - Test 6: verifyCsrf rejects when Origin header does not match expected origin (defense-in-depth)
+    - Test 7: csrf.shared.ts exports CSRF_COOKIE_NAME, CSRF_HEADER_NAME, EXPECTED_ORIGIN as plain constants with NO `server-only` import — client code can import them without build error
   </behavior>
   <action>
-    Create `apps/admin/lib/csrf.server.ts`:
+    **Step 4a — Create `apps/admin/lib/csrf.shared.ts` (neutral, no server-only marker):**
+
+    ```typescript
+    // csrf.shared.ts — constants shared between client and server.
+    // MUST NOT import 'server-only' or any server-only runtime.
+    // Safe to import from .tsx client components.
+
+    export const CSRF_COOKIE_NAME = 'hla-csrf';
+    export const CSRF_HEADER_NAME = 'x-csrf-token';
+    export const EXPECTED_ORIGIN =
+      process.env.NEXT_PUBLIC_EXPECTED_ORIGIN ??
+      process.env.EXPECTED_ORIGIN ??
+      'https://homelab.makscee.ru';
+    ```
+
+    **Step 4b — Create `apps/admin/lib/csrf.server.ts` (re-exports constants, adds server helpers):**
 
     ```typescript
     import 'server-only';
     import { randomBytes } from 'node:crypto';
     import { NextRequest } from 'next/server';
+    import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, EXPECTED_ORIGIN } from './csrf.shared';
 
-    const COOKIE_NAME = 'hla-csrf';
-    const HEADER_NAME = 'x-csrf-token';
-    const EXPECTED_ORIGIN = process.env.EXPECTED_ORIGIN ?? 'https://homelab.makscee.ru';
+    // Re-export so existing server code can still import the constants from csrf.server.
+    // NEW: client code MUST import from csrf.shared directly (this file is server-only).
+    export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, EXPECTED_ORIGIN };
 
     export function generateCsrfToken(): string {
       return randomBytes(32).toString('hex');  // 64 hex chars
@@ -567,7 +602,7 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     export function csrfCookie(token: string): string {
       // HttpOnly=false is intentional: client JS reads the cookie and mirrors
       // into the x-csrf-token header (double-submit pattern)
-      return `${COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure; Max-Age=28800`;
+      return `${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure; Max-Age=28800`;
     }
 
     export class CsrfError extends Error {
@@ -582,38 +617,43 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
       if (origin && origin !== EXPECTED_ORIGIN) {
         throw new CsrfError('bad origin');
       }
-      const cookie = req.cookies.get(COOKIE_NAME)?.value;
-      const header = req.headers.get(HEADER_NAME);
+      const cookie = req.cookies.get(CSRF_COOKIE_NAME)?.value;
+      const header = req.headers.get(CSRF_HEADER_NAME);
       if (!cookie) throw new CsrfError('cookie missing');
       if (!header) throw new CsrfError('header missing');
       if (cookie.length < 32) throw new CsrfError('cookie too short');
       if (cookie !== header) throw new CsrfError('mismatch');
     }
-
-    export { COOKIE_NAME as CSRF_COOKIE_NAME, HEADER_NAME as CSRF_HEADER_NAME };
     ```
 
-    Also add a helper to the shared layout to issue the cookie on first authenticated render (wiring in Plan 13-04).
+    **Step 4c — Create tests in `csrf.server.test.ts` covering all 7 behaviors.**
 
-    Create tests covering the 6 behaviors using `NextRequest`-compatible mocks.
+    Test 7 specifically: read `apps/admin/lib/csrf.shared.ts` as text, assert it contains NO `server-only` string and exports all three constants.
+
+    Layout helper note: Plan 13-05 (Task 1) wires issuance via `issueCsrfCookieOnce()` in `(auth)/layout.tsx`; this plan only ships the constants + verifier.
   </action>
   <verify>
     <automated>cd apps/admin &amp;&amp; bun test lib/csrf.server.test.ts</automated>
   </verify>
   <acceptance_criteria>
-    - grep `export function verifyCsrf` returns 1 line
-    - grep `export function generateCsrfToken` returns 1 line
-    - grep `export function csrfCookie` returns 1 line
-    - grep `SameSite=Strict` returns 1 line
+    - File `apps/admin/lib/csrf.shared.ts` exists
+    - grep `CSRF_COOKIE_NAME` in csrf.shared.ts returns 1 line (the export)
+    - grep `CSRF_HEADER_NAME` in csrf.shared.ts returns 1 line
+    - grep `EXPECTED_ORIGIN` in csrf.shared.ts returns at least 1 line
+    - grep `server-only` in csrf.shared.ts returns 0 lines (MUST be neutral)
+    - grep `export function verifyCsrf` in csrf.server.ts returns 1 line
+    - grep `export function generateCsrfToken` in csrf.server.ts returns 1 line
+    - grep `export function csrfCookie` in csrf.server.ts returns 1 line
+    - grep `from './csrf.shared'` in csrf.server.ts returns 1 line (re-export path)
+    - grep `SameSite=Strict` in csrf.server.ts returns 1 line
     - grep `Secure` in csrf.server.ts returns at least 1 line
-    - grep `EXPECTED_ORIGIN` returns at least 2 lines (const + check)
-    - `cd apps/admin && bun test lib/csrf.server.test.ts` exits 0; 6 passed
+    - `cd apps/admin && bun test lib/csrf.server.test.ts` exits 0; 7 passed
   </acceptance_criteria>
-  <done>Double-submit CSRF helper shipped with origin check.</done>
+  <done>Double-submit CSRF: constants live in csrf.shared.ts (client-safe, zero server-only imports), server-only verifier + token generator in csrf.server.ts. Origin check present. Plan 13-05 api-client.ts MUST import CSRF_COOKIE_NAME / CSRF_HEADER_NAME from csrf.shared — never from csrf.server (would break the client bundle).</done>
 </task>
 
 <task type="auto">
-  <name>Task 5: API Route Handlers for all 5 mutations</name>
+  <name>Task 5: API Route Handlers for all 5 mutations (Next.js 15 async params)</name>
   <files>apps/admin/app/api/tokens/route.ts, apps/admin/app/api/tokens/[id]/route.ts, apps/admin/app/api/tokens/[id]/rotate/route.ts, apps/admin/app/api/tokens/[id]/toggle/route.ts, apps/admin/app/api/tokens/[id]/rename/route.ts</files>
   <read_first>
     - apps/admin/lib/token-registry.server.ts (Task 3 exports)
@@ -624,20 +664,32 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     - .planning/phases/13-CONTEXT.md §D-13-11 (add-token form inputs)
   </read_first>
   <action>
+    **CRITICAL Next.js 15 change:** Dynamic route params are `Promise<...>`, not sync. Every `[id]` route MUST type the context as `{ params: Promise<{ id: string }> }` and `await ctx.params` before use.
+
     Every route MUST follow this exact skeleton (adapt per-verb):
+
+    **Non-dynamic route (`/api/tokens`):**
 
     ```typescript
     import { NextRequest, NextResponse } from 'next/server';
     import { z } from 'zod';
-    import { auth } from '@/auth';  // or wherever Phase 12 exports it
+    import { auth } from '@/auth';
     import { verifyCsrf, CsrfError } from '@/lib/csrf.server';
     import { sopsAvailable } from '@/lib/sops.server';
-    import { /* specific fn */ } from '@/lib/token-registry.server';
+    import { addToken } from '@/lib/token-registry.server';
 
-    export const runtime = 'nodejs';  // REQUIRED: sops binary needs Node runtime, not Edge
+    export const runtime = 'nodejs';  // REQUIRED: sops binary needs Node runtime
 
-    export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
-      // 1. AuthZ
+    const InputSchema = z.object({
+      label: z.string().min(1).max(64).regex(/^[A-Za-z0-9._-]+$/),
+      value: z.string().regex(/^sk-ant-oat01-[A-Za-z0-9_-]+$/),
+      tier: z.enum(['pro', 'max', 'enterprise']),
+      owner_host: z.string().min(1).max(64),
+      notes: z.string().max(500).optional(),  // matches client AddTokenSchema notes field
+    });
+
+    export async function POST(req: NextRequest) {
+      // 1. AuthN/AuthZ
       const session = await auth();
       if (!session?.user?.login) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -652,7 +704,7 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
       if (!sopsAvailable()) {
         return NextResponse.json({ error: 'sops unavailable' }, { status: 503 });
       }
-      // 4. Input validation (Zod)
+      // 4. Input validation
       const body = await req.json().catch(() => null);
       const parsed = InputSchema.safeParse(body);
       if (!parsed.success) {
@@ -660,47 +712,142 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
       }
       // 5. Execute
       try {
-        const result = await /* business fn */(/* args */, session.user.login);
+        const result = await addToken(parsed.data, session.user.login);
         return NextResponse.json({ ok: true, token: result });
       } catch (e) {
         const message = e instanceof Error ? e.message : 'server error';
-        // Sanitize: NEVER echo input value or registry content
         const safe = message.startsWith('sk-ant-oat01-') ? 'server error' : message;
         return NextResponse.json({ error: safe }, { status: 400 });
       }
     }
     ```
 
-    Per-route specifics:
+    **Dynamic routes (`/api/tokens/[id]/*`) — Next.js 15 async params pattern:**
 
-    **`apps/admin/app/api/tokens/route.ts` (POST = addToken):**
     ```typescript
-    const InputSchema = z.object({
-      label: z.string().min(1).max(64).regex(/^[A-Za-z0-9._-]+$/),
-      value: z.string().regex(/^sk-ant-oat01-[A-Za-z0-9_-]+$/),
-      tier: z.enum(['pro', 'max', 'enterprise']),
-      owner_host: z.string().min(1).max(64),
-      notes: z.string().max(256).optional(),
-    });
-    // call: addToken(parsed.data, session.user.login)
+    import { NextRequest, NextResponse } from 'next/server';
+    import { z } from 'zod';
+    import { auth } from '@/auth';
+    import { verifyCsrf, CsrfError } from '@/lib/csrf.server';
+    import { sopsAvailable } from '@/lib/sops.server';
+    import { /* mutation fn */ } from '@/lib/token-registry.server';
+
+    export const runtime = 'nodejs';
+
+    const ParamsSchema = z.object({ id: z.string().uuid() });
+    const InputSchema = /* per-route — see below */;
+
+    // NOTE: Next.js 15 — params is a Promise, NOT a sync object.
+    export async function POST(
+      req: NextRequest,
+      ctx: { params: Promise<{ id: string }> },
+    ) {
+      // 0. Resolve async params FIRST so `id` is available to all downstream checks.
+      const rawParams = await ctx.params;
+      const paramsParsed = ParamsSchema.safeParse(rawParams);
+      if (!paramsParsed.success) {
+        return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+      }
+      const { id } = paramsParsed.data;
+
+      // 1. AuthN/AuthZ
+      const session = await auth();
+      if (!session?.user?.login) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      // 2. CSRF
+      try { verifyCsrf(req); }
+      catch (e) {
+        if (e instanceof CsrfError) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+        throw e;
+      }
+      // 3. Degraded mode
+      if (!sopsAvailable()) {
+        return NextResponse.json({ error: 'sops unavailable' }, { status: 503 });
+      }
+      // 4. Input validation (skip for DELETE which has no body)
+      const body = await req.json().catch(() => null);
+      const parsed = InputSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json({ error: 'invalid input', issues: parsed.error.issues }, { status: 400 });
+      }
+      // 5. Execute
+      try {
+        const result = await /* mutation */(id, parsed.data./* field */, session.user.login);
+        return NextResponse.json({ ok: true, token: result });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'server error';
+        const safe = message.startsWith('sk-ant-oat01-') ? 'server error' : message;
+        return NextResponse.json({ error: safe }, { status: 400 });
+      }
+    }
     ```
 
-    **`apps/admin/app/api/tokens/[id]/route.ts` (DELETE = softDeleteToken):**
+    Per-route specifics (all dynamic routes use the `Promise<{ id: string }>` pattern above):
+
+    **`apps/admin/app/api/tokens/route.ts` (POST = addToken):** Non-dynamic, uses the first skeleton above. InputSchema includes `notes: z.string().max(500).optional()`.
+
+    **`apps/admin/app/api/tokens/[id]/route.ts` (DELETE = softDeleteToken)** — full concrete file:
+
     ```typescript
+    import { NextRequest, NextResponse } from 'next/server';
+    import { z } from 'zod';
+    import { auth } from '@/auth';
+    import { verifyCsrf, CsrfError } from '@/lib/csrf.server';
+    import { sopsAvailable } from '@/lib/sops.server';
+    import { softDeleteToken } from '@/lib/token-registry.server';
+
+    export const runtime = 'nodejs';
+
     const ParamsSchema = z.object({ id: z.string().uuid() });
-    // call: softDeleteToken(params.id, session.user.login); return { ok: true }
+
+    // Next.js 15: params is a Promise. Resolve before anything else.
+    export async function DELETE(
+      req: NextRequest,
+      ctx: { params: Promise<{ id: string }> },
+    ) {
+      const rawParams = await ctx.params;
+      const paramsParsed = ParamsSchema.safeParse(rawParams);
+      if (!paramsParsed.success) {
+        return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+      }
+      const { id } = paramsParsed.data;
+
+      const session = await auth();
+      if (!session?.user?.login) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      try { verifyCsrf(req); }
+      catch (e) {
+        if (e instanceof CsrfError) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+        throw e;
+      }
+      if (!sopsAvailable()) {
+        return NextResponse.json({ error: 'sops unavailable' }, { status: 503 });
+      }
+      try {
+        await softDeleteToken(id, session.user.login);
+        return NextResponse.json({ ok: true });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'server error';
+        const safe = message.startsWith('sk-ant-oat01-') ? 'server error' : message;
+        return NextResponse.json({ error: safe }, { status: 400 });
+      }
+    }
     ```
 
     **`apps/admin/app/api/tokens/[id]/rotate/route.ts` (POST = rotateToken):**
     ```typescript
     const InputSchema = z.object({ value: z.string().regex(/^sk-ant-oat01-[A-Za-z0-9_-]+$/) });
-    // call: rotateToken(params.id, parsed.data.value, session.user.login)
+    // const { id } = ParamsSchema.parse(await ctx.params);
+    // call: rotateToken(id, parsed.data.value, session.user.login)
     ```
 
     **`apps/admin/app/api/tokens/[id]/toggle/route.ts` (POST = toggleEnabled):**
     ```typescript
     const InputSchema = z.object({ enabled: z.boolean() });
-    // call: toggleEnabled(params.id, parsed.data.enabled, session.user.login)
+    // const { id } = ParamsSchema.parse(await ctx.params);
+    // call: toggleEnabled(id, parsed.data.enabled, session.user.login)
     ```
 
     **`apps/admin/app/api/tokens/[id]/rename/route.ts` (POST = renameToken):**
@@ -708,15 +855,18 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     const InputSchema = z.object({
       label: z.string().min(1).max(64).regex(/^[A-Za-z0-9._-]+$/),
     });
-    // call: renameToken(params.id, parsed.data.label, session.user.login)
+    // const { id } = ParamsSchema.parse(await ctx.params);
+    // call: renameToken(id, parsed.data.label, session.user.login)
     ```
 
     Critical rules:
     - `export const runtime = 'nodejs'` on EVERY route (sops subprocess needs it).
+    - EVERY dynamic route uses `ctx: { params: Promise<{ id: string }> }` — NEVER `{ params: { id: string } }` (that was Next.js 14 and will fail type-check + runtime in Next.js 15.5.x).
+    - EVERY dynamic route `await ctx.params` before accessing `id`.
     - The error branch MUST check if the error message starts with `sk-ant-oat01-` (defensive) and replace with generic text.
-    - The success branch MUST NOT include the `value` field in the response (PublicTokenEntry guarantees this, but verify via inspection — do NOT spread the internal registry entry directly).
+    - The success branch MUST NOT include the `value` field in the response (PublicTokenEntry guarantees this).
     - Return 401 before CSRF check so unauth probes don't learn CSRF semantics.
-    - Return 503 specifically for `sopsAvailable() === false` so the client can render degraded state.
+    - Return 503 specifically for `sopsAvailable() === false`.
   </action>
   <verify>
     <automated>cd apps/admin &amp;&amp; bun run build 2&gt;&amp;1 | tail -30 &amp;&amp; grep -rE "export const runtime = 'nodejs'" apps/admin/app/api/tokens/ | wc -l | grep -q '^5$'</automated>
@@ -727,6 +877,11 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     - grep `export async function POST` in apps/admin/app/api/tokens/[id]/rotate/route.ts returns 1 line
     - grep `export async function POST` in apps/admin/app/api/tokens/[id]/toggle/route.ts returns 1 line
     - grep `export async function POST` in apps/admin/app/api/tokens/[id]/rename/route.ts returns 1 line
+    - grep -rE `params: Promise<\{ id: string \}>` apps/admin/app/api/tokens/\[id\]/ returns exactly 4 lines (Next.js 15 async-param contract present in ALL 4 dynamic routes — route.ts, rotate/route.ts, toggle/route.ts, rename/route.ts)
+    - grep -rE `await ctx\.params` apps/admin/app/api/tokens/\[id\]/ returns exactly 4 lines (each dynamic route awaits ctx.params before touching id)
+    - grep -rE `ParamsSchema\.safeParse\(rawParams\)|ParamsSchema\.safeParse\(await ctx\.params\)` apps/admin/app/api/tokens/\[id\]/ returns at least 4 lines (every dynamic route validates id via Zod)
+    - grep -rE `\bparams: \{ id: string \}([^>]|$)` apps/admin/app/api/tokens/ returns 0 lines (no sync-param Next.js 14 signature anywhere — guards against regression)
+    - grep -rE `ctx\.params\.id` apps/admin/app/api/tokens/ returns 0 lines (no direct sync access to params.id — MUST go through await)
     - grep -r `export const runtime = 'nodejs'` apps/admin/app/api/tokens/ returns exactly 5 files
     - grep -r `verifyCsrf(req)` apps/admin/app/api/tokens/ returns 5 lines
     - grep -r `sopsAvailable()` apps/admin/app/api/tokens/ returns 5 lines
@@ -735,7 +890,7 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
     - `cd apps/admin && bun run build` exits 0
     - grep -r `sk-ant-oat01-` apps/admin/app/api/tokens/ — every match is inside a Zod regex literal (NOT in a NextResponse.json body, NOT in a console.log/error)
   </acceptance_criteria>
-  <done>All 5 mutation routes ship with identical auth+CSRF+degraded+validate+execute skeleton; build is clean; no token leakage paths.</done>
+  <done>All 5 mutation routes ship with Next.js 15 async-param contract, identical auth+CSRF+degraded+validate+execute skeleton; build is clean; no token leakage paths.</done>
 </task>
 
 </tasks>
@@ -764,6 +919,7 @@ export function queryRange(promql: string, start: Date, end: Date, stepSec: numb
 | T-13-03-08 | Denial of Service | Concurrent SOPS writes corrupt file | V1.1 | mitigate | Plan 13-01 withMutex serializes; Task 3 tests observe serialization via replaceRegistry call count |
 | T-13-03-09 | Information Disclosure | Prometheus credentials exposed | V10.3 | accept | Prom is Tailnet-only, no creds; if HTTPS+basicauth is added later, adapt promFetch |
 | T-13-03-10 | Repudiation | Audit event lost if process crashes mid-mutation | accept | Stdout write is line-buffered and flushed on event loop turn; systemd journal has crash-survivable log; Phase 14 sqlite upgrade closes remaining window |
+| T-13-03-11 | Information Disclosure | server-only module accidentally imported by client bundle | V1.1 | mitigate | Task 4 splits CSRF constants to csrf.shared.ts (no server-only marker); client code imports from csrf.shared; build-time next.js server-only guard still protects csrf.server.ts runtime |
 
 All threats have a disposition. No high-severity unmitigated.
 </threat_model>
@@ -772,13 +928,15 @@ All threats have a disposition. No high-severity unmitigated.
 - `cd apps/admin && bun test lib/` — all four test files pass (prometheus, audit, token-registry, csrf)
 - `cd apps/admin && bun run build` exits 0
 - `grep -r 'export const runtime' apps/admin/app/api/tokens/` shows 5 `'nodejs'` matches
+- `grep -rE 'params: Promise<' apps/admin/app/api/tokens/\[id\]/` shows 4 matches (Next.js 15 contract)
 - No `sk-ant-oat01-` leakage in any response path (acceptance criteria in Task 5)
+- `grep 'server-only' apps/admin/lib/csrf.shared.ts` returns 0 (neutral module)
 </verification>
 
 <success_criteria>
-Backend API + lib layer is complete: all 5 mutations work through a uniform auth+CSRF+degraded+validate+execute skeleton, every mutation emits exactly one audit event, token values never leave the sops.server.ts boundary toward the client. Plans 13-04/05 can import from these modules without writing any new business logic.
+Backend API + lib layer is complete: all 5 mutations work through a uniform auth+CSRF+degraded+validate+execute skeleton, every mutation emits exactly one audit event, token values never leave the sops.server.ts boundary toward the client. CSRF constants are cleanly split so client code (Plan 13-05 api-client.ts) imports from csrf.shared.ts without tripping the server-only boundary. All dynamic API routes use Next.js 15's async params contract. Plans 13-04/05 can import from these modules without writing any new business logic.
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/13-claude-tokens-page/13-03-SUMMARY.md` noting: final API surface, audit event JSON shape example (redacted), any deviation from plan (e.g. if Auth.js session uses `email` instead of `login`, record).
+After completion, create `.planning/phases/13-claude-tokens-page/13-03-SUMMARY.md` noting: final API surface, audit event JSON shape example (redacted), csrf.shared.ts vs csrf.server.ts split rationale, and any deviation from plan (e.g. if Auth.js session uses `email` instead of `login`, record).
 </output>
