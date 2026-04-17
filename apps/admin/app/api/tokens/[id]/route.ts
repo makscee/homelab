@@ -3,16 +3,13 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
+import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { softDeleteToken } from "@/lib/token-registry.server";
 
 export const runtime = "nodejs";
 
 const ParamsSchema = z.object({ id: z.string().uuid() });
-
-function sanitizeErrorMessage(msg: string): string {
-  return msg.startsWith("sk-ant-oat01-") ? "server error" : msg;
-}
 
 // Next.js 15 — params is a Promise. Resolve before anything else so `id`
 // is available to all downstream checks (including 401/403 branches where

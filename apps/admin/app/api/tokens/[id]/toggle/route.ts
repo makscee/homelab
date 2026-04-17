@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
+import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { toggleEnabled } from "@/lib/token-registry.server";
 
@@ -13,10 +14,6 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 const InputSchema = z.object({
   enabled: z.boolean(),
 });
-
-function sanitizeErrorMessage(msg: string): string {
-  return msg.startsWith("sk-ant-oat01-") ? "server error" : msg;
-}
 
 export async function POST(
   req: NextRequest,

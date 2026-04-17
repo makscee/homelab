@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
+import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
 import { addToken } from "@/lib/token-registry.server";
 
@@ -21,13 +22,6 @@ const InputSchema = z.object({
   owner_host: z.string().min(1).max(64),
   notes: z.string().max(500).optional(),
 });
-
-function sanitizeErrorMessage(msg: string): string {
-  // Defensive: if any upstream code ever stringified a token into an error
-  // we drop the whole message. The pattern itself never appears on wire
-  // under normal operation.
-  return msg.startsWith("sk-ant-oat01-") ? "server error" : msg;
-}
 
 export async function POST(req: NextRequest) {
   // 1. AuthN/AuthZ — return 401 BEFORE CSRF so unauthed probes can't learn
