@@ -25,3 +25,23 @@ export const TOKEN_PATTERN = /sk-ant-oat01-[A-Za-z0-9_-]+/g;
 export function sanitizeErrorMessage(msg: string): string {
   return msg.replace(TOKEN_PATTERN, "[REDACTED]");
 }
+
+const DENY_KEYS = new Set([
+  "password", "token", "secret", "api_key", "apikey",
+  "auth", "authorization", "value", "cookie",
+]);
+
+export function redactPayload(input: unknown): unknown {
+  if (typeof input === "string") {
+    return input.replace(TOKEN_PATTERN, "[REDACTED]");
+  }
+  if (Array.isArray(input)) return input.map(redactPayload);
+  if (input && typeof input === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      out[k] = DENY_KEYS.has(k.toLowerCase()) ? "[REDACTED]" : redactPayload(v);
+    }
+    return out;
+  }
+  return input;
+}
