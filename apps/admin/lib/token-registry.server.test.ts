@@ -1,23 +1,23 @@
-import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
+
+import {
+  listTokens,
+  addToken,
+  rotateToken,
+  toggleEnabled,
+  renameToken,
+  softDeleteToken,
+  _setSopsImplForTest,
+  type PublicTokenEntry,
+} from "./token-registry.server";
+import { SopsUnavailableError, type TokenRegistry, type TokenEntry } from "./sops.server";
+import * as audit from "./audit.server";
 
 // --------------------------------------------------------------------------
-// Mock ./sops.server BEFORE the registry module imports it. Bun's mock.module
-// is hoisted per file, so module-scope placement is sufficient.
+// In-memory sops double. Installed via DI hook; restored after each test so
+// the real sops.server module is untouched and sibling test files (notably
+// sops.server.test.ts) see pristine behavior regardless of run order.
 // --------------------------------------------------------------------------
-
-type TokenEntry = {
-  id: string;
-  label: string;
-  value: string;
-  tier: "pro" | "max" | "enterprise";
-  owner_host: string;
-  enabled: boolean;
-  added_at: string;
-  rotated_at?: string;
-  deleted_at?: string;
-  notes?: string;
-};
-type TokenRegistry = { tokens: TokenEntry[] };
 
 type SopsState = {
   store: TokenRegistry;
@@ -26,55 +26,26 @@ type SopsState = {
   available: boolean;
 };
 
-const sopsState: SopsState = {
-  store: { tokens: [] },
-  replaceCalls: 0,
-  decryptCalls: 0,
-  available: true,
-};
+let sopsState: SopsState;
 
-class SopsUnavailableError extends Error {
-  constructor(message = "sops binary unavailable") {
-    super(message);
-    this.name = "SopsUnavailableError";
-  }
-}
-
-mock.module("./sops.server", () => ({
-  sopsAvailable: () => sopsState.available,
-  decryptRegistry: async (_path?: string) => {
-    sopsState.decryptCalls += 1;
-    // Return a DEEP copy so the caller can't mutate our store accidentally.
-    return JSON.parse(JSON.stringify(sopsState.store)) as TokenRegistry;
-  },
-  replaceRegistry: async (_path: string, next: TokenRegistry) => {
-    sopsState.replaceCalls += 1;
-    sopsState.store = JSON.parse(JSON.stringify(next)) as TokenRegistry;
-  },
-  // setRegistryField not used by token-registry, but keep stub for completeness.
-  setRegistryField: async () => undefined,
-  SopsUnavailableError,
-  // Re-export types via empty no-ops (types erased at runtime).
-}));
-
-// Now import the module under test (after the mock is installed).
-import {
-  listTokens,
-  addToken,
-  rotateToken,
-  toggleEnabled,
-  renameToken,
-  softDeleteToken,
-  type PublicTokenEntry,
-} from "./token-registry.server";
-
-import * as audit from "./audit.server";
-
-function resetState(): void {
-  sopsState.store = { tokens: [] };
-  sopsState.replaceCalls = 0;
-  sopsState.decryptCalls = 0;
-  sopsState.available = true;
+function installFake(): void {
+  sopsState = {
+    store: { tokens: [] },
+    replaceCalls: 0,
+    decryptCalls: 0,
+    available: true,
+  };
+  _setSopsImplForTest({
+    sopsAvailable: () => sopsState.available,
+    decryptRegistry: async (_path?: string) => {
+      sopsState.decryptCalls += 1;
+      return JSON.parse(JSON.stringify(sopsState.store)) as TokenRegistry;
+    },
+    replaceRegistry: async (_path: string, next: TokenRegistry) => {
+      sopsState.replaceCalls += 1;
+      sopsState.store = JSON.parse(JSON.stringify(next)) as TokenRegistry;
+    },
+  });
 }
 
 function seedToken(partial: Partial<TokenEntry> = {}): TokenEntry {
@@ -95,7 +66,11 @@ function seedToken(partial: Partial<TokenEntry> = {}): TokenEntry {
 }
 
 beforeEach(() => {
-  resetState();
+  installFake();
+});
+
+afterEach(() => {
+  _setSopsImplForTest(null);
 });
 
 describe("listTokens", () => {
@@ -109,13 +84,12 @@ describe("listTokens", () => {
     const out = await listTokens();
     expect(out.length).toBe(1);
     expect(out[0].label).toBe("alpha");
-    // value field must be absent in the public shape.
     expect(Object.hasOwn(out[0] as object, "value")).toBe(false);
   });
 });
 
 describe("addToken", () => {
-  test("generates uuid v4 id + added_at, appends to registry, emits audit", async () => {
+  test("generates uuid id + added_at, appends to registry, emits audit", async () => {
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
       const result = await addToken(
@@ -129,7 +103,6 @@ describe("addToken", () => {
         "makscee",
       );
       expect((result as PublicTokenEntry).label).toBe("new");
-      // uuid v4-ish check (8-4-4-4-12 hex).
       expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(typeof result.added_at).toBe("string");
       expect(sopsState.store.tokens.length).toBe(1);
@@ -143,7 +116,6 @@ describe("addToken", () => {
       };
       expect(event.action).toBe("token.add");
       expect(event.actor).toBe("makscee");
-      // Diff records all set fields; value key MUST NOT leak plaintext.
       expect(event.diff.label?.after).toBe("new");
       expect(event.diff.enabled?.after).toBe(true);
       expect(event.diff.value?.after).toBe("[NEW]");
@@ -160,7 +132,6 @@ describe("addToken", () => {
         "u",
       ),
     ).rejects.toThrow(/duplicate label/);
-    // No write side-effect on validation failure.
     expect(sopsState.replaceCalls).toBe(0);
   });
 
@@ -176,7 +147,7 @@ describe("addToken", () => {
 });
 
 describe("rotateToken", () => {
-  test("atomically swaps value + sets rotated_at; audit diff redacts value", async () => {
+  test("atomically swaps value + sets rotated_at; audit redacts value", async () => {
     const e = seedToken({ id: "33333333-3333-4333-8333-333333333333", label: "r" });
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
@@ -200,7 +171,7 @@ describe("rotateToken", () => {
 });
 
 describe("toggleEnabled", () => {
-  test("flips enabled bool; audit diff shows before/after", async () => {
+  test("flips enabled bool; audit shows before/after", async () => {
     const e = seedToken({ id: "44444444-4444-4444-8444-444444444444", enabled: true });
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
@@ -221,7 +192,7 @@ describe("toggleEnabled", () => {
 });
 
 describe("renameToken", () => {
-  test("updates label when no collision; audit records before/after", async () => {
+  test("updates label when no collision", async () => {
     const e = seedToken({ id: "55555555-5555-4555-8555-555555555555", label: "old" });
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
@@ -241,14 +212,17 @@ describe("renameToken", () => {
 
   test("throws on collision with another non-deleted label", async () => {
     seedToken({ id: "66666666-6666-4666-8666-666666666666", label: "taken" });
-    const other = seedToken({ id: "77777777-7777-4777-8777-777777777777", label: "self" });
+    const other = seedToken({
+      id: "77777777-7777-4777-8777-777777777777",
+      label: "self",
+    });
     await expect(renameToken(other.id, "taken", "u")).rejects.toThrow(/duplicate label/);
     expect(sopsState.replaceCalls).toBe(0);
   });
 });
 
 describe("softDeleteToken", () => {
-  test("sets deleted_at without removing the entry; audit action=token.delete", async () => {
+  test("sets deleted_at without removing entry; audit action=token.delete", async () => {
     const e = seedToken({ id: "88888888-8888-4888-8888-888888888888" });
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
@@ -265,12 +239,10 @@ describe("softDeleteToken", () => {
 });
 
 describe("invariants across all mutations", () => {
-  test("each mutation calls replaceRegistry exactly once per call", async () => {
-    const e = seedToken({ id: "99999999-9999-4999-8999-999999999999", label: "invar" });
+  test("each mutation calls replaceRegistry exactly once", async () => {
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
-      resetState();
-      seedToken({ id: e.id, label: e.label });
+      const e = seedToken({ id: "99999999-9999-4999-8999-999999999999", label: "invar" });
 
       await addToken(
         { label: "addc", value: "sk-ant-oat01-A", tier: "pro", owner_host: "mcow" },
@@ -294,12 +266,10 @@ describe("invariants across all mutations", () => {
     }
   });
 
-  test("each mutation emits exactly one audit event per call", async () => {
-    const e = seedToken({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", label: "au" });
+  test("each mutation emits exactly one audit event", async () => {
     const emitSpy = spyOn(audit, "emitAudit").mockImplementation(() => undefined);
     try {
-      resetState();
-      seedToken({ id: e.id, label: e.label });
+      const e = seedToken({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", label: "au" });
 
       await addToken(
         { label: "au2", value: "sk-ant-oat01-A", tier: "pro", owner_host: "mcow" },

@@ -2,15 +2,39 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import * as sopsModule from "./sops.server";
 import {
-  decryptRegistry,
-  replaceRegistry,
-  sopsAvailable,
   SopsUnavailableError,
   type TokenEntry,
   type TokenRegistry,
 } from "./sops.server";
 import { emitAudit, type AuditDiff } from "./audit.server";
+
+// --------------------------------------------------------------------------
+// Dependency injection for tests
+//
+// We DO NOT use Bun's `mock.module("./sops.server", ...)` because that mock
+// persists for the whole test process and bleeds into sops.server.test.ts
+// which imports the real module. Instead, tests call `_setSopsImpl({...})`
+// with an in-memory double and `_setSopsImpl(null)` to restore.
+// --------------------------------------------------------------------------
+
+type SopsImpl = {
+  sopsAvailable: () => boolean;
+  decryptRegistry: (path?: string) => Promise<TokenRegistry>;
+  replaceRegistry: (path: string, next: TokenRegistry) => Promise<void>;
+};
+
+let sopsImpl: SopsImpl | null = null;
+
+/** Test-only: swap the sops.server surface used by this module. */
+export function _setSopsImplForTest(impl: SopsImpl | null): void {
+  sopsImpl = impl;
+}
+
+function sops(): SopsImpl {
+  return sopsImpl ?? sopsModule;
+}
 
 // --------------------------------------------------------------------------
 // Types
@@ -46,7 +70,7 @@ function toPublic(entry: TokenEntry): PublicTokenEntry {
 }
 
 function requireSops(): void {
-  if (!sopsAvailable()) {
+  if (!sops().sopsAvailable()) {
     throw new SopsUnavailableError("sops binary unavailable");
   }
 }
@@ -73,7 +97,7 @@ function ensureUniqueLabel(
 // --------------------------------------------------------------------------
 
 export async function listTokens(): Promise<PublicTokenEntry[]> {
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   return reg.tokens.filter((t) => !t.deleted_at).map(toPublic);
 }
 
@@ -91,7 +115,7 @@ export async function addToken(
   if (!VALUE_REGEX.test(input.value)) {
     throw new Error("invalid token format");
   }
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   ensureUniqueLabel(reg, input.label);
 
   const entry: TokenEntry = {
@@ -106,7 +130,7 @@ export async function addToken(
   };
 
   const next: TokenRegistry = { tokens: [...reg.tokens, entry] };
-  await replaceRegistry(REGISTRY_PATH, next);
+  await sops().replaceRegistry(REGISTRY_PATH, next);
 
   const diff: AuditDiff = {
     label: { after: entry.label },
@@ -132,13 +156,13 @@ export async function rotateToken(
   if (!VALUE_REGEX.test(newValue)) {
     throw new Error("invalid token format");
   }
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   const e = findEntry(reg, id);
   const prevRotated = e.rotated_at;
   e.value = newValue;
   e.rotated_at = new Date().toISOString();
 
-  await replaceRegistry(REGISTRY_PATH, reg);
+  await sops().replaceRegistry(REGISTRY_PATH, reg);
 
   emitAudit({
     actor,
@@ -160,12 +184,12 @@ export async function toggleEnabled(
   actor: string,
 ): Promise<PublicTokenEntry> {
   requireSops();
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   const e = findEntry(reg, id);
   const before = e.enabled;
   e.enabled = enabled;
 
-  await replaceRegistry(REGISTRY_PATH, reg);
+  await sops().replaceRegistry(REGISTRY_PATH, reg);
 
   emitAudit({
     actor,
@@ -183,13 +207,13 @@ export async function renameToken(
   actor: string,
 ): Promise<PublicTokenEntry> {
   requireSops();
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   const e = findEntry(reg, id);
   ensureUniqueLabel(reg, newLabel, id);
   const before = e.label;
   e.label = newLabel;
 
-  await replaceRegistry(REGISTRY_PATH, reg);
+  await sops().replaceRegistry(REGISTRY_PATH, reg);
 
   emitAudit({
     actor,
@@ -203,11 +227,11 @@ export async function renameToken(
 
 export async function softDeleteToken(id: string, actor: string): Promise<void> {
   requireSops();
-  const reg = await decryptRegistry();
+  const reg = await sops().decryptRegistry();
   const e = findEntry(reg, id);
   e.deleted_at = new Date().toISOString();
 
-  await replaceRegistry(REGISTRY_PATH, reg);
+  await sops().replaceRegistry(REGISTRY_PATH, reg);
 
   emitAudit({
     actor,
