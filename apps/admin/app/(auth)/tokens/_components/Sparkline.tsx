@@ -34,9 +34,14 @@ export function Sparkline({ samples }: Props) {
             isAnimationActive={false}
           />
           <Tooltip
-            formatter={(v: number) => [`${v.toFixed(0)}%`, "7d usage"]}
-            labelFormatter={(t: number) =>
-              new Date(t * 1000).toLocaleDateString()
+            formatter={(v) => [
+              `${typeof v === "number" ? v.toFixed(0) : v}%`,
+              "7d usage",
+            ]}
+            labelFormatter={(t) =>
+              typeof t === "number"
+                ? new Date(t * 1000).toLocaleDateString()
+                : String(t)
             }
             contentStyle={{
               fontSize: "11px",
