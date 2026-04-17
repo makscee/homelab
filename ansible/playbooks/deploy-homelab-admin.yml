@@ -213,9 +213,15 @@
       block:
         - name: bun run build
           become_user: "{{ _homelab_admin_service_user }}"
-          ansible.builtin.command:
-            cmd: /usr/local/bin/bun run build
+          ansible.builtin.shell: |
+            set -euo pipefail
+            set -a
+            . /etc/homelab-admin/env
+            set +a
+            /usr/local/bin/bun run build
+          args:
             chdir: "{{ _homelab_admin_install_dir }}"
+            executable: /bin/bash
           register: build_result
           changed_when: "'compiled' in build_result.stdout.lower() or 'compiled' in build_result.stderr.lower()"
       rescue:
