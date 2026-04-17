@@ -29,8 +29,6 @@ CapabilityBoundingSet=
 AmbientCapabilities=
 ReadOnlyPaths=/opt/claude-usage-exporter
 ReadWritePaths=/var/lib/claude-usage-exporter
-IPAddressAllow=100.101.0.0/16
-IPAddressDeny=any
 
 [Install]
 WantedBy=multi-user.target
