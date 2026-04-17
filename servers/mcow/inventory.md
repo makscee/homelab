@@ -8,6 +8,16 @@
 | Hardware | Hardware pending SSH query: `ssh root@mcow "lscpu | head -15 && free -h && df -h"` |
 | Access | `ssh root@mcow` via Tailnet |
 
+## Port Allocation
+
+| Port | Service | Description | Bind |
+|------|---------|-------------|------|
+| 8080 | voidnet-api | VoidNet REST API | 0.0.0.0 |
+| 8090 | PocketBase / Notes / Animaya API | notes.makscee.ru, animaya.makscee.ru /api/* | — |
+| 3090 | Animaya Frontend | animaya.makscee.ru | — |
+| 1080 | SOCKS5 proxy | Local proxy for Telegram bot egress | 127.0.0.1 |
+| 3847 | homelab-admin | Next.js dashboard — Tailnet only via Caddy → homelab.makscee.ru (Plan 12) | 127.0.0.1 |
+
 ## Hosted Services
 
 | Service | Port | Image/Binary | Notes |
@@ -43,6 +53,24 @@
 | /opt/voidnet/voidnet-api | VoidNet API binary | Rust executable |
 | /opt/voidnet/voidnet-bot | VoidNet bot binary | Rust executable |
 | (additional paths pending SSH query) | — | — |
+
+## Systemd Services
+
+- `voidnet-api.service` — VoidNet REST API (Rust binary)
+  - Binding: `0.0.0.0:8080`
+  - Install dir: `/opt/voidnet`
+  - Env file: `/opt/voidnet/.env`
+
+- `voidnet-bot.service` — Telegram bot (@void_net_bot) (Rust binary)
+  - Install dir: `/opt/voidnet`
+
+- `homelab-admin.service` — Next.js admin dashboard (Bun runtime)
+  - Binding: `127.0.0.1:3847`
+  - User: `homelab-admin` (system user, no shell)
+  - Install dir: `/opt/homelab-admin/app`
+  - Env file: `/etc/homelab-admin/env` (written by Ansible from SOPS — Plan 12-08)
+  - Public hostname: `https://homelab.makscee.ru` (via Caddy reverse proxy — Plan 12-09)
+  - Status: scaffold deployed Phase 12; page content ships Phases 13-18
 
 ## Notes
 
