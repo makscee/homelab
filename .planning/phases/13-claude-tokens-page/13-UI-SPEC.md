@@ -1,10 +1,11 @@
 ---
 phase: 13
 slug: claude-tokens-page
-status: draft
+status: approved
 shadcn_initialized: true
 preset: slate (default style, CSS variables, dark-default)
 created: 2026-04-17
+reviewed_at: 2026-04-17
 ---
 
 # Phase 13 — UI Design Contract
