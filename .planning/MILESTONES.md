@@ -42,3 +42,36 @@ Any server's full stack is reproducible from this repo alone. 6/6 Tailnet hosts 
 - `.planning/v1.0-MILESTONE-AUDIT.md` — audit report
 
 ---
+
+## v2.0 — Claude Code Usage Monitor
+
+**Closed with pivot:** 2026-04-16
+**Phases:** 7 scoped (05-11), 3 shipped (05 formal + 06-07 operational), 4 pivoted into v3.0 (08 superseded, 09 moved, 10 killed, 11 absorbed)
+**Tag:** `v2.0`
+
+### Delivered (operational)
+
+1. **Feasibility gate formally passed** — ADR D-07 locked (Claude Code quota access via OAuth endpoint) with GATE-PASSED evidence.
+2. **Python Claude-usage exporter** running as systemd on mcow:9101 — per-token gauges for weekly/session utilization live since 2026-04-16.
+3. **Prometheus scraping operational** — docker-tower Prometheus `up{job="claude-usage"}==1`; metrics flowing into TSDB.
+4. **2 real tokens live** — personal + worker LXC tokens emitting distinct label series (Phase 11 scale-out achieved operationally before formal plan).
+
+### Why the pivot
+
+Mid-Phase-05 realization: (1) feasibility already proven by ad-hoc production exporter; (2) a custom Next.js admin dashboard covering VoidNet + Animaya + homelab in one UI is higher-value than Grafana-only; (3) unifying all 3 projects on one TypeScript stack accelerates AI-agent development.
+
+### Tech Debt (carried forward / resolved in v3.0)
+
+- Exporter ran as root (should be uid 65534) → **resolved v3.0 Phase 13-02**
+- Exporter bound 0.0.0.0:9101 (should be 100.101.0.9:9101) → **resolved v3.0 Phase 13-02**
+- `promtool check metrics` never run against prod
+- Prometheus scrape config not captured in repo
+- 429 backoff never load-tested (0% 429 in prod so far)
+
+### Archives
+
+- `.planning/milestones/v2.0-ROADMAP.md` — full phase dispositions
+- `.planning/milestones/v2.0-REQUIREMENTS.md` — requirement carry-forward map
+- `.planning/milestones/v2.0-MILESTONE-CLOSE.md` — close memo
+
+---
