@@ -9,10 +9,10 @@
    with the nonce and break shadcn/Recharts inline styles.
 #}
 
-{{ homelab_admin_domain }} {
+{{ _homelab_admin_domain }} {
     encode gzip
 
-    reverse_proxy 127.0.0.1:{{ homelab_admin_port }} {
+    reverse_proxy 127.0.0.1:{{ _homelab_admin_port }} {
         header_up X-Forwarded-Proto {scheme}
         header_up X-Real-IP {remote_host}
         header_up Host {host}
