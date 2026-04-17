@@ -21,3 +21,18 @@ homelab_admin_service_group: "homelab-admin"
 # NOTE: bump this deliberately only when testing a newer Bun on mcow confirms
 # no native-module regressions (PITFALLS P-05). Latest stable at plan authoring: 1.1.38.
 bun_version: "1.1.38"
+
+# ── v3.0 Phase 13 — claude-usage-exporter hardening (SEC-03) ──────────────
+# Tailnet-only bind (was 0.0.0.0), dropped privileges to uid 65534 (nobody),
+# mtime-polled registry reload every 30s so admin-app SOPS writes surface in
+# metrics without a full Ansible redeploy.
+claude_usage_exporter:
+  bind_address: 100.101.0.9
+  port: 9101
+  user: nobody
+  group: nogroup
+  read_path: /var/lib/claude-usage-exporter/claude-tokens.json
+  state_dir: /var/lib/claude-usage-exporter
+  install_dir: /opt/claude-usage-exporter
+  poll_interval: 300
+  reload_interval: 30

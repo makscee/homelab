@@ -1,0 +1,36 @@
+[Unit]
+Description=Claude Code Usage Exporter (Prometheus)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+ExecStart=/usr/bin/python3 /opt/claude-usage-exporter/exporter.py --bind-address 100.101.0.9 --port 9101 --registry /var/lib/claude-usage-exporter/claude-tokens.json --poll-interval 300 --reload-interval 30
+Restart=on-failure
+RestartSec=10s
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/claude-usage-exporter
+ReadWritePaths=/var/lib/claude-usage-exporter
+IPAddressAllow=100.101.0.0/16
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target
