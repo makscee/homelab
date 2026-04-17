@@ -121,13 +121,14 @@ Plans:
 
 ### Phase 15: Tailwind v4 migration (3.4 to 4.2) + tailwind-merge 3
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** apps/admin frontend stack upgraded from Tailwind v3.4 → v4.2 (CSS-first config, autoprefixer dropped) and tailwind-merge v2.5 → v3.0 via official codemod, zero visual or build regression, scope strictly upgrade-only.
+**Requirements**: D-1, D-2, D-3, D-4, D-5 (see 15-CONTEXT.md)
 **Depends on:** Phase 14
-**Plans:** 6/7 plans executed
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 15 to break down)
+- [ ] 15-01-PLAN.md — codemod + CSS-first migration + autoprefixer drop + human-verify visual fidelity
+- [ ] 15-02-PLAN.md — tailwind-merge v3 bump + Playwright visual spot-check (fix-on-break)
 
 ---
 
