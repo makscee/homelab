@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { MoreVertical } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -9,11 +8,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { TokenRow } from "../_lib/view-model";
 import { UtilizationBar } from "./UtilizationBar";
 import { ResetCountdown } from "./ResetCountdown";
 import { Sparkline } from "./Sparkline";
+import { RowActions } from "./RowActions";
 
 type Props = { rows: TokenRow[]; writeAvailable: boolean };
 
@@ -93,16 +92,12 @@ export function TokensTable({ rows, writeAvailable }: Props) {
               )}
             </TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Row actions"
+              <RowActions
+                id={row.entry.id}
+                label={row.entry.label}
+                enabled={row.entry.enabled}
                 disabled={!writeAvailable}
-                aria-disabled={!writeAvailable ? "true" : undefined}
-                className="h-8 w-8"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
+              />
             </TableCell>
           </TableRow>
         ))}
