@@ -101,6 +101,18 @@ export async function listTokens(): Promise<PublicTokenEntry[]> {
   return reg.tokens.filter((t) => !t.deleted_at).map(toPublic);
 }
 
+/**
+ * Fetch a single non-deleted token by id. Returns null when no live entry
+ * matches — callers (the detail page) call `notFound()` in that case.
+ */
+export async function getTokenById(
+  id: string,
+): Promise<PublicTokenEntry | null> {
+  const reg = await sops().decryptRegistry();
+  const e = reg.tokens.find((t) => t.id === id && !t.deleted_at);
+  return e ? toPublic(e) : null;
+}
+
 export async function addToken(
   input: {
     label: string;
