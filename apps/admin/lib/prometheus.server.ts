@@ -153,3 +153,30 @@ export async function queryRange(
     samples: r.values.map(([t, v]) => [t, Number(v)] as [number, number]),
   }));
 }
+
+// --------------------------------------------------------------------------
+// Overview aggregator — shared by /api/overview Route Handler and the RSC
+// page.tsx seed. Keeping both surfaces on one helper guarantees the SWR
+// refresh payload matches the SSR'd first paint (T-14-04-06).
+// --------------------------------------------------------------------------
+
+/**
+ * Run the overview query range and return a flat record keyed by
+ * `instance` → numeric samples (bytes/sec), for sparkline consumption.
+ * Any query failure degrades to an empty object.
+ */
+export async function queryRangeByInstance(
+  promql: string,
+  start: Date,
+  end: Date,
+  stepSec: number,
+): Promise<Record<string, number[]>> {
+  const series = await queryRange(promql, start, end, stepSec);
+  const out: Record<string, number[]> = {};
+  for (const s of series) {
+    const inst = s.labels.instance;
+    if (!inst) continue;
+    out[inst] = s.samples.map(([, v]) => v);
+  }
+  return out;
+}
