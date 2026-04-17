@@ -1,10 +1,12 @@
 import "server-only";
 
+let cachedRaw: string | null = null;
 let cached: Set<string> | null = null;
 
 export function getAllowedLogins(): Set<string> {
-  if (cached) return cached;
   const raw = process.env.HOMELAB_ADMIN_ALLOWED_GITHUB_LOGINS ?? "";
+  if (cached && raw === cachedRaw) return cached;
+  cachedRaw = raw;
   cached = new Set(
     raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
   );
