@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
 status: executing
-stopped_at: Phase 14 context gathered
-last_updated: "2026-04-17T10:58:20.161Z"
-last_activity: 2026-04-17 -- Phase 13 execution started
+stopped_at: Completed 14-01-PLAN.md (checkpoint at Task 3 — operator deploy required)
+last_updated: "2026-04-17T11:39:47.564Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 38
-  completed_plans: 38
-  percent: 100
+  total_plans: 43
+  completed_plans: 39
+  percent: 91
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
-**Current focus:** Phase 13 — claude-tokens-page
+**Current focus:** Phase 14 — global-overview-audit-log
 
 ## Current Position
 
-Phase: 13 (claude-tokens-page) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 13
-Last activity: 2026-04-17 -- Phase 13 execution started
+Phase: 14 (global-overview-audit-log) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-04-17
 
 Progress: [          ] 0% — v3.0 not started
 
@@ -58,6 +58,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 12-infra-foundation]: Ansible task include pattern established: delegate_to localhost decrypt + no_log + drop facts after render
 - [Phase 12-infra-foundation]: blockinfile is ansible.builtin (core), not community.general — FQCN corrected from plan spec
 - [Phase 12-infra-foundation]: Next.js 15.5.15 satisfies >=15.2.4 SC; bun audit clean; SC #5 idempotency exceptions documented (env render + rsync ownership + handler restart)
+- [Phase 14]: cAdvisor uses community.docker.docker_container directly (not role) for explicit Tailnet-bind control; mcow uses port 18080 (voidnet-api owns 8080)
 
 ### Blockers/Concerns
 
@@ -78,6 +79,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-17T10:58:20.157Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-global-overview-audit-log/14-CONTEXT.md
+Last session: 2026-04-17T11:39:47.561Z
+Stopped at: Completed 14-01-PLAN.md (checkpoint at Task 3 — operator deploy required)
+Resume file: None
