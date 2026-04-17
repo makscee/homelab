@@ -10,7 +10,16 @@
 - name: Install and configure node_exporter on all monitored hosts
   hosts: monitored_hosts
   become: true
+  vars:
+    node_exporter_web_listen_address: "{{ tailscale_ip }}:9100"
   pre_tasks:
+    - name: Assert tailscale_ip is defined for this host
+      ansible.builtin.assert:
+        that:
+          - tailscale_ip is defined
+          - tailscale_ip | length > 0
+        fail_msg: "tailscale_ip must be set in inventory for {{ inventory_hostname }}"
+
     - name: Ensure Python3 is present (required for Ansible modules)
       ansible.builtin.raw: test -x /usr/bin/python3 || (apt-get update && apt-get install -y python3)
       changed_when: false
@@ -24,9 +33,9 @@
         enabled: true
       when: not ansible_check_mode
 
-    - name: Probe :9100/metrics locally from each host
+    - name: Probe :9100/metrics locally from each host (via Tailscale IP)
       ansible.builtin.uri:
-        url: "http://127.0.0.1:9100/metrics"
+        url: "http://{{ tailscale_ip }}:9100/metrics"
         return_content: false
         status_code: 200
       register: ne_probe

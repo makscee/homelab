@@ -1,9 +1,35 @@
 - targets:
-    - '100.101.0.7:9100'    # tower (Proxmox host)
-    - '100.101.0.8:9100'    # docker-tower (LXC 100)
-    - '100.99.133.9:9100'   # cc-worker (LXC 204)
-    - '100.101.0.9:9100'    # mcow
-    - '100.101.0.3:9100'    # nether
-    - '100.119.15.122:9100' # animaya-dev (LXC 205) — restored 2026-04-15 via Plan 04-04
+    - '100.101.0.7:9100'
   labels:
     job: node
+    hostname: tower
+
+- targets:
+    - '100.101.0.8:9100'
+  labels:
+    job: node
+    hostname: docker-tower
+
+- targets:
+    - '100.99.133.9:9100'
+  labels:
+    job: node
+    hostname: cc-worker
+
+- targets:
+    - '100.101.0.9:9100'
+  labels:
+    job: node
+    hostname: mcow
+
+- targets:
+    - '100.101.0.3:9100'
+  labels:
+    job: node
+    hostname: nether
+
+- targets:
+    - '100.119.15.122:9100'
+  labels:
+    job: node
+    hostname: animaya-dev

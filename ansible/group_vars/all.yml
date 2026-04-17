@@ -1,11 +1,11 @@
 ---
-node_exporter_version: "1.8.2"   # latest stable as of 2026-04-14
-node_exporter_web_listen_address: "0.0.0.0:9100"
-# Bind 0.0.0.0 — rely on Tailnet for access control:
-#   - LXCs have no public IP (Tailnet-only)
-#   - tower (Proxmox bare-metal): PVE firewall is disabled (verified 2026-04-14)
-#   - All scraping done from docker-tower (100.101.0.8) over Tailnet mesh
+node_exporter_version: "1.11.1"   # bumped 2026-04-17 (Plan 14-01) — latest stable
+node_exporter_web_listen_address: "{{ tailscale_ip }}:9100"
+# Bind to Tailscale IP only (SEC-03 / T-14-01-01) — explicit Tailnet-only bind.
+# tailscale_ip is set per-host in inventory/homelab.yml.
 # If per-host override is needed, add to host_vars/<host>.yml
+
+cadvisor_version: "v0.56.1"   # pinned 2026-04-17 (Plan 14-01)
 
 # ── v3.0 Phase 12 — homelab-admin dashboard on mcow ─────────────────────
 # Port 3847 chosen because Docker (Grafana stack) already owns 3000 on mcow.

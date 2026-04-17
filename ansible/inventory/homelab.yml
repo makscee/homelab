@@ -8,19 +8,30 @@ all:
         tower:
           ansible_host: 100.101.0.7
           ansible_user: root
+          tailscale_ip: 100.101.0.7
         docker-tower:
           ansible_host: 100.101.0.8
           ansible_user: root
+          tailscale_ip: 100.101.0.8
         cc-worker:
           ansible_host: 100.99.133.9
           ansible_user: root
+          tailscale_ip: 100.99.133.9
         mcow:
           ansible_host: 100.101.0.9
           ansible_user: root
+          tailscale_ip: 100.101.0.9
         nether:
           ansible_host: 100.101.0.3
           ansible_user: root
+          tailscale_ip: 100.101.0.3
         animaya-dev:
           ansible_host: 100.119.15.122
           ansible_user: root
+          tailscale_ip: 100.119.15.122
           # SSH key pushed via pct exec 205 on tower 2026-04-15 (Plan 04-04). See .planning/phases/04-operator-dashboard/04-04-SSH-UNBLOCK-LOG.md.
+
+    docker_hosts:
+      hosts:
+        docker-tower:
+        mcow:
