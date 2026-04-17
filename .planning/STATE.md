@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
 status: executing
-stopped_at: Completed 12-03-PLAN.md
-last_updated: "2026-04-16T22:40:16.749Z"
-last_activity: 2026-04-16
+stopped_at: Completed 12-07-PLAN.md
+last_updated: "2026-04-17T07:00:37.198Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 33
-  completed_plans: 26
-  percent: 79
+  completed_plans: 30
+  percent: 91
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 12 (infra-foundation) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
-Last activity: 2026-04-16
+Last activity: 2026-04-17
 
 Progress: [          ] 0% — v3.0 not started
 
@@ -53,6 +53,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 12-infra-foundation]: bun.lock (text format) committed as lockfile — Bun 1.3.5 generates .lock not .lockb binary
 - [Phase 12]: bun_version pinned to 1.1.38 in group_vars/all.yml (do not bump to 1.2.x without P-05 re-validation)
 - [Phase 12]: mcow confirmed KVM — strict systemd hardening safe for Plan 07 (ProtectSystem=strict, PrivateTmp=yes); P-15 degraded path not needed
+- [Phase 12-infra-foundation]: KVM confirmed — full strict systemd hardening block used for homelab-admin.service (ProtectSystem=strict + PrivateTmp=yes)
 
 ### Blockers/Concerns
 
@@ -73,6 +74,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-16T22:40:16.746Z
-Stopped at: Completed 12-03-PLAN.md
+Last session: 2026-04-17T07:00:37.194Z
+Stopped at: Completed 12-07-PLAN.md
 Resume file: None
