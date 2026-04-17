@@ -4,7 +4,10 @@ import "server-only";
 // Config
 // --------------------------------------------------------------------------
 
-const PROM_BASE = process.env.PROMETHEUS_URL ?? "http://mcow:9090";
+// Prometheus runs on docker-tower (100.101.0.8 via Tailnet MagicDNS). The fallback
+// is only hit in local dev — production renders PROMETHEUS_URL into
+// /etc/homelab-admin/env (ansible/playbooks/tasks/homelab-admin-secrets.yml).
+const PROM_BASE = process.env.PROMETHEUS_URL ?? "http://docker-tower:9090";
 
 // --------------------------------------------------------------------------
 // Public types
