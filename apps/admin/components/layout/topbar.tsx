@@ -1,11 +1,11 @@
-import { auth, signOut } from "@/auth";
+import { headers } from "next/headers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NavAlertBadge } from "@/app/(auth)/_components/NavAlertBadge";
 
 export async function TopBar() {
-  const session = await auth();
-  const login = (session?.user as { login?: string } | undefined)?.login ?? "operator";
-  const image = session?.user?.image ?? undefined;
+  const h = await headers();
+  const login = h.get("x-user-login") ?? "operator";
+  const image = h.get("x-user-picture") ?? undefined;
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
@@ -19,12 +19,7 @@ export async function TopBar() {
           </Avatar>
           <span className="text-sm text-muted-foreground">{login}</span>
         </div>
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}
-        >
+        <form action="/api/auth/signout" method="post">
           <button type="submit" className="text-sm text-muted-foreground hover:text-foreground">
             Sign out
           </button>

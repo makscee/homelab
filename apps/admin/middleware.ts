@@ -1,8 +1,5 @@
-import NextAuth from "next-auth";
-import { NextResponse } from "next/server";
-import { authConfig } from "@/auth.config";
-
-const { auth } = NextAuth(authConfig);
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = new Set<string>(["/login", "/403", "/api/health"]);
 const isApiAuthPath = (p: string) => p.startsWith("/api/auth/");
@@ -25,14 +22,14 @@ function isLoginAllowedEdge(login: string | null | undefined): boolean {
 function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://avatars.githubusercontent.com",
     "font-src 'self' data:",
     "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://github.com",
   ].join("; ");
 }
 
@@ -52,7 +49,7 @@ function applySecurityHeaders(res: NextResponse, nonce: string): NextResponse {
   return res;
 }
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString(
     "base64",
@@ -71,23 +68,55 @@ export default auth((req) => {
     return applySecurityHeaders(passRes, nonce);
   }
 
-  const session = req.auth;
-  if (!session) {
+  // Decode raw JWT to read `login` directly — bypasses needing a session()
+  // callback in middleware (Auth.js v5 would otherwise not expose custom
+  // token fields through `req.auth.user`).
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: true,
+    cookieName: "__Secure-authjs.session-token",
+  });
+  if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return applySecurityHeaders(NextResponse.redirect(url), nonce);
   }
 
-  const login = (session.user as { login?: string } | undefined)?.login;
+  const login = typeof (token as { login?: unknown }).login === "string"
+    ? (token as { login: string }).login
+    : undefined;
   if (!isLoginAllowedEdge(login)) {
     const url = req.nextUrl.clone();
     url.pathname = "/403";
     return applySecurityHeaders(NextResponse.redirect(url), nonce);
   }
 
+  if (login) requestHeaders.set("x-user-login", login);
+  const picture = typeof (token as { picture?: unknown }).picture === "string"
+    ? (token as { picture: string }).picture
+    : undefined;
+  if (picture) requestHeaders.set("x-user-picture", picture);
+
   const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  if (!req.cookies.get("hla-csrf")) {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    res.cookies.set({
+      name: "hla-csrf",
+      value: token,
+      path: "/",
+      sameSite: "strict",
+      secure: true,
+      httpOnly: false,
+      maxAge: 28800,
+    });
+  }
+
   return applySecurityHeaders(res, nonce);
-});
+}
 
 export const config = {
   // Match everything except Next.js internals and static files.
