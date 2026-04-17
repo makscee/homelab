@@ -1,0 +1,42 @@
+{# Rendered by ansible/playbooks/deploy-homelab-admin.yml (Phase 12-09).
+   Inserted into /etc/caddy/Caddyfile on mcow via community.general.blockinfile
+   between "# BEGIN homelab-admin" / "# END homelab-admin" markers (D-12-11).
+   Caddy on mcow issues LE certs via HTTP-01 (D-12-12 — NOT DNS-01, NOT xcaddy).
+   This block is the SEC-02 defense-in-depth layer (D-12-14) — the same header set is
+   emitted by the Next.js middleware from Plan 12-04 at the runtime layer.
+   NOTE: Content-Security-Policy is NOT set here. CSP uses a per-request nonce
+   emitted only by the Next.js middleware (D-12-33). A static CSP here would clash
+   with the nonce and break shadcn/Recharts inline styles.
+#}
+
+{{ homelab_admin_domain }} {
+    encode gzip
+
+    reverse_proxy 127.0.0.1:{{ homelab_admin_port }} {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+        header_up Host {host}
+    }
+
+    # SEC-02 defense-in-depth headers (D-12-14).
+    # Next.js middleware (Plan 12-04) also emits these at the app runtime layer.
+    # Caddy emits them at the edge so the policy holds even for responses that
+    # bypass the Next.js runtime (static assets, edge errors, upstream 502s).
+    # CSP is intentionally absent — see note above.
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/homelab-admin.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+        format json
+    }
+}

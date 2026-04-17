@@ -1,0 +1,286 @@
+---
+# Deploy Next.js admin dashboard to mcow.
+# Idempotent: second run from a clean controller yields all-ok (SC #5).
+#
+# Run:
+#   cd ansible
+#   ansible-playbook -i inventory/homelab.yml playbooks/deploy-homelab-admin.yml
+#
+# Prereqs on controller:
+#   - sops + age installed (age key at ~/.config/sops/age/keys.txt)
+#   - SSH access to root@100.101.0.9 (Tailnet — mcow)
+#   - Bun installed (for local `bun audit` gate)
+#   - Collections installed: ansible-galaxy collection install -r requirements.yml
+#   - docs/setup-github-oauth.md complete + secrets/mcow.sops.yaml has homelab_admin: block (Plan 12-08)
+
+- name: Pre-deploy gate — bun audit on controller
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: Run bun audit (HIGH/CRITICAL aborts deploy)
+      ansible.builtin.command:
+        cmd: bun audit --audit-level high
+        chdir: "{{ playbook_dir }}/../../apps/admin"
+      changed_when: false
+      register: audit_result
+
+    - name: Show bun audit summary
+      ansible.builtin.debug:
+        var: audit_result.stdout_lines
+
+- name: Deploy homelab-admin to mcow
+  hosts: mcow
+  gather_facts: true
+  become: true
+  vars:
+    repo_root: "{{ playbook_dir }}/../.."
+    app_src: "{{ repo_root }}/apps/admin/"
+    unit_src: "{{ repo_root }}/servers/mcow/homelab-admin.service"
+    caddyfile_path: /etc/caddy/Caddyfile
+    caddy_block_marker: "homelab-admin"
+    homelab_admin_commit_sha: "{{ lookup('pipe', 'git -C ' + repo_root + ' rev-parse --short HEAD') }}"
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restart homelab-admin
+      ansible.builtin.systemd:
+        name: homelab-admin.service
+        state: restarted
+
+    - name: Validate and reload Caddy
+      block:
+        - name: Validate Caddyfile
+          ansible.builtin.command:
+            cmd: caddy validate --config {{ caddyfile_path }} --adapter caddyfile
+          changed_when: false
+
+        - name: Reload Caddy
+          ansible.builtin.systemd:
+            name: caddy
+            state: reloaded
+
+  tasks:
+
+    # ── Stage 1 — Bun runtime ───────────────────────────────────────────────
+    - name: Check current Bun version on mcow
+      ansible.builtin.command: /usr/local/bin/bun --version
+      register: bun_installed
+      failed_when: false
+      changed_when: false
+
+    - name: Install/Upgrade Bun to {{ bun_version }}
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -fsSL https://bun.sh/install | bash -s "bun-v{{ bun_version }}"
+        install -m 0755 /root/.bun/bin/bun /usr/local/bin/bun
+      args:
+        executable: /bin/bash
+      when: bun_installed.rc != 0 or bun_version not in (bun_installed.stdout | default(''))
+
+    # ── Stage 2 — OS user + group ───────────────────────────────────────────
+    - name: Ensure homelab-admin group exists
+      ansible.builtin.group:
+        name: "{{ homelab_admin_service_group }}"
+        system: true
+        state: present
+
+    - name: Ensure homelab-admin user exists
+      ansible.builtin.user:
+        name: "{{ homelab_admin_service_user }}"
+        group: "{{ homelab_admin_service_group }}"
+        system: true
+        shell: /usr/sbin/nologin
+        home: /opt/homelab-admin
+        create_home: false
+        state: present
+
+    # ── Stage 3 — Directories ───────────────────────────────────────────────
+    - name: Ensure /opt/homelab-admin exists
+      ansible.builtin.file:
+        path: /opt/homelab-admin
+        state: directory
+        owner: "{{ homelab_admin_service_user }}"
+        group: "{{ homelab_admin_service_group }}"
+        mode: '0755'
+
+    - name: Ensure {{ homelab_admin_install_dir }} exists
+      ansible.builtin.file:
+        path: "{{ homelab_admin_install_dir }}"
+        state: directory
+        owner: "{{ homelab_admin_service_user }}"
+        group: "{{ homelab_admin_service_group }}"
+        mode: '0755'
+
+    # ── Stage 4 — Secrets + env file (delegates to Plan 08 task file) ──────
+    - name: Plumb secrets from SOPS to /etc/homelab-admin/env
+      ansible.builtin.include_tasks: tasks/homelab-admin-secrets.yml
+
+    # ── Stage 5 — Rsync source ──────────────────────────────────────────────
+    - name: Sync apps/admin source to {{ homelab_admin_install_dir }}
+      ansible.posix.synchronize:
+        src: "{{ app_src }}"
+        dest: "{{ homelab_admin_install_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.next"
+          - "--exclude=.next.prev"
+          - "--exclude=.env.local"
+          - "--exclude=.env.*.local"
+      register: rsync_result
+
+    - name: Chown install dir to homelab-admin
+      ansible.builtin.file:
+        path: "{{ homelab_admin_install_dir }}"
+        owner: "{{ homelab_admin_service_user }}"
+        group: "{{ homelab_admin_service_group }}"
+        recurse: true
+
+    # ── Stage 6 — bun install --frozen-lockfile ─────────────────────────────
+    - name: Install deps with frozen lockfile
+      become_user: "{{ homelab_admin_service_user }}"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/bun install --frozen-lockfile
+        chdir: "{{ homelab_admin_install_dir }}"
+      register: bun_install
+      changed_when: "'installed' in bun_install.stdout or 'packages' in bun_install.stdout"
+
+    # ── Stage 7 — Build with rollback ───────────────────────────────────────
+    - name: Snapshot previous build
+      ansible.builtin.shell: |
+        set -euo pipefail
+        if [ -d "{{ homelab_admin_install_dir }}/.next" ] && [ ! -d "{{ homelab_admin_install_dir }}/.next.prev" ]; then
+          mv "{{ homelab_admin_install_dir }}/.next" "{{ homelab_admin_install_dir }}/.next.prev"
+        elif [ -d "{{ homelab_admin_install_dir }}/.next" ] && [ -d "{{ homelab_admin_install_dir }}/.next.prev" ]; then
+          rm -rf "{{ homelab_admin_install_dir }}/.next.prev"
+          mv "{{ homelab_admin_install_dir }}/.next" "{{ homelab_admin_install_dir }}/.next.prev"
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Build Next.js
+      block:
+        - name: bun run build
+          become_user: "{{ homelab_admin_service_user }}"
+          ansible.builtin.command:
+            cmd: /usr/local/bin/bun run build
+            chdir: "{{ homelab_admin_install_dir }}"
+          register: build_result
+          changed_when: "'compiled' in build_result.stdout.lower() or 'compiled' in build_result.stderr.lower()"
+      rescue:
+        - name: Rollback to previous .next
+          ansible.builtin.shell: |
+            set -euo pipefail
+            rm -rf "{{ homelab_admin_install_dir }}/.next"
+            if [ -d "{{ homelab_admin_install_dir }}/.next.prev" ]; then
+              mv "{{ homelab_admin_install_dir }}/.next.prev" "{{ homelab_admin_install_dir }}/.next"
+            fi
+          args:
+            executable: /bin/bash
+        - name: Abort deploy after rollback
+          ansible.builtin.fail:
+            msg: "bun run build failed — rolled back to .next.prev. Fix build locally (`cd apps/admin && bun run build`) before re-running."
+
+    # ── Stage 8 — systemd unit install ──────────────────────────────────────
+    - name: Install homelab-admin.service unit
+      ansible.builtin.copy:
+        src: "{{ unit_src }}"
+        dest: /etc/systemd/system/homelab-admin.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Reload systemd
+        - Restart homelab-admin
+
+    # Flush handlers so daemon-reload + restart happen BEFORE smoke check
+    - name: Apply systemd changes before smoke
+      ansible.builtin.meta: flush_handlers
+
+    - name: Ensure homelab-admin is enabled and started
+      ansible.builtin.systemd:
+        name: homelab-admin.service
+        enabled: true
+        state: started
+
+    # ── Stage 11 — Local smoke check against loopback ───────────────────────
+    - name: Smoke — /api/health on 127.0.0.1:{{ homelab_admin_port }}
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ homelab_admin_port }}/api/health"
+        return_content: true
+        status_code: 200
+      register: health_local
+      retries: 10
+      delay: 1
+      until: health_local.status == 200 and (health_local.json.ok | default(false))
+
+    - name: Fail if health body.ok != true
+      ansible.builtin.fail:
+        msg: "Health check returned 200 but body.ok != true: {{ health_local.json }}"
+      when: not (health_local.json.ok | default(false))
+
+    # ── Stage 12 — Caddy block (additive via blockinfile; authors SEC-02 layer) ─
+    - name: Render Caddy site-block template locally
+      delegate_to: localhost
+      become: false
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/caddy-homelab-admin.conf.j2"
+        dest: "/tmp/caddy-homelab-admin.conf"
+        mode: '0644'
+      vars:
+        homelab_admin_domain: "{{ homelab_admin_domain }}"
+        homelab_admin_port: "{{ homelab_admin_port }}"
+      check_mode: false
+      changed_when: false
+
+    - name: Read rendered Caddy block into variable
+      delegate_to: localhost
+      become: false
+      ansible.builtin.slurp:
+        src: "/tmp/caddy-homelab-admin.conf"
+      register: caddy_block_rendered
+      check_mode: false
+
+    - name: Ensure /var/log/caddy exists on mcow
+      ansible.builtin.file:
+        path: /var/log/caddy
+        state: directory
+        owner: caddy
+        group: caddy
+        mode: '0755'
+
+    - name: Patch /etc/caddy/Caddyfile with homelab-admin site block
+      ansible.builtin.blockinfile:
+        path: "{{ caddyfile_path }}"
+        marker: "# {mark} homelab-admin"
+        block: "{{ caddy_block_rendered.content | b64decode }}"
+        create: false
+      notify:
+        - Validate and reload Caddy
+
+    - name: Apply Caddy reload before external smoke
+      ansible.builtin.meta: flush_handlers
+
+    # ── Stage 14 — External smoke check via Caddy ───────────────────────────
+    - name: Smoke — /api/health via https://{{ homelab_admin_domain }}
+      ansible.builtin.uri:
+        url: "https://{{ homelab_admin_domain }}/api/health"
+        return_content: true
+        status_code: 200
+        validate_certs: true
+      register: health_public
+      retries: 20
+      delay: 3
+      until: health_public.status == 200 and (health_public.json.ok | default(false))
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Local  /api/health → {{ health_local.status }} ok={{ health_local.json.ok }}"
+          - "Public /api/health → {{ health_public.status }} ok={{ health_public.json.ok }}"
+          - "Commit: {{ homelab_admin_commit_sha }}"
