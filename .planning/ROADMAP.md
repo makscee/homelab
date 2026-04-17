@@ -47,7 +47,7 @@ Phase 19 (Security + Launch) → depends on all others
 ```
 
 - [x] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers (completed 2026-04-17)
-- [ ] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt)
+- [x] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt) (completed 2026-04-17)
 - [ ] **Phase 14: Global Overview + Audit Log** - First dashboard page with Prometheus data, audit log infrastructure for all writes
 - [ ] **Phase 15: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 14)
 - [ ] **Phase 16: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 14)
@@ -196,7 +196,7 @@ Plans:
 - [x] 13-02-exporter-rebind-PLAN.md — Tailnet-only bind + uid 65534 + mtime-poll registry reload + idempotent Ansible (SEC-03)
 - [x] 13-03-backend-libs-PLAN.md — prometheus.server.ts + audit.server.ts + token-registry CRUD + CSRF helper + 5 API routes
 - [x] 13-04-tokens-list-page-PLAN.md — /tokens RSC: list, inline bars, sparkline, empty+degraded+loading states
-- [ ] 13-05-mutations-and-detail-PLAN.md — Add/Rotate/Rename/Toggle/Delete dialogs + /tokens/[id] detail with Recharts chart
+- [x] 13-05-mutations-and-detail-PLAN.md — Add/Rotate/Rename/Toggle/Delete dialogs + /tokens/[id] detail with Recharts chart
 **UI hint**: yes
 
 ---
@@ -336,7 +336,7 @@ Plans:
 | 10. Grafana Dashboard | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 12. Infra Foundation | v3.0 | 10/10 | Complete    | 2026-04-17 |
-| 13. Claude Tokens Page | v3.0 | 4/5 | In Progress|  |
+| 13. Claude Tokens Page | v3.0 | 5/5 | Complete   | 2026-04-17 |
 | 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
 | 15. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 16. Proxmox Ops | v3.0 | 0/? | Not started | - |
