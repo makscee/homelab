@@ -10,7 +10,7 @@
 
 - [x] **INFRA-01**: Next.js 15 + React 19 + TypeScript app scaffolded under `apps/admin/` in this repo, running under Bun, managed by systemd on mcow
 - [x] **INFRA-02**: App binds Unix socket (or 127.0.0.1:PORT, port ≠ 3000 since Docker already owns it) — never public-bound directly; existing Caddy on mcow reverse-proxies `homelab.makscee.ru` to the socket
-- [ ] **INFRA-03**: LE TLS certificate auto-issued + auto-renewed via existing Caddy HTTP-01 flow on mcow (mirrors `vibe.makscee.ru` pattern in `/etc/caddy/Caddyfile`); new site block added to Caddyfile
+- [x] **INFRA-03**: LE TLS certificate auto-issued + auto-renewed via existing Caddy HTTP-01 flow on mcow (mirrors `vibe.makscee.ru` pattern in `/etc/caddy/Caddyfile`); new site block added to Caddyfile
 - [ ] **INFRA-04**: GitHub OAuth sign-in via Auth.js v5; allowlist of GitHub user logins enforced (initial: `makscee`); unlisted users rejected with 403 before any handler runs
 - [ ] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
 - [x] **INFRA-06**: Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml` deploys the app to mcow (rsync source, `bun install`, `bun run build`, systemd unit install/reload); idempotent
@@ -83,7 +83,7 @@
 ### SEC — Security + Deploy Hardening
 
 - [ ] **SEC-01**: Rate limit at Caddy layer on `homelab.makscee.ru` (per-IP, e.g. 60 req/min for auth endpoints)
-- [ ] **SEC-02**: CSP, HSTS, X-Frame-Options headers set via Next.js middleware; strict CSP (no inline scripts); OWASP baseline
+- [x] **SEC-02**: CSP, HSTS, X-Frame-Options headers set via Next.js middleware; strict CSP (no inline scripts); OWASP baseline
 - [ ] **SEC-03**: Exporter rebinding (v2.0 tech-debt): claude-usage-exporter listens on `100.101.0.9:9101` only (not `0.0.0.0`); runs as `nobody(65534)` with read-only token mount
 - [ ] **SEC-04**: Server-only lint rule enforces `"use server"` directive usage; prevents RSC → client secret leakage
 - [ ] **SEC-05**: Zod schema validation on every Route Handler input; Drizzle prepared statements for every query (no raw SQL)
@@ -122,7 +122,7 @@
 |-------------|-------|--------|
 | INFRA-01 | Phase 12 | Complete |
 | INFRA-02 | Phase 12 | Complete |
-| INFRA-03 | Phase 12 | Pending |
+| INFRA-03 | Phase 12 | Complete |
 | INFRA-04 | Phase 12 | Pending |
 | INFRA-05 | Phase 14 | Pending |
 | INFRA-06 | Phase 12 | Complete |
@@ -171,7 +171,7 @@
 | ALERT-05 | Phase 17 | Pending |
 | ALERT-06 | Phase 17 | Pending |
 | SEC-01 | Phase 19 | Pending |
-| SEC-02 | Phase 12 | Pending |
+| SEC-02 | Phase 12 | Complete |
 | SEC-03 | Phase 13 | Pending |
 | SEC-04 | Phase 12 | Pending |
 | SEC-05 | Phase 12 | Pending |
