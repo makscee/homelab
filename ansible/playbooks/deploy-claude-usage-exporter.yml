@@ -1,0 +1,110 @@
+---
+# Deploy claude-usage-exporter to mcow.
+# Phase 13-02 (SEC-03): Tailnet-only bind, uid 65534 (nobody), mtime-poll
+# registry reload every 30s so admin-app SOPS writes surface in metrics
+# without a full Ansible redeploy (D-13-07).
+#
+# Run:
+#   cd ansible
+#   ansible-playbook -i inventory.ini playbooks/deploy-claude-usage-exporter.yml
+#
+# Prereqs on controller:
+#   - sops + age installed (age key at ~/.config/sops/age/keys.txt)
+#   - SSH access to root@100.101.0.9 (Tailnet — mcow)
+#   - secrets/claude-tokens.sops.yaml exists and decryptable
+#
+# Idempotency:
+#   - synchronize(delete=true) is a no-op when src==dest
+#   - copy uses content-hash for both the unit file and the rendered registry
+#   - decrypt task carries changed_when: false (produces no artifact by itself)
+#   - handlers only fire when files change
+
+- name: Deploy claude-usage-exporter to mcow
+  hosts: mcow
+  become: true
+  vars:
+    exporter_src: "{{ playbook_dir }}/../../servers/mcow/claude-usage-exporter"
+    unit_src: "{{ playbook_dir }}/../../servers/mcow/systemd/claude-usage-exporter.service"
+    sops_file: "{{ playbook_dir }}/../../secrets/claude-tokens.sops.yaml"
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: restart claude-usage-exporter
+      ansible.builtin.systemd:
+        name: claude-usage-exporter
+        state: restarted
+
+  tasks:
+    - name: Ensure state dir exists (owned by nobody)
+      ansible.builtin.file:
+        path: "{{ claude_usage_exporter.state_dir }}"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0750"
+
+    - name: Ensure install dir exists (root-owned, read-only to nobody)
+      ansible.builtin.file:
+        path: "{{ claude_usage_exporter.install_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Rsync exporter source to mcow
+      ansible.posix.synchronize:
+        src: "{{ exporter_src }}/"
+        dest: "{{ claude_usage_exporter.install_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+          - "--exclude=test_exporter.py"
+          - "--exclude=.venv"
+          - "--exclude=.pytest_cache"
+          - "--exclude=.gitignore"
+      notify: restart claude-usage-exporter
+
+    - name: Install systemd unit file
+      ansible.builtin.copy:
+        src: "{{ unit_src }}"
+        dest: /etc/systemd/system/claude-usage-exporter.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - reload systemd
+        - restart claude-usage-exporter
+
+    - name: Decrypt claude-tokens registry on controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command: sops -d --output-type json {{ sops_file }}
+      register: decrypted_registry
+      changed_when: false
+      no_log: true
+
+    - name: Render decrypted registry on mcow (nobody-readable, 0440)
+      ansible.builtin.copy:
+        content: "{{ decrypted_registry.stdout }}"
+        dest: "{{ claude_usage_exporter.read_path }}"
+        owner: nobody
+        group: nogroup
+        mode: "0440"
+      no_log: true
+      # mtime advance -> exporter reloads within reload_interval seconds
+
+    - name: Drop decrypted fact from memory
+      ansible.builtin.set_fact:
+        decrypted_registry: !!null
+      no_log: true
+
+    - name: Ensure service enabled and running
+      ansible.builtin.systemd:
+        name: claude-usage-exporter
+        enabled: true
+        state: started
+        daemon_reload: true
