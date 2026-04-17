@@ -46,7 +46,7 @@ Phase 18 (Web Terminal) → depends on Phase 16 (needs Proxmox LXC context)
 Phase 19 (Security + Launch) → depends on all others
 ```
 
-- [ ] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers
+- [x] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers (completed 2026-04-17)
 - [ ] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt)
 - [ ] **Phase 14: Global Overview + Audit Log** - First dashboard page with Prometheus data, audit log infrastructure for all writes
 - [ ] **Phase 15: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 14)
@@ -169,7 +169,7 @@ Plans:
 - [x] 12-07-PLAN.md — servers/mcow/homelab-admin.service systemd unit (probe-matched hardening) + inventory update
 - [x] 12-08-PLAN.md — SOPS mcow.sops.yaml extension + Ansible decrypt/render tasks (env file mode 0600)
 - [x] 12-09-PLAN.md — deploy-homelab-admin.yml end-to-end playbook + Caddy blockinfile template
-- [ ] 12-10-PLAN.md — Deploy execution + evidence capture + VERIFICATION.md + SEC-05 policy doc
+- [x] 12-10-PLAN.md — Deploy execution + evidence capture + VERIFICATION.md + SEC-05 policy doc
 **UI hint**: yes
 
 ---
@@ -329,7 +329,7 @@ Plans:
 | 09. Alerts | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 10. Grafana Dashboard | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
-| 12. Infra Foundation | v3.0 | 9/10 | In Progress|  |
+| 12. Infra Foundation | v3.0 | 10/10 | Complete   | 2026-04-17 |
 | 13. Claude Tokens Page | v3.0 | 0/? | Not started | - |
 | 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
 | 15. VoidNet Management | v3.0 | 0/? | Not started | - |

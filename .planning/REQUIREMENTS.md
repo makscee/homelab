@@ -11,7 +11,7 @@
 - [x] **INFRA-01**: Next.js 15 + React 19 + TypeScript app scaffolded under `apps/admin/` in this repo, running under Bun, managed by systemd on mcow
 - [x] **INFRA-02**: App binds Unix socket (or 127.0.0.1:PORT, port ≠ 3000 since Docker already owns it) — never public-bound directly; existing Caddy on mcow reverse-proxies `homelab.makscee.ru` to the socket
 - [x] **INFRA-03**: LE TLS certificate auto-issued + auto-renewed via existing Caddy HTTP-01 flow on mcow (mirrors `vibe.makscee.ru` pattern in `/etc/caddy/Caddyfile`); new site block added to Caddyfile
-- [ ] **INFRA-04**: GitHub OAuth sign-in via Auth.js v5; allowlist of GitHub user logins enforced (initial: `makscee`); unlisted users rejected with 403 before any handler runs
+- [x] **INFRA-04**: GitHub OAuth sign-in via Auth.js v5; allowlist of GitHub user logins enforced (initial: `makscee`); unlisted users rejected with 403 before any handler runs
 - [ ] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
 - [x] **INFRA-06**: Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml` deploys the app to mcow (rsync source, `bun install`, `bun run build`, systemd unit install/reload); idempotent
 - [x] **INFRA-07**: Next.js pinned to a release containing the CVE-2025-66478 fix; `bun audit` clean before deploy; dependency bump policy documented
@@ -21,8 +21,8 @@
 
 - [ ] **UI-01**: `hub-shared/ui-kit` repo created (separate from homelab repo) with Tailwind config, CSS variable theme tokens, base shadcn component set, README with usage instructions
 - [ ] **UI-02**: Homelab admin consumes `hub-shared/ui-kit` as a git submodule at `vendor/ui-kit/`; updates flow one-way from ui-kit → consumers
-- [ ] **UI-03**: Base layout component with sidebar nav (pages), top bar (GitHub user chip), page content slot; dark mode default
-- [ ] **UI-04**: Standard error page + 404 + unauthorized (403) page using shared components; consistent empty-state + loading + error patterns
+- [x] **UI-03**: Base layout component with sidebar nav (pages), top bar (GitHub user chip), page content slot; dark mode default
+- [x] **UI-04**: Standard error page + 404 + unauthorized (403) page using shared components; consistent empty-state + loading + error patterns
 
 ### DASH — Global Overview Page
 
@@ -85,10 +85,10 @@
 - [ ] **SEC-01**: Rate limit at Caddy layer on `homelab.makscee.ru` (per-IP, e.g. 60 req/min for auth endpoints)
 - [x] **SEC-02**: CSP, HSTS, X-Frame-Options headers set via Next.js middleware; strict CSP (no inline scripts); OWASP baseline
 - [ ] **SEC-03**: Exporter rebinding (v2.0 tech-debt): claude-usage-exporter listens on `100.101.0.9:9101` only (not `0.0.0.0`); runs as `nobody(65534)` with read-only token mount
-- [ ] **SEC-04**: Server-only lint rule enforces `"use server"` directive usage; prevents RSC → client secret leakage
-- [ ] **SEC-05**: Zod schema validation on every Route Handler input; Drizzle prepared statements for every query (no raw SQL)
-- [ ] **SEC-06**: GitHub OAuth state param + PKCE enforced (Auth.js default — verify)
-- [ ] **SEC-07**: Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, short TTL (8h) with rolling refresh
+- [x] **SEC-04**: Server-only lint rule enforces `"use server"` directive usage; prevents RSC → client secret leakage
+- [x] **SEC-05**: Zod schema validation on every Route Handler input; Drizzle prepared statements for every query (no raw SQL)
+- [x] **SEC-06**: GitHub OAuth state param + PKCE enforced (Auth.js default — verify)
+- [x] **SEC-07**: Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, short TTL (8h) with rolling refresh
 - [ ] **SEC-08**: Security review phase before launch: `bun audit`, bundle analysis for secret leakage, header-spoofing integration test, Proxmox token scope audit
 
 ## Future Requirements (Deferred to v3.x / later)
@@ -123,15 +123,15 @@
 | INFRA-01 | Phase 12 | Complete |
 | INFRA-02 | Phase 12 | Complete |
 | INFRA-03 | Phase 12 | Complete |
-| INFRA-04 | Phase 12 | Pending |
+| INFRA-04 | Phase 12 | Complete |
 | INFRA-05 | Phase 14 | Pending |
 | INFRA-06 | Phase 12 | Complete |
 | INFRA-07 | Phase 12 | Complete |
 | INFRA-08 | Phase 12 | Complete |
 | UI-01 | Phase 19 | Pending |
 | UI-02 | Phase 19 | Pending |
-| UI-03 | Phase 12 | Pending |
-| UI-04 | Phase 12 | Pending |
+| UI-03 | Phase 12 | Complete |
+| UI-04 | Phase 12 | Complete |
 | DASH-01 | Phase 14 | Pending |
 | DASH-02 | Phase 14 | Pending |
 | DASH-03 | Phase 14 | Pending |
@@ -173,10 +173,10 @@
 | SEC-01 | Phase 19 | Pending |
 | SEC-02 | Phase 12 | Complete |
 | SEC-03 | Phase 13 | Pending |
-| SEC-04 | Phase 12 | Pending |
-| SEC-05 | Phase 12 | Pending |
-| SEC-06 | Phase 12 | Pending |
-| SEC-07 | Phase 12 | Pending |
+| SEC-04 | Phase 12 | Complete |
+| SEC-05 | Phase 12 | Complete |
+| SEC-06 | Phase 12 | Complete |
+| SEC-07 | Phase 12 | Complete |
 | SEC-08 | Phase 19 | Pending |
 
 ---

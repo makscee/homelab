@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: — Claude Code Usage Monitor
 status: executing
-stopped_at: Completed 12-09-PLAN.md
-last_updated: "2026-04-17T07:30:00.232Z"
+stopped_at: Completed 12-10-PLAN.md — Phase 12 fully closed
+last_updated: "2026-04-17T07:49:32.003Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 33
-  completed_plans: 32
-  percent: 97
+  completed_plans: 33
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 12 (infra-foundation) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -57,6 +57,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 12-infra-foundation]: Used sops --set for non-interactive key injection into mcow.sops.yaml; OAuth creds are placeholders pending operator GitHub app creation
 - [Phase 12-infra-foundation]: Ansible task include pattern established: delegate_to localhost decrypt + no_log + drop facts after render
 - [Phase 12-infra-foundation]: blockinfile is ansible.builtin (core), not community.general — FQCN corrected from plan spec
+- [Phase 12-infra-foundation]: Next.js 15.5.15 satisfies >=15.2.4 SC; bun audit clean; SC #5 idempotency exceptions documented (env render + rsync ownership + handler restart)
 
 ### Blockers/Concerns
 
@@ -77,6 +78,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-17T07:30:00.229Z
-Stopped at: Completed 12-09-PLAN.md
+Last session: 2026-04-17T07:49:32.000Z
+Stopped at: Completed 12-10-PLAN.md — Phase 12 fully closed
 Resume file: None
