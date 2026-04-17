@@ -4,7 +4,7 @@
 
 - **v1.0 Homelab IaC** — Phases 1-4 (shipped 2026-04-15) — see `.planning/milestones/v1.0-ROADMAP.md`
 - **v2.0 Claude Code Usage Monitor** — Phases 05-11 (closed with pivot 2026-04-16) — see below
-- **v3.0 Unified Stack Migration** — Phases 12-19 (active) — homelab admin dashboard at `homelab.makscee.ru`
+- **v3.0 Unified Stack Migration** — Phases 12-22 (active) — homelab admin dashboard at `homelab.makscee.ru`
 
 ## Phases
 
@@ -28,7 +28,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 06: Exporter Skeleton** — COMPLETE operational (2026-04-16). Python exporter running on mcow:9101 as systemd service. Tech-debt flagged for v3.0. See `06-SUMMARY-OPERATIONAL.md`.
 - [x] **Phase 07: Prometheus Wiring** — COMPLETE operational (2026-04-16). docker-tower Prometheus scraping mcow:9101, `up=1`. See `07-SUMMARY-OPERATIONAL.md`.
 - [~] **Phase 08: SOPS Token Registry** — SUPERSEDED by v3.0 Claude Tokens page (UI + SOPS backend in monorepo)
-- [~] **Phase 09: Alerts** — MOVED to v3.0 Phase 17
+- [~] **Phase 09: Alerts** — MOVED to v3.0 Phase 20
 - [~] **Phase 10: Grafana Dashboard** — KILLED. Replaced by v3.0 Next.js custom dashboard.
 - [~] **Phase 11: Multi-token Scale-out** — ABSORBED into v3.0 (token CRUD UI = scale-out path; 2 tokens already live operationally)
 
@@ -41,19 +41,23 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 Phase 12 (Infra Foundation) → all downstream phases
 Phase 13 (Tokens) → depends on Phase 12
 Phase 14 (Overview + Audit Log) → depends on Phase 13
-Phases 15, 16, 17 (VoidNet, Proxmox, Alerts) → parallel-safe after Phase 14
-Phase 18 (Web Terminal) → depends on Phase 16 (needs Proxmox LXC context)
-Phase 19 (Security + Launch) → depends on all others
+Phases 15, 16, 17 (Tailwind v4, TypeScript 6, ESLint 10) → frontend stack upgrades, sequential after Phase 14
+Phases 18, 19, 20 (VoidNet, Proxmox, Alerts) → parallel-safe after Phase 17
+Phase 21 (Web Terminal) → depends on Phase 19 (needs Proxmox LXC context)
+Phase 22 (Security + Launch) → depends on all others
 ```
 
 - [x] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers (completed 2026-04-17)
 - [x] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt) (completed 2026-04-17)
 - [ ] **Phase 14: Global Overview + Audit Log** - First dashboard page with Prometheus data, audit log infrastructure for all writes
-- [ ] **Phase 15: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 14)
-- [ ] **Phase 16: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 14)
-- [ ] **Phase 17: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 14)
-- [ ] **Phase 18: Web Terminal** - xterm.js + ssh2 PTY relay; node-pty feasibility spike required first
-- [ ] **Phase 19: Security Review + Launch** - Hardening, audit, ui-kit extraction finalization, launch checklist
+- [ ] **Phase 15: Tailwind v4 Migration (3.4 → 4.2) + tailwind-merge 3** - Frontend stack upgrade
+- [ ] **Phase 16: TypeScript 6.0 Upgrade with Deprecation Fixes** - Frontend stack upgrade
+- [ ] **Phase 17: ESLint 10 + Node Types 24 Upgrade** - Frontend stack upgrade
+- [ ] **Phase 18: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 17)
+- [ ] **Phase 19: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 17)
+- [ ] **Phase 20: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 17)
+- [ ] **Phase 21: Web Terminal** - xterm.js + ssh2 PTY relay; node-pty feasibility spike required first
+- [ ] **Phase 22: Security Review + Launch** - Hardening, audit, ui-kit extraction finalization, launch checklist
 
 ## Phase Details
 
@@ -228,12 +232,48 @@ Plans:
 
 ---
 
-### Phase 15: VoidNet Management
+### Phase 15: Tailwind v4 migration (3.4 to 4.2) + tailwind-merge 3
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 14
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 15 to break down)
+
+---
+
+### Phase 16: TypeScript 6.0 upgrade with deprecation fixes
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 15
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 16 to break down)
+
+---
+
+### Phase 17: ESLint 10 + Node types 24 upgrade
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 16
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17 to break down)
+
+---
+
+### Phase 18: VoidNet Management
 
 **Goal**: Operator can manage VoidNet users and Claude boxes from the admin dashboard — view user list, adjust credits, ban/unban, and inspect per-user boxes with masked SSH credentials — all writes audit-logged.
 
-**Depends on**: Phase 14
-**Note:** This phase is **parallel-safe with Phases 16 and 17** — all three can execute concurrently after Phase 14 completes. VoidNet JSON admin endpoints must exist on `voidnet-api` before this phase ships (parallel milestone in voidnet repo).
+**Depends on**: Phase 17
+**Note:** This phase is **parallel-safe with Phases 19 and 20** — all three can execute concurrently after Phase 17 completes. VoidNet JSON admin endpoints must exist on `voidnet-api` before this phase ships (parallel milestone in voidnet repo).
 **Requirements**: VOIDNET-01, VOIDNET-02, VOIDNET-03, VOIDNET-04, VOIDNET-05, VOIDNET-06, VOIDNET-07, VOIDNET-08
 
 **Success Criteria** (what must be TRUE):
@@ -248,12 +288,12 @@ Plans:
 
 ---
 
-### Phase 16: Proxmox Ops
+### Phase 19: Proxmox Ops
 
 **Goal**: Operator can manage LXC containers on tower from the admin dashboard — view all containers, start/shutdown/restart with graceful default, spawn new containers, and inspect config — all destructive operations guarded and audit-logged.
 
-**Depends on**: Phase 14
-**Note:** This phase is **parallel-safe with Phases 15 and 17** — all three can execute concurrently after Phase 14 completes.
+**Depends on**: Phase 17
+**Note:** This phase is **parallel-safe with Phases 18 and 20** — all three can execute concurrently after Phase 17 completes.
 **Requirements**: PROXMOX-01, PROXMOX-02, PROXMOX-03, PROXMOX-04, PROXMOX-05, PROXMOX-06
 
 **Success Criteria** (what must be TRUE):
@@ -268,12 +308,12 @@ Plans:
 
 ---
 
-### Phase 17: Alerts Panel + Rules
+### Phase 20: Alerts Panel + Rules
 
 **Goal**: Operator can see all current Alertmanager firing alerts on `/alerts`, Claude quota alert rules are deployed and unit-tested, and Telegram delivery is proven end-to-end — absorbing v2.0 Phase 09 scope entirely.
 
-**Depends on**: Phase 14
-**Note:** This phase is **parallel-safe with Phases 15 and 16** — all three can execute concurrently after Phase 14 completes.
+**Depends on**: Phase 17
+**Note:** This phase is **parallel-safe with Phases 18 and 19** — all three can execute concurrently after Phase 17 completes.
 **Requirements**: ALERT-01, ALERT-02, ALERT-03, ALERT-04, ALERT-05, ALERT-06
 
 **Success Criteria** (what must be TRUE):
@@ -287,13 +327,13 @@ Plans:
 
 ---
 
-### Phase 18: Web Terminal
+### Phase 21: Web Terminal
 
 **Goal**: Operator can open an in-browser SSH terminal to any Proxmox LXC via xterm.js — session is auth-gated, resource-limited, audit-logged, and cleans up on disconnect.
 
 **Rationale for last placement:** Web terminal is the highest-risk feature (XL scope, node-pty LXC compatibility unknown). The node-pty feasibility spike is the mandatory first task of this phase — if node-pty fails in mcow's LXC, the fallback is a pure-JS ssh2 pipe. Only attempt after all other features are stable.
 
-**Depends on**: Phase 16 (needs Proxmox LXC context + SSH credential retrieval pattern)
+**Depends on**: Phase 19 (needs Proxmox LXC context + SSH credential retrieval pattern)
 **Requirements**: TERM-01, TERM-02, TERM-03, TERM-04, TERM-05, TERM-06
 
 **Success Criteria** (what must be TRUE):
@@ -308,11 +348,11 @@ Plans:
 
 ---
 
-### Phase 19: Security Review + Launch
+### Phase 22: Security Review + Launch
 
 **Goal**: The dashboard passes a security review (bundle analysis, header audit, Proxmox token scope check, bun audit), the shared ui-kit repo is fully extracted and wired as a git submodule, and the app is ready for ongoing operator use.
 
-**Depends on**: Phase 18 (all features complete)
+**Depends on**: Phase 21 (all features complete)
 **Requirements**: UI-01, UI-02, SEC-01, SEC-08
 
 **Success Criteria** (what must be TRUE):
@@ -344,8 +384,11 @@ Plans:
 | 12. Infra Foundation | v3.0 | 10/10 | Complete    | 2026-04-17 |
 | 13. Claude Tokens Page | v3.0 | 5/5 | Complete   | 2026-04-17 |
 | 14. Global Overview + Audit Log | v3.0 | 4/5 | In Progress|  |
-| 15. VoidNet Management | v3.0 | 0/? | Not started | - |
-| 16. Proxmox Ops | v3.0 | 0/? | Not started | - |
-| 17. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
-| 18. Web Terminal | v3.0 | 0/? | Not started | - |
-| 19. Security Review + Launch | v3.0 | 0/? | Not started | - |
+| 15. Tailwind v4 Migration | v3.0 | 0/? | Not started | - |
+| 16. TypeScript 6.0 Upgrade | v3.0 | 0/? | Not started | - |
+| 17. ESLint 10 + Node Types 24 | v3.0 | 0/? | Not started | - |
+| 18. VoidNet Management | v3.0 | 0/? | Not started | - |
+| 19. Proxmox Ops | v3.0 | 0/? | Not started | - |
+| 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
+| 21. Web Terminal | v3.0 | 0/? | Not started | - |
+| 22. Security Review + Launch | v3.0 | 0/? | Not started | - |
