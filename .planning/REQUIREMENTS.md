@@ -29,8 +29,8 @@
 - [x] **DASH-01**: Page `/` shows per-host stat rows for all 6 monitored Tailnet hosts: CPU %, memory %, disk %, container count (from node_exporter metrics)
 - [ ] **DASH-02**: Page shows Claude usage summary (per-token 5h + 7d utilization gauges, small form factor, links to tokens page for detail)
 - [ ] **DASH-03**: Page shows current Alertmanager firing alert count with severity breakdown; links to alerts page
-- [ ] **DASH-04**: All data auto-refreshes every 30s via SWR; loading/stale states handled gracefully
-- [ ] **DASH-05**: Prometheus queries served via Route Handler (server-side fetch) — no Prometheus creds or URLs exposed client-side
+- [x] **DASH-04**: All data auto-refreshes every 30s via SWR; loading/stale states handled gracefully
+- [x] **DASH-05**: Prometheus queries served via Route Handler (server-side fetch) — no Prometheus creds or URLs exposed client-side
 
 ### TOKEN — Claude Code Tokens Page
 
@@ -135,8 +135,8 @@
 | DASH-01 | Phase 14 | Complete |
 | DASH-02 | Phase 14 | Pending |
 | DASH-03 | Phase 14 | Pending |
-| DASH-04 | Phase 14 | Pending |
-| DASH-05 | Phase 14 | Pending |
+| DASH-04 | Phase 14 | Complete |
+| DASH-05 | Phase 14 | Complete |
 | TOKEN-01 | Phase 13 | Pending |
 | TOKEN-02 | Phase 13 | Pending |
 | TOKEN-03 | Phase 13 | Pending |
