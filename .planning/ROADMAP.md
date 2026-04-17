@@ -84,8 +84,17 @@ Phase 22 (Security + Launch) → depends on all others
 **Depends on**: Phase 12
 **Requirements**: TOKEN-01..07, SEC-03
 
-**Plans**: 5 plans (all complete)
+**Plans**: 7 plans (5 complete, 2 gap-closure pending)
 **UI hint**: yes
+
+Plans:
+- [x] 14-01-PLAN.md — audit infra (SQLite + helpers)
+- [x] 14-02-PLAN.md — /audit page
+- [x] 14-03-PLAN.md — emitAudit wiring across mutation routes
+- [x] 14-04-PLAN.md — /overview host tiles + PromQL
+- [x] 14-05-PLAN.md — alerts card + nav badge
+- [x] 14-06-PLAN.md — gap closure: bun:sqlite shim runtime proxy (UAT tests 3, 4, 6)
+- [ ] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
 
 ---
 
@@ -96,8 +105,17 @@ Phase 22 (Security + Launch) → depends on all others
 **Depends on**: Phase 13
 **Requirements**: DASH-01..05, INFRA-05
 
-**Plans**: 5 plans (all complete)
+**Plans**: 7 plans (5 complete, 2 gap-closure pending)
 **UI hint**: yes
+
+Plans:
+- [x] 14-01-PLAN.md — audit infra (SQLite + helpers)
+- [x] 14-02-PLAN.md — /audit page
+- [x] 14-03-PLAN.md — emitAudit wiring across mutation routes
+- [x] 14-04-PLAN.md — /overview host tiles + PromQL
+- [x] 14-05-PLAN.md — alerts card + nav badge
+- [ ] 14-06-PLAN.md — gap closure: bun:sqlite shim runtime proxy (UAT tests 3, 4, 6)
+- [ ] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
 
 ---
 
@@ -106,7 +124,7 @@ Phase 22 (Security + Launch) → depends on all others
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 14
-**Plans:** 0 plans
+**Plans:** 6/7 plans executed
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 15 to break down)
@@ -203,7 +221,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 12. Infra Foundation | v3.0 | 10/10 | Complete | 2026-04-17 |
 | 13. Claude Tokens Page | v3.0 | 5/5 | Complete | 2026-04-17 |
-| 14. Global Overview + Audit Log | v3.0 | 5/5 | Complete | 2026-04-17 |
+| 14. Global Overview + Audit Log | v3.0 | 6/7 | In Progress|  |
 | 15. Tailwind v4 Migration | v3.0 | 0/? | Not started | - |
 | 16. TypeScript 6.0 Upgrade | v3.0 | 0/? | Not started | - |
 | 17. ESLint 10 + Node Types 24 | v3.0 | 0/? | Not started | - |

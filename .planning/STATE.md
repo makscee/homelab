@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: — Claude Code Usage Monitor
+milestone: v3.0
+milestone_name: — Unified Stack Migration
 status: verifying
 stopped_at: Completed 14-04-PLAN.md
-last_updated: "2026-04-17T12:42:12.197Z"
+last_updated: "2026-04-17T14:23:10.981Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 10
-  completed_phases: 7
-  total_plans: 43
-  completed_plans: 42
-  percent: 98
+  total_phases: 11
+  completed_phases: 2
+  total_plans: 22
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -42,6 +42,12 @@ Progress: [          ] 0% — v3.0 not started
 **v3.0 scope:** 8 phases (12-19), 58 requirements across 9 categories
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 15 added: Tailwind v4 migration (3.4 to 4.2) + tailwind-merge 3
+- Phase 16 added: TypeScript 6.0 upgrade with deprecation fixes
+- Phase 17 added: ESLint 10 + Node types 24 upgrade
 
 ### Decisions
 
