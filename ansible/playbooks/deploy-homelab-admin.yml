@@ -232,6 +232,10 @@
           ansible.builtin.fail:
             msg: "bun run build failed — rolled back to .next.prev. Fix build locally (`cd apps/admin && bun run build`) before re-running."
 
+    # ── Stage 7b — Audit data directory ─────────────────────────────────────
+    - name: Provision /var/lib/homelab-admin for audit SQLite DB
+      ansible.builtin.include_tasks: tasks/homelab-admin-audit-dir.yml
+
     # ── Stage 8 — systemd unit install ──────────────────────────────────────
     - name: Install homelab-admin.service unit
       ansible.builtin.copy:

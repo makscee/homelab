@@ -33,7 +33,8 @@ ProtectHome=yes
 PrivateTmp=yes
 ProtectKernelTunables=yes
 ProtectControlGroups=yes
-ReadWritePaths=/opt/homelab-admin/app/.next /tmp
+ReadWritePaths=/opt/homelab-admin/app/.next /tmp /var/lib/homelab-admin
+Environment=AUDIT_DB_PATH=/var/lib/homelab-admin/audit.db
 
 [Install]
 WantedBy=multi-user.target

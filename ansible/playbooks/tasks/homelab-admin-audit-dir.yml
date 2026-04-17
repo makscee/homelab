@@ -1,0 +1,7 @@
+- name: Ensure /var/lib/homelab-admin exists
+  ansible.builtin.file:
+    path: /var/lib/homelab-admin
+    state: directory
+    owner: homelab-admin
+    group: homelab-admin
+    mode: "0750"
