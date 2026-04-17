@@ -127,7 +127,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — codemod + CSS-first migration + autoprefixer drop + human-verify visual fidelity
+- [x] 15-01-PLAN.md — codemod + CSS-first migration + autoprefixer drop + human-verify visual fidelity (completed 2026-04-17)
 - [ ] 15-02-PLAN.md — tailwind-merge v3 bump + Playwright visual spot-check (fix-on-break)
 
 ---
@@ -223,7 +223,7 @@ Plans:
 | 12. Infra Foundation | v3.0 | 10/10 | Complete | 2026-04-17 |
 | 13. Claude Tokens Page | v3.0 | 5/5 | Complete | 2026-04-17 |
 | 14. Global Overview + Audit Log | v3.0 | 6/7 | In Progress|  |
-| 15. Tailwind v4 Migration | v3.0 | 0/? | Not started | - |
+| 15. Tailwind v4 Migration | v3.0 | 1/2 | In Progress | - |
 | 16. TypeScript 6.0 Upgrade | v3.0 | 0/? | Not started | - |
 | 17. ESLint 10 + Node Types 24 | v3.0 | 0/? | Not started | - |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
@@ -231,3 +231,9 @@ Plans:
 | 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
 | 21. Web Terminal | v3.0 | 0/? | Not started | - |
 | 22. Security Review + Launch | v3.0 | 0/? | Not started | - |
+
+## Backlog (Unscheduled)
+
+Captured issues not yet scoped to a phase. Promote to a numbered phase when ready.
+
+- **999.1 — /tokens sops PATH (homelab-admin.service)** — Captured 2026-04-17 during Phase 15-01 UAT. `/tokens` throws digest error `1852942543`; journal: `Error [TypeError]: Executable not found in $PATH: "sops"`. Root cause: systemd unit `homelab-admin.service` uses `ProtectSystem=strict` which hides `/usr/local/bin/sops` from the admin user's `$PATH`. **Not a Tailwind regression.** Fix: extend service unit `Environment=PATH=...` to include `/usr/local/bin` (or add explicit `BindReadOnlyPaths=/usr/local/bin/sops`) in `ansible/playbooks/deploy-homelab-admin.yml`. Likely Phase 13 follow-up.
