@@ -15,7 +15,7 @@ type SeverityRow = {
   key: SeverityKey;
   name: string;
   count: number;
-  variant: "destructive" | "default" | "secondary" | "outline";
+  variant: "destructive" | "default" | "secondary" | "outline-solid";
 };
 
 const SEVERITY_ORDER: SeverityKey[] = ["critical", "warning", "info", "other"];
@@ -80,7 +80,7 @@ export function AlertsCard() {
       <Link
         href="/alerts"
         title={tooltip}
-        className="block focus:outline-none focus:ring-2 focus:ring-ring rounded-lg"
+        className="block focus:outline-hidden focus:ring-2 focus:ring-ring rounded-lg"
       >
         <Card className="transition-colors hover:bg-accent/40">
           <CardHeader className="pb-3">

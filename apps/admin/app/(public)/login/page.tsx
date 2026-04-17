@@ -8,7 +8,7 @@ export default function LoginPage() {
           "use server";
           await signIn("github", { redirectTo: "/" });
         }}
-        className="flex flex-col gap-4 rounded-xl border border-border bg-card p-8 shadow-sm"
+        className="flex flex-col gap-4 rounded-xl border border-border bg-card p-8 shadow-xs"
       >
         <h1 className="text-xl font-semibold">Homelab Admin</h1>
         <p className="text-sm text-muted-foreground">

@@ -97,7 +97,7 @@ export function ClaudeSummaryCard({ entry }: { entry: ClaudeUsageEntry }) {
   return (
     <Link
       href={`/tokens/${encodeURIComponent(entry.label)}`}
-      className="block focus:outline-none focus:ring-2 focus:ring-ring rounded-lg"
+      className="block focus:outline-hidden focus:ring-2 focus:ring-ring rounded-lg"
       data-token-label={entry.label}
     >
       <Card className="transition-colors hover:bg-accent/40">

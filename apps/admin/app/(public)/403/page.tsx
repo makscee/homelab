@@ -6,7 +6,7 @@ export default async function ForbiddenPage() {
     (session?.user as { login?: string } | undefined)?.login ?? "unknown";
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="flex max-w-md flex-col gap-4 rounded-xl border border-destructive/40 bg-card p-8 text-center shadow-sm">
+      <div className="flex max-w-md flex-col gap-4 rounded-xl border border-destructive/40 bg-card p-8 text-center shadow-xs">
         <h1 className="text-2xl font-semibold text-destructive">
           403 — Not Authorized
         </h1>
