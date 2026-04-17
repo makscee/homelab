@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
-status: executing
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-04-17T15:10:00.000Z"
+status: ready_for_verification
+stopped_at: Completed 15-02-PLAN.md — Phase 15 complete (24/24)
+last_updated: "2026-04-17T16:00:00.000Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 11
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 24
-  completed_plans: 23
-  percent: 96
+  completed_plans: 24
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 15 (tailwind-v4-migration) — EXECUTING
-Plan: 1 of 2 complete (15-01 done; 15-02 pending)
-Status: 15-01 shipped + verified (Playwright MCP UAT passed); parent to route next
+Phase: 15 (tailwind-v4-migration) — COMPLETE (ready_for_verification)
+Plan: 2 of 2 complete (15-01 + 15-02 both shipped + Playwright-verified on prod)
+Status: Phase 15 scope fully delivered (Tailwind v4.2 + tailwind-merge v3); awaiting phase-level verification before advancing to Phase 16 (TypeScript 6.0)
 Last activity: 2026-04-17
 
 Progress: [          ] 0% — v3.0 not started
@@ -74,6 +74,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 15-01]: Preserved v3 default-border via global `* { @apply border-border }` — avoids shadcn Card/Input/Button border regressions under v4
 - [Phase 15-01]: `@tailwindcss/upgrade` codemod can false-positive rename string-literal content (e.g. `"outline"` → `"outline-solid"` in JSX props). Always diff-audit codemod output before committing.
 - [Phase 15-01]: Verified pixel-identical to prod v3 baseline via Playwright MCP (/, /audit, /alerts, /login, focus ring). /tokens error is NOT Tailwind — it's the sops PATH infra issue tracked in ROADMAP backlog 999.1.
+- [Phase 15-02]: tailwind-merge v3 bump was zero-code — single cn() call site in apps/admin/lib/utils.ts with no extendTailwindMerge/custom validators, so all v3 breaking changes were no-ops. Fix-on-break branch (D-3) not exercised. Commit a039d43 deployed to mcow (PLAY RECAP ok=29); Playwright MCP prod UAT confirmed zero visual regressions on /, /audit, /alerts (no doubled focus rings, no state-variant conflicts, no size stacking, no badge mismatch). /tokens UAT skipped — pre-existing sops PATH issue (backlog 999.1).
 
 ### Blockers/Concerns
 
@@ -95,6 +96,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-17T15:10:00.000Z
-Stopped at: Completed 15-01-PLAN.md (Tailwind v4 migration shipped + Playwright-verified)
-Resume file: .planning/phases/15-tailwind-v4-migration-3-4-to-4-2-tailwind-merge-3/15-02-PLAN.md
+Last session: 2026-04-17T16:00:00.000Z
+Stopped at: Completed 15-02-PLAN.md — Phase 15 complete, status=ready_for_verification
+Resume file: (phase-level verifier for Phase 15, or Phase 16 start — TypeScript 6.0 upgrade)
