@@ -15,7 +15,7 @@
 - [ ] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
 - [x] **INFRA-06**: Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml` deploys the app to mcow (rsync source, `bun install`, `bun run build`, systemd unit install/reload); idempotent
 - [x] **INFRA-07**: Next.js pinned to a release containing the CVE-2025-66478 fix; `bun audit` clean before deploy; dependency bump policy documented
-- [ ] **INFRA-08**: Secrets (GitHub OAuth client id/secret, session secret, allowlist) live in SOPS-encrypted `secrets/mcow.sops.yaml`; never committed plaintext; loaded at app start via Ansible-decrypted `.env`
+- [x] **INFRA-08**: Secrets (GitHub OAuth client id/secret, session secret, allowlist) live in SOPS-encrypted `secrets/mcow.sops.yaml`; never committed plaintext; loaded at app start via Ansible-decrypted `.env`
 
 ### UI — Shared Design System
 
@@ -127,7 +127,7 @@
 | INFRA-05 | Phase 14 | Pending |
 | INFRA-06 | Phase 12 | Complete |
 | INFRA-07 | Phase 12 | Complete |
-| INFRA-08 | Phase 12 | Pending |
+| INFRA-08 | Phase 12 | Complete |
 | UI-01 | Phase 19 | Pending |
 | UI-02 | Phase 19 | Pending |
 | UI-03 | Phase 12 | Pending |

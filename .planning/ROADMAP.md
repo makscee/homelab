@@ -167,7 +167,7 @@ Plans:
 - [x] 12-05-PLAN.md — Base layout (sidebar + topbar) + 8 route stubs + UI-04 primitives + /api/health + server-only lint
 - [x] 12-06-PLAN.md — docs/setup-github-oauth.md runbook + apps/admin/README.md policy gates
 - [x] 12-07-PLAN.md — servers/mcow/homelab-admin.service systemd unit (probe-matched hardening) + inventory update
-- [ ] 12-08-PLAN.md — SOPS mcow.sops.yaml extension + Ansible decrypt/render tasks (env file mode 0600)
+- [x] 12-08-PLAN.md — SOPS mcow.sops.yaml extension + Ansible decrypt/render tasks (env file mode 0600)
 - [ ] 12-09-PLAN.md — deploy-homelab-admin.yml end-to-end playbook + Caddy blockinfile template
 - [ ] 12-10-PLAN.md — Deploy execution + evidence capture + VERIFICATION.md + SEC-05 policy doc
 **UI hint**: yes
@@ -329,7 +329,7 @@ Plans:
 | 09. Alerts | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 10. Grafana Dashboard | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
-| 12. Infra Foundation | v3.0 | 7/10 | In Progress|  |
+| 12. Infra Foundation | v3.0 | 8/10 | In Progress|  |
 | 13. Claude Tokens Page | v3.0 | 0/? | Not started | - |
 | 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
 | 15. VoidNet Management | v3.0 | 0/? | Not started | - |
