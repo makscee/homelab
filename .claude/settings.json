@@ -1,15 +1,3 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash /Users/admin/hub/tools/autocommit.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }
