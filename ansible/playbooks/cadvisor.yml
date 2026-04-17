@@ -1,0 +1,57 @@
+---
+# Deploy cAdvisor container on Docker hosts (docker-tower + mcow).
+# Binds to Tailscale IP only — never 0.0.0.0 (T-14-01-02 / SEC-03).
+#
+# Note on mcow port: mcow's port 8080 is occupied by voidnet-api.
+# cAdvisor on mcow uses host port 18080 mapped to container port 8080.
+# This matches the Prometheus cadvisor target in targets/cadvisor.yml.
+#
+# Run:
+#   cd ansible && ansible-playbook -i inventory/homelab.yml playbooks/cadvisor.yml
+#
+# Prereqs:
+#   - Docker installed on target hosts
+#   - SSH access to root@<tailscale_ip> over Tailnet
+
+- name: Deploy cAdvisor on Docker hosts
+  hosts: docker_hosts
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Assert tailscale_ip is defined for this host
+      ansible.builtin.assert:
+        that:
+          - tailscale_ip is defined
+          - tailscale_ip | length > 0
+        fail_msg: "tailscale_ip must be set in inventory for {{ inventory_hostname }}"
+
+    - name: Gather minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - '!min'
+
+  tasks:
+    - name: Run cAdvisor container
+      community.docker.docker_container:
+        name: cadvisor
+        image: "gcr.io/cadvisor/cadvisor:v0.56.1"
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ tailscale_ip }}:{{ cadvisor_host_port | default('8080') }}:8080"
+        volumes:
+          - /:/rootfs:ro
+          - /var/run:/var/run:ro
+          - /sys:/sys:ro
+          - /var/lib/docker/:/var/lib/docker:ro
+          - /dev/disk/:/dev/disk:ro
+
+  post_tasks:
+    - name: Probe cAdvisor metrics endpoint (via Tailscale IP)
+      ansible.builtin.uri:
+        url: "http://{{ tailscale_ip }}:{{ cadvisor_host_port | default('8080') }}/metrics"
+        return_content: false
+        status_code: 200
+      when: not ansible_check_mode
