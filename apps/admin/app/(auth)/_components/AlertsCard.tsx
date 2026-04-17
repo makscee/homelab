@@ -15,7 +15,7 @@ type SeverityRow = {
   key: SeverityKey;
   name: string;
   count: number;
-  variant: "destructive" | "default" | "secondary" | "outline-solid";
+  variant: "destructive" | "default" | "secondary" | "outline";
 };
 
 const SEVERITY_ORDER: SeverityKey[] = ["critical", "warning", "info", "other"];

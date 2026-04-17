@@ -41,6 +41,6 @@ describe("buildSeverityRows", () => {
   test("info and other render with correct variants", () => {
     const rows = buildSeverityRows(mk({ info: 1, other: 1 }));
     expect(rows.find((r) => r.key === "info")?.variant).toBe("secondary");
-    expect(rows.find((r) => r.key === "other")?.variant).toBe("outline-solid");
+    expect(rows.find((r) => r.key === "other")?.variant).toBe("outline");
   });
 });
