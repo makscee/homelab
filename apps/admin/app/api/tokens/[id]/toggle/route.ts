@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
-import { toggleEnabled } from "@/lib/token-registry.server";
+import { toggleEnabled, TokenNotFoundError } from "@/lib/token-registry.server";
 
 export const runtime = "nodejs";
 
@@ -57,6 +57,9 @@ export async function POST(
     const result = await toggleEnabled(id, parsed.data.enabled, session.user.login);
     return NextResponse.json({ ok: true, token: result });
   } catch (e) {
+    if (e instanceof TokenNotFoundError) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
     const raw = e instanceof Error ? e.message : "server error";
     return NextResponse.json({ error: sanitizeErrorMessage(raw) }, { status: 400 });
   }

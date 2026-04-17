@@ -81,9 +81,22 @@ function requireSops(): void {
   }
 }
 
+/**
+ * Thrown by `findEntry` when no live (non-deleted) token matches the given id.
+ * Route handlers branch on `instanceof TokenNotFoundError` to map to HTTP 404
+ * instead of the generic 400, so clients can distinguish "acted on a deleted
+ * or never-existed token" from "malformed body". See WR-05.
+ */
+export class TokenNotFoundError extends Error {
+  constructor(message = "token not found") {
+    super(message);
+    this.name = "TokenNotFoundError";
+  }
+}
+
 function findEntry(reg: TokenRegistry, id: string): TokenEntry {
   const e = reg.tokens.find((t) => t.id === id && !t.deleted_at);
-  if (!e) throw new Error("token not found");
+  if (!e) throw new TokenNotFoundError();
   return e;
 }
 

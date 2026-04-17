@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { verifyCsrf, CsrfError } from "@/lib/csrf.server";
 import { sanitizeErrorMessage } from "@/lib/redact.server";
 import { sopsAvailable } from "@/lib/sops.server";
-import { softDeleteToken } from "@/lib/token-registry.server";
+import { softDeleteToken, TokenNotFoundError } from "@/lib/token-registry.server";
 
 export const runtime = "nodejs";
 
@@ -47,6 +47,9 @@ export async function DELETE(
     await softDeleteToken(id, session.user.login);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof TokenNotFoundError) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
     const raw = e instanceof Error ? e.message : "server error";
     return NextResponse.json({ error: sanitizeErrorMessage(raw) }, { status: 400 });
   }
