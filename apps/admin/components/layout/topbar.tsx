@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NavAlertBadge } from "@/app/(auth)/_components/NavAlertBadge";
 
 export async function TopBar() {
   const session = await auth();
@@ -10,6 +11,7 @@ export async function TopBar() {
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
       <div className="text-sm font-medium">Homelab Admin</div>
       <div className="flex items-center gap-3">
+        <NavAlertBadge />
         <div className="flex items-center gap-2">
           <Avatar className="h-7 w-7">
             {image ? <AvatarImage src={image} alt={login} /> : null}

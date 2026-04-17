@@ -1,5 +1,7 @@
 import { getOverviewSnapshot } from "@/lib/overview-aggregator.server";
 import { HostGrid } from "./_components/HostGrid";
+import { ClaudeSummary } from "./_components/ClaudeSummary";
+import { AlertsCard } from "./_components/AlertsCard";
 
 // Live dashboard: every paint is a fresh Prometheus snapshot — static
 // generation would be a correctness bug (stale host state). SWR on the
@@ -18,9 +20,6 @@ export default async function OverviewPage() {
         </p>
       </div>
 
-      {/* Plan 05 replaces this with the Claude summary card. */}
-      <div data-slot="claude-summary" className="mb-6" />
-
       <section className="mb-6">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Hosts
@@ -28,8 +27,9 @@ export default async function OverviewPage() {
         <HostGrid initial={initial} />
       </section>
 
-      {/* Plan 05 replaces this with the alerts card. */}
-      <div data-slot="alerts-card" />
+      <ClaudeSummary initial={initial} />
+
+      <AlertsCard />
     </div>
   );
 }
