@@ -217,7 +217,13 @@ Plans:
   4. Prometheus credentials and URLs are absent from any client-side bundle (verify via browser DevTools network tab — no direct Prometheus calls from the browser)
   5. SQLite `audit_log` table exists; a manual test mutation produces a row with `user`, `action`, `target`, `payload_json`, and `created_at` fields correctly populated
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 14-01-PLAN.md — Ansible provisioning: node-exporter on 6 hosts + cAdvisor on Docker hosts + Prometheus scrape targets
+- [ ] 14-02-PLAN.md — bun:sqlite audit infrastructure: audit-db.server + logAudit + redactPayload + systemd ReadWritePaths
+- [ ] 14-03-PLAN.md — /audit RSC paginated viewer + Phase 13 mutation-route migration to logAudit()
+- [ ] 14-04-PLAN.md — / overview page: 6 host tiles with SWR 30s refresh + degraded/outage states (DASH-01/04/05)
+- [ ] 14-05-PLAN.md — Claude usage summary + Alerts card + NavAlertBadge + /alerts stub (DASH-02/03/04)
 **UI hint**: yes
 
 ---
@@ -337,7 +343,7 @@ Plans:
 | 11. Multi-token Scale-out | v2.0 | 0/0 | Superseded | 2026-04-16 |
 | 12. Infra Foundation | v3.0 | 10/10 | Complete    | 2026-04-17 |
 | 13. Claude Tokens Page | v3.0 | 5/5 | Complete   | 2026-04-17 |
-| 14. Global Overview + Audit Log | v3.0 | 0/? | Not started | - |
+| 14. Global Overview + Audit Log | v3.0 | 0/5 | Planning    | - |
 | 15. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 16. Proxmox Ops | v3.0 | 0/? | Not started | - |
 | 17. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
