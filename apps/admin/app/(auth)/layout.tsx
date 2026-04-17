@@ -2,6 +2,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { issueCsrfCookieOnce } from "@/lib/csrf-cookie.server";
+// Nav items rendered by <Sidebar /> — see components/layout/nav-items.ts:
+//   { href: "/",      label: "Overview" }
+//   { href: "/audit", label: "Audit" }
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   await issueCsrfCookieOnce();
