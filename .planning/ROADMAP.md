@@ -56,7 +56,7 @@ Phase 22 (Security + Launch) → depends on all others
 - [x] **Phase 14: Global Overview + Audit Log** - First dashboard page with Prometheus data, audit log infrastructure for all writes (completed 2026-04-17)
 - [ ] **Phase 15: Tailwind v4 Migration (3.4 → 4.2) + tailwind-merge 3** - Frontend stack upgrade
 - [x] **Phase 16: TypeScript 6.0 Upgrade with Deprecation Fixes** - Frontend stack upgrade (completed 2026-04-17)
-- [ ] **Phase 17: ESLint 10 + Node Types 24 Upgrade** - Frontend stack upgrade
+- [x] **Phase 17: ESLint 10 + Node Types 24 Upgrade** - Frontend stack upgrade (completed 2026-04-17)
 - [ ] **Phase 18: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 17)
 - [ ] **Phase 19: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 17)
 - [ ] **Phase 20: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 17)
@@ -149,7 +149,7 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 16
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 17 to break down)
@@ -225,7 +225,7 @@ Plans:
 | 14. Global Overview + Audit Log | v3.0 | 6/7 | In Progress|  |
 | 15. Tailwind v4 Migration | v3.0 | 1/2 | In Progress | - |
 | 16. TypeScript 6.0 Upgrade | v3.0 | 1/1 | Complete   | 2026-04-17 |
-| 17. ESLint 10 + Node Types 24 | v3.0 | 0/? | Not started | - |
+| 17. ESLint 10 + Node Types 24 | v3.0 | 1/1 | Complete   | 2026-04-17 |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 19. Proxmox Ops | v3.0 | 0/? | Not started | - |
 | 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
