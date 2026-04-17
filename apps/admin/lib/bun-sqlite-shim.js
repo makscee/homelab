@@ -1,17 +1,26 @@
 /**
- * Build-time shim for bun:sqlite (CommonJS, Node.js-loadable).
+ * bun:sqlite shim — dual-mode.
  *
- * Next.js builds route files in a Node.js worker process where bun:sqlite
- * is not available. This shim satisfies the require() call during the
- * "collecting page data" step. At runtime the app runs under Bun which
- * resolves bun:sqlite natively — this shim is never executed in production.
+ * 1. Runtime (Bun): proxies native `bun:sqlite` by re-exporting its module.
+ *    The webpack externals interceptor in next.config.mjs rewrites
+ *    `import { Database } from 'bun:sqlite'` to `require('/abs/.../bun-sqlite-shim.js')`;
+ *    under Bun, this file in turn `require('bun:sqlite')` which resolves natively.
  *
- * Wired via next.config.mjs webpack externals interceptor (server-only).
+ * 2. Build (Node.js — Next.js worker): `Bun` global is absent; we export a
+ *    throw-on-construct stub so `next build` can resolve the module without
+ *    actually executing any SQLite code.
+ *
+ * Do NOT move the `typeof Bun` check below the native require — it must gate it.
  */
-class Database {
-  constructor(_path, _opts) {
-    throw new Error("bun:sqlite shim: should not be called at build time");
+if (typeof Bun !== "undefined") {
+  // Under Bun: delegate every export to the real native module.
+  module.exports = require("bun:sqlite");
+} else {
+  // Under Node.js build worker: construction throws; bare require() does not.
+  class Database {
+    constructor(_path, _opts) {
+      throw new Error("bun:sqlite shim: should not be called at build time");
+    }
   }
+  module.exports = { Database };
 }
-
-module.exports = { Database };
