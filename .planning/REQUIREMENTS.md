@@ -12,7 +12,7 @@
 - [x] **INFRA-02**: App binds Unix socket (or 127.0.0.1:PORT, port ≠ 3000 since Docker already owns it) — never public-bound directly; existing Caddy on mcow reverse-proxies `homelab.makscee.ru` to the socket
 - [x] **INFRA-03**: LE TLS certificate auto-issued + auto-renewed via existing Caddy HTTP-01 flow on mcow (mirrors `vibe.makscee.ru` pattern in `/etc/caddy/Caddyfile`); new site block added to Caddyfile
 - [x] **INFRA-04**: GitHub OAuth sign-in via Auth.js v5; allowlist of GitHub user logins enforced (initial: `makscee`); unlisted users rejected with 403 before any handler runs
-- [ ] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
+- [x] **INFRA-05**: Audit log infrastructure — SQLite table `audit_log(id, user, action, target, payload_json, created_at)` + middleware wrapper applied to all mutation routes before any page ships writes
 - [x] **INFRA-06**: Ansible playbook `ansible/playbooks/deploy-homelab-admin.yml` deploys the app to mcow (rsync source, `bun install`, `bun run build`, systemd unit install/reload); idempotent
 - [x] **INFRA-07**: Next.js pinned to a release containing the CVE-2025-66478 fix; `bun audit` clean before deploy; dependency bump policy documented
 - [x] **INFRA-08**: Secrets (GitHub OAuth client id/secret, session secret, allowlist) live in SOPS-encrypted `secrets/mcow.sops.yaml`; never committed plaintext; loaded at app start via Ansible-decrypted `.env`
@@ -26,7 +26,7 @@
 
 ### DASH — Global Overview Page
 
-- [ ] **DASH-01**: Page `/` shows per-host stat rows for all 6 monitored Tailnet hosts: CPU %, memory %, disk %, container count (from node_exporter metrics)
+- [x] **DASH-01**: Page `/` shows per-host stat rows for all 6 monitored Tailnet hosts: CPU %, memory %, disk %, container count (from node_exporter metrics)
 - [ ] **DASH-02**: Page shows Claude usage summary (per-token 5h + 7d utilization gauges, small form factor, links to tokens page for detail)
 - [ ] **DASH-03**: Page shows current Alertmanager firing alert count with severity breakdown; links to alerts page
 - [ ] **DASH-04**: All data auto-refreshes every 30s via SWR; loading/stale states handled gracefully
@@ -124,7 +124,7 @@
 | INFRA-02 | Phase 12 | Complete |
 | INFRA-03 | Phase 12 | Complete |
 | INFRA-04 | Phase 12 | Complete |
-| INFRA-05 | Phase 14 | Pending |
+| INFRA-05 | Phase 14 | Complete |
 | INFRA-06 | Phase 12 | Complete |
 | INFRA-07 | Phase 12 | Complete |
 | INFRA-08 | Phase 12 | Complete |
@@ -132,7 +132,7 @@
 | UI-02 | Phase 19 | Pending |
 | UI-03 | Phase 12 | Complete |
 | UI-04 | Phase 12 | Complete |
-| DASH-01 | Phase 14 | Pending |
+| DASH-01 | Phase 14 | Complete |
 | DASH-02 | Phase 14 | Pending |
 | DASH-03 | Phase 14 | Pending |
 | DASH-04 | Phase 14 | Pending |
