@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: executing
-stopped_at: PAUSED mid 17.1-02 — awaiting tower BIOS reboot to enable Intel iGPU (D-17 blocked)
-last_updated: "2026-04-18T16:20:00.000Z"
-last_activity: 2026-04-18 -- 17.1-02 playbook deployed + idempotent; HW transcode gated on iGPU BIOS enable
+stopped_at: 17.1-02 closed with deferred acceptance (D-17 deferred by operator); awaiting operator CPU-only perf signoff before wave-3 cutover
+last_updated: "2026-04-18T17:00:00.000Z"
+last_activity: 2026-04-18 -- 17.1-02 closed CPU-only; verify-script extended (17 PASS / 3 WARN / 0 FAIL); D-17 deferred to later BIOS window
 progress:
   total_phases: 12
   completed_phases: 6
@@ -79,6 +79,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 16]: TS 6.0.3 upgrade clean; typescript-eslint 8.58.2 peer range covers TS 6 (D-2 no-op); TS2882 on CSS side-effect import resolved via ambient declare module *.css
 - [Phase 17.1-01]: CT 101 provisioned on tower (unprivileged Debian 12, dev0: renderD128 gid=993, mp0/mp1 ro=1, vmbr1 10.10.20.11/24). Tailscale IP 100.77.246.74 assigned as `jellyfin`; operator approved node. Added to ansible `monitored_hosts` (NOT docker_hosts per D-05); `ansible jellyfin -m ping` SUCCESS. SSH host-key acceptance required one-time `ssh-keyscan` on controller (Rule 3 auto-fix).
 - [Phase 17.1-02 PARTIAL]: `deploy-jellyfin.yml` playbook + `jellyfin-transcodes.mount.j2` written and applied idempotently to CT 101. Jellyfin service active, `/health` returns Healthy, tmpfs mount active, apt holds + groups set. Auto-deviations applied (Rule 1/3): (a) added Debian non-free + non-free-firmware apt source — required for `intel-media-va-driver-non-free`; (b) renamed `libva-utils` → `vainfo` (correct Debian 12 package name). **D-17 (HW transcode) BLOCKED**: `/dev/dri/renderD128` on tower resolves to NVIDIA RTX 2060 (nouveau), not Intel UHD 630. `lspci` shows no `00:02.0` Intel VGA device — iGPU is BIOS-disabled (auto-off when dGPU present). i915 module available but no device to bind. See `17.1-02-IGPU-PROBE.md` for full diagnosis + BIOS setting to toggle (`iGPU Multi-Monitor: Enabled`) + post-reboot resume checklist. Wave 3 gated.
+- [Phase 17.1-02 CLOSED w/ deferred acceptance]: 2026-04-18 operator chose to proceed CPU-only for perf testing before committing to wave-3 cutover; D-17 deferred. `scripts/verify-jellyfin-lxc.sh` extended with full runtime probe (LXC infra, service, tmpfs opts+size, user groups, bindmounts, apt holds, /health on Tailnet); VA-API/iHD/vmbr1-ingress checks are WARN-not-FAIL while D-17 is deferred and Plan 04 ingress is pending. Final: 17 PASS / 3 WARN / 0 FAIL. Auto-fixes this session: (a) Rule 3 — added jellyfin host key to controller known_hosts; (b) Rule 1 — relaxed `findmnt SIZE` regex for leading whitespace; (c) Rule 1 — downgraded vmbr1 `/health` to WARN (that path is Plan 04 ingress territory; Tailnet 100.77.246.74:8096 is authoritative). Wave-3 gate now: operator perf signoff on CPU-only.
 
 ### Blockers/Concerns
 
@@ -86,7 +87,7 @@ Progress: [          ] 0% — v3.0 not started
 - Phase 15 (VoidNet): blocked on voidnet-api adding JSON admin endpoints (parallel milestone in voidnet repo)
 - Phase 18 (Terminal): node-pty LXC feasibility spike is mandatory first task — fallback to ssh2 pure-JS pipe if PTY allocation fails in mcow LXC
 - docker-tower cleanup: `docker volume rm monitoring_{grafana,alertmanager}-data` scheduled 2026-04-22
-- **Phase 17.1 PAUSED at plan 02** awaiting physical BIOS access to tower to enable Intel UHD 630 iGPU. Resume checklist: `.planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-IGPU-PROBE.md` §Post-Reboot Resume Checklist. Do not write 17.1-02-SUMMARY.md until D-17 passes.
+- **Phase 17.1 plan 02 complete with deferred acceptance** — operator approved closing plan 02 CPU-only; D-17 (HW transcode) deferred to later BIOS window. Gate before wave 3 (plan 03 cutover): operator performance signoff on CPU-only transcode at `http://100.77.246.74:8096`. BIOS resume path preserved in `17.1-02-IGPU-PROBE.md`; to close D-17 later, promote the two `check_warn` blocks at the bottom of `scripts/verify-jellyfin-lxc.sh` to hard `check` calls.
 
 ### Pending Todos
 
@@ -101,6 +102,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-18T16:20:00.000Z
-Stopped at: PAUSED mid 17.1-02 — awaiting tower BIOS reboot to enable Intel iGPU
-Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-IGPU-PROBE.md (resume checklist) → then 17.1-02-PLAN.md (run verify + D-17 gate)
+Last session: 2026-04-18T17:00:00.000Z
+Stopped at: 17.1-02 closed with deferred acceptance; awaiting operator CPU-only perf signoff on http://100.77.246.74:8096 before wave-3 cutover (plan 03)
+Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-SUMMARY.md → 17.1-03-PLAN.md (on operator signoff) / 17.1-02-IGPU-PROBE.md (if BIOS window opens first)
