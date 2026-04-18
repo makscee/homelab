@@ -1,0 +1,136 @@
+---
+# Deploy Jellyfin native-deb on LXC 101 (Phase 17.1).
+# Idempotent; mirrors deploy-docker-tower.yml shape minus Docker tasks.
+#
+# Run:
+#   cd ansible && ansible-playbook -i inventory/homelab.yml playbooks/deploy-jellyfin.yml
+#
+# Prereqs:
+#   - CT 101 provisioned per Plan 17.1-01 (iGPU dev0, RO bindmounts, Tailscale joined)
+#   - `ansible jellyfin -m ping` green
+
+- name: Deploy Jellyfin (native deb) on LXC 101
+  hosts: jellyfin
+  gather_facts: true
+  become: true
+  vars:
+    jellyfin_packages:
+      - jellyfin
+      - jellyfin-ffmpeg7
+      - intel-media-va-driver-non-free
+      - vainfo   # Debian 12 packaging; Ubuntu ships this binary as `libva-utils`
+
+  tasks:
+    - name: Ensure keyrings dir
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Jellyfin GPG key
+      ansible.builtin.get_url:
+        url: https://repo.jellyfin.org/jellyfin_team.gpg.key
+        dest: /etc/apt/keyrings/jellyfin.gpg.key
+        mode: '0644'
+
+    - name: Enable Debian non-free + non-free-firmware (needed for intel-media-va-driver-non-free)
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/debian-nonfree.sources
+        mode: '0644'
+        content: |
+          Types: deb
+          URIs: http://deb.debian.org/debian
+          Suites: bookworm bookworm-updates
+          Components: non-free non-free-firmware
+          Architectures: amd64
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+          Types: deb
+          URIs: http://security.debian.org
+          Suites: bookworm-security
+          Components: non-free non-free-firmware
+          Architectures: amd64
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+    - name: Jellyfin apt source
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/jellyfin.sources
+        mode: '0644'
+        content: |
+          Types: deb
+          URIs: https://repo.jellyfin.org/debian
+          Suites: bookworm
+          Components: main
+          Architectures: amd64
+          Signed-By: /etc/apt/keyrings/jellyfin.gpg.key
+
+    - name: Install Jellyfin + VA-API stack
+      ansible.builtin.apt:
+        name: "{{ jellyfin_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Hold Jellyfin packages (Ansible-managed upgrades only — D-06)
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop: "{{ jellyfin_packages }}"
+
+    - name: Ensure jellyfin in render + video groups (D-08/D-10)
+      ansible.builtin.user:
+        name: jellyfin
+        groups: render,video
+        append: true
+      notify: Restart jellyfin
+
+    - name: Ensure transcode dir exists (pre-mount; mount hides it)
+      ansible.builtin.file:
+        path: /var/cache/jellyfin/transcodes
+        state: directory
+        owner: jellyfin
+        group: jellyfin
+        mode: '0755'
+
+    - name: Install transcode tmpfs mount unit
+      ansible.builtin.template:
+        src: templates/jellyfin-transcodes.mount.j2
+        dest: /etc/systemd/system/var-cache-jellyfin-transcodes.mount
+        mode: '0644'
+      notify:
+        - Reload systemd
+        - Restart transcodes mount
+
+    - name: Enable + start tmpfs mount
+      ansible.builtin.systemd:
+        name: var-cache-jellyfin-transcodes.mount
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Enable + start jellyfin
+      ansible.builtin.systemd:
+        name: jellyfin
+        enabled: true
+        state: started
+
+    - name: Probe Jellyfin health
+      ansible.builtin.uri:
+        url: http://localhost:8096/health
+        status_code: 200
+      retries: 10
+      delay: 3
+      register: hc
+      until: hc.status == 200
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+    - name: Restart transcodes mount
+      ansible.builtin.systemd:
+        name: var-cache-jellyfin-transcodes.mount
+        state: restarted
+    - name: Restart jellyfin
+      ansible.builtin.systemd:
+        name: jellyfin
+        state: restarted

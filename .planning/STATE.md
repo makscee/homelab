@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: executing
-stopped_at: Completed 17.1-01-PLAN.md (LXC 101 provisioning)
-last_updated: "2026-04-18T12:15:00.000Z"
-last_activity: 2026-04-18 -- 17.1-01 complete; jellyfin on Tailnet as 100.77.246.74
+stopped_at: PAUSED mid 17.1-02 — awaiting tower BIOS reboot to enable Intel iGPU (D-17 blocked)
+last_updated: "2026-04-18T16:20:00.000Z"
+last_activity: 2026-04-18 -- 17.1-02 playbook deployed + idempotent; HW transcode gated on iGPU BIOS enable
 progress:
   total_phases: 12
   completed_phases: 6
@@ -78,6 +78,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 15-02]: tailwind-merge v3 bump was zero-code — single cn() call site in apps/admin/lib/utils.ts with no extendTailwindMerge/custom validators, so all v3 breaking changes were no-ops. Fix-on-break branch (D-3) not exercised. Commit a039d43 deployed to mcow (PLAY RECAP ok=29); Playwright MCP prod UAT confirmed zero visual regressions on /, /audit, /alerts (no doubled focus rings, no state-variant conflicts, no size stacking, no badge mismatch). /tokens UAT skipped — pre-existing sops PATH issue (backlog 999.1).
 - [Phase 16]: TS 6.0.3 upgrade clean; typescript-eslint 8.58.2 peer range covers TS 6 (D-2 no-op); TS2882 on CSS side-effect import resolved via ambient declare module *.css
 - [Phase 17.1-01]: CT 101 provisioned on tower (unprivileged Debian 12, dev0: renderD128 gid=993, mp0/mp1 ro=1, vmbr1 10.10.20.11/24). Tailscale IP 100.77.246.74 assigned as `jellyfin`; operator approved node. Added to ansible `monitored_hosts` (NOT docker_hosts per D-05); `ansible jellyfin -m ping` SUCCESS. SSH host-key acceptance required one-time `ssh-keyscan` on controller (Rule 3 auto-fix).
+- [Phase 17.1-02 PARTIAL]: `deploy-jellyfin.yml` playbook + `jellyfin-transcodes.mount.j2` written and applied idempotently to CT 101. Jellyfin service active, `/health` returns Healthy, tmpfs mount active, apt holds + groups set. Auto-deviations applied (Rule 1/3): (a) added Debian non-free + non-free-firmware apt source — required for `intel-media-va-driver-non-free`; (b) renamed `libva-utils` → `vainfo` (correct Debian 12 package name). **D-17 (HW transcode) BLOCKED**: `/dev/dri/renderD128` on tower resolves to NVIDIA RTX 2060 (nouveau), not Intel UHD 630. `lspci` shows no `00:02.0` Intel VGA device — iGPU is BIOS-disabled (auto-off when dGPU present). i915 module available but no device to bind. See `17.1-02-IGPU-PROBE.md` for full diagnosis + BIOS setting to toggle (`iGPU Multi-Monitor: Enabled`) + post-reboot resume checklist. Wave 3 gated.
 
 ### Blockers/Concerns
 
@@ -85,6 +86,7 @@ Progress: [          ] 0% — v3.0 not started
 - Phase 15 (VoidNet): blocked on voidnet-api adding JSON admin endpoints (parallel milestone in voidnet repo)
 - Phase 18 (Terminal): node-pty LXC feasibility spike is mandatory first task — fallback to ssh2 pure-JS pipe if PTY allocation fails in mcow LXC
 - docker-tower cleanup: `docker volume rm monitoring_{grafana,alertmanager}-data` scheduled 2026-04-22
+- **Phase 17.1 PAUSED at plan 02** awaiting physical BIOS access to tower to enable Intel UHD 630 iGPU. Resume checklist: `.planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-IGPU-PROBE.md` §Post-Reboot Resume Checklist. Do not write 17.1-02-SUMMARY.md until D-17 passes.
 
 ### Pending Todos
 
@@ -99,6 +101,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-18T12:15:00.000Z
-Stopped at: Completed 17.1-01-PLAN.md — LXC 101 ready for Jellyfin install (Plan 02)
-Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-PLAN.md
+Last session: 2026-04-18T16:20:00.000Z
+Stopped at: PAUSED mid 17.1-02 — awaiting tower BIOS reboot to enable Intel iGPU
+Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-IGPU-PROBE.md (resume checklist) → then 17.1-02-PLAN.md (run verify + D-17 gate)

@@ -1,0 +1,14 @@
+[Unit]
+Description=Jellyfin transcode tmpfs
+Before=jellyfin.service
+After=local-fs.target
+
+[Mount]
+What=tmpfs
+Where=/var/cache/jellyfin/transcodes
+Type=tmpfs
+Options=size=4G,mode=0755,uid=jellyfin,gid=jellyfin,nodev,nosuid,noexec
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=jellyfin.service
