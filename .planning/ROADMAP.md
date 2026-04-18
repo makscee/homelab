@@ -156,6 +156,20 @@ Plans:
 
 ---
 
+### Phase 17.1: Migrate Jellyfin to dedicated LXC on tower (INSERTED)
+
+**Goal:** Jellyfin runs natively on its own Proxmox LXC (CT 101) on tower with exclusive /dev/dri ownership and RO media bindmounts, serving 1080p + 4K without buffering via tower:22098 → 10.10.20.11:8096 reverse proxy. Old Docker container kept as hot standby through 2026-04-25.
+**Requirements**: D-01..D-18 (see 17.1-CONTEXT.md)
+**Depends on:** Phase 17
+**Plans:** 5 plans
+
+Plans:
+- [x] 17.1-01-PLAN.md — LXC 101 provisioning (pct create, dev0:, mp0/mp1 RO, Tailscale join, inventory)
+- [ ] 17.1-02-PLAN.md — Jellyfin deb install + systemd tmpfs + vainfo probe
+- [ ] 17.1-03-PLAN.md — state rsync + cutover (user-gated maintenance window)
+- [ ] 17.1-04-PLAN.md — tower:22098 ingress swap with WebSocket headers
+- [ ] 17.1-05-PLAN.md — verification + docs + 2026-04-25 cleanup scheduling
+
 ### Phase 18: VoidNet Management
 
 **Goal**: Operator can manage VoidNet users and Claude boxes from the admin dashboard — view user list, adjust credits, ban/unban, and inspect per-user boxes with masked SSH credentials — all writes audit-logged.

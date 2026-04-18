@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
-status: verifying
-stopped_at: Phase 17.1 context gathered
-last_updated: "2026-04-18T11:14:25.851Z"
-last_activity: 2026-04-17
+status: executing
+stopped_at: Completed 17.1-01-PLAN.md (LXC 101 provisioning)
+last_updated: "2026-04-18T12:15:00.000Z"
+last_activity: 2026-04-18 -- 17.1-01 complete; jellyfin on Tailnet as 100.77.246.74
 progress:
   total_phases: 12
   completed_phases: 6
-  total_plans: 26
+  total_plans: 31
   completed_plans: 26
-  percent: 100
+  percent: 84
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 Phase: 15 (tailwind-v4-migration) — COMPLETE (ready_for_verification)
 Plan: 2 of 2 complete (15-01 + 15-02 both shipped + Playwright-verified on prod)
-Status: Phase complete — ready for verification
-Last activity: 2026-04-17
+Status: Ready to execute
+Last activity: 2026-04-18 -- Phase 17.1 planning complete
 
 Progress: [          ] 0% — v3.0 not started
 
@@ -77,6 +77,7 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 15-01]: Verified pixel-identical to prod v3 baseline via Playwright MCP (/, /audit, /alerts, /login, focus ring). /tokens error is NOT Tailwind — it's the sops PATH infra issue tracked in ROADMAP backlog 999.1.
 - [Phase 15-02]: tailwind-merge v3 bump was zero-code — single cn() call site in apps/admin/lib/utils.ts with no extendTailwindMerge/custom validators, so all v3 breaking changes were no-ops. Fix-on-break branch (D-3) not exercised. Commit a039d43 deployed to mcow (PLAY RECAP ok=29); Playwright MCP prod UAT confirmed zero visual regressions on /, /audit, /alerts (no doubled focus rings, no state-variant conflicts, no size stacking, no badge mismatch). /tokens UAT skipped — pre-existing sops PATH issue (backlog 999.1).
 - [Phase 16]: TS 6.0.3 upgrade clean; typescript-eslint 8.58.2 peer range covers TS 6 (D-2 no-op); TS2882 on CSS side-effect import resolved via ambient declare module *.css
+- [Phase 17.1-01]: CT 101 provisioned on tower (unprivileged Debian 12, dev0: renderD128 gid=993, mp0/mp1 ro=1, vmbr1 10.10.20.11/24). Tailscale IP 100.77.246.74 assigned as `jellyfin`; operator approved node. Added to ansible `monitored_hosts` (NOT docker_hosts per D-05); `ansible jellyfin -m ping` SUCCESS. SSH host-key acceptance required one-time `ssh-keyscan` on controller (Rule 3 auto-fix).
 
 ### Blockers/Concerns
 
@@ -98,6 +99,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-18T11:14:25.842Z
-Stopped at: Phase 17.1 context gathered
-Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-CONTEXT.md
+Last session: 2026-04-18T12:15:00.000Z
+Stopped at: Completed 17.1-01-PLAN.md — LXC 101 ready for Jellyfin install (Plan 02)
+Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-PLAN.md
