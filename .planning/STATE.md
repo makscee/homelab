@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-04-17T16:22:14.889Z"
+stopped_at: Phase 17.1 context gathered
+last_updated: "2026-04-18T11:14:25.851Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 6
   total_plans: 26
   completed_plans: 26
@@ -48,6 +48,7 @@ Progress: [          ] 0% — v3.0 not started
 - Phase 15 added: Tailwind v4 migration (3.4 to 4.2) + tailwind-merge 3
 - Phase 16 added: TypeScript 6.0 upgrade with deprecation fixes
 - Phase 17 added: ESLint 10 + Node types 24 upgrade
+- Phase 17.1 inserted after Phase 17: Migrate Jellyfin to dedicated LXC on tower (URGENT — docker-tower contention causing buffering)
 
 ### Decisions
 
@@ -97,6 +98,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-17T15:40:48.110Z
-Stopped at: Completed 16-01-PLAN.md
-Resume file: None
+Last session: 2026-04-18T11:14:25.842Z
+Stopped at: Phase 17.1 context gathered
+Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-CONTEXT.md
