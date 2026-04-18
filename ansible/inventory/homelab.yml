@@ -13,6 +13,11 @@ all:
           ansible_host: 100.101.0.8
           ansible_user: root
           tailscale_ip: 100.101.0.8
+        jellyfin:
+          ansible_host: 100.77.246.74
+          ansible_user: root
+          tailscale_ip: 100.77.246.74
+          # CT 101 on tower; native-deb Jellyfin, iGPU QSV (Phase 17.1)
         cc-worker:
           ansible_host: 100.99.133.9
           ansible_user: root
