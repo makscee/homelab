@@ -92,7 +92,11 @@ Derived from `docker inspect` on 2026-04-14. Named volumes are declared by monit
 
 ## Post-deploy gotchas
 
-- **Jellyfin QSV:** hardware-accelerated transcoding needs Intel QSV enabled on the host kernel. Run `scripts/enable-jellyfin-qsv.sh` from the repo root **once** after deploying Jellyfin.
+> **Moved 2026-04-18:** Jellyfin migrated to CT 101 (`jellyfin` LXC) on tower per Phase 17.1.
+> The Jellyfin QSV note below is kept for historical reference through 2026-04-25 hot-standby window.
+> Config dir `/opt/docker-configs/shared/jellyfin/` slated for purge 2026-05-02 (see `.planning/STATE.md` §Pending Todos).
+
+- **Jellyfin QSV (historical — docker-tower container is hot standby until 2026-04-25):** hardware-accelerated transcoding needs Intel QSV enabled on the host kernel. Run `scripts/enable-jellyfin-qsv.sh` from the repo root **once** after deploying Jellyfin.
 - **Prometheus config:** the file referenced by `${PROMETHEUS_CONFIG:-prometheus.yml}` must exist under `./prometheus/` **before** compose up — compose will fail the bind mount otherwise.
 - **Homestack workspace network:** `homestack` is declared `external: true` in multiple files. Create it with `docker network create homestack` before first `up`.
 - **docker-tower-api runs on host network** (port 8000). If the LXC has anything else on 8000 it will collide.

@@ -5,7 +5,8 @@
 | Server | Location | Tailscale IP | Role |
 |--------|----------|--------------|------|
 | tower | Moscow | 100.101.0.7 | Proxmox host (i7-8700 12C, 16GB RAM) |
-| docker-tower | Moscow (LXC 100) | 100.101.0.8 | Media stack: Jellyfin, Navidrome, *arr |
+| docker-tower | Moscow (LXC 100) | 100.101.0.8 | Media stack: Navidrome, *arr (Jellyfin moved to CT 101 on 2026-04-18) |
+| jellyfin | Moscow (LXC 101) | 100.77.246.74 | Jellyfin (native deb, iGPU QSV when BIOS enabled; CPU-only as of 2026-04-19) |
 | cc-worker | Moscow (LXC 204) | 100.99.133.9 | Claude Code runner (renamed from cc-vk 2026-04-14) |
 | cc-andrey | Moscow (LXC 200) | — | Developer worker (SSH via tower:2201 → 10.10.20.200:22) |
 | cc-dan | Moscow (LXC 202) | — | Developer worker |

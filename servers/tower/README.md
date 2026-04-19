@@ -22,7 +22,8 @@ output at the timestamp of the last refresh (see D-03).
 
 | VMID | Hostname | Config | Inventory | Tailscale | Notes |
 |------|----------|--------|-----------|-----------|-------|
-| 100 | docker-tower | [lxc-100-docker-tower.conf](lxc-100-docker-tower.conf) | [servers/docker-tower/inventory.md](../docker-tower/inventory.md) | 100.101.0.8 | Media stack (Jellyfin, Navidrome, *arr, qBittorrent) |
+| 100 | docker-tower | [lxc-100-docker-tower.conf](lxc-100-docker-tower.conf) | [servers/docker-tower/inventory.md](../docker-tower/inventory.md) | 100.101.0.8 | Media stack (Navidrome, *arr, qBittorrent) — Jellyfin migrated to CT 101 2026-04-18 |
+| 101 | jellyfin | [lxc-101-jellyfin.conf](lxc-101-jellyfin.conf) | [servers/jellyfin/inventory.md](../jellyfin/inventory.md) | 100.77.246.74 | Jellyfin (native deb, iGPU QSV when BIOS-enabled) |
 | 200 | cc-andrey | [lxc-200-cc-andrey.conf](lxc-200-cc-andrey.conf) | [servers/cc-andrey/inventory.md](../cc-andrey/inventory.md) | — | Dev worker; SSH via tower:2201 (router 2201 → tower:2200 → 10.10.20.200:22) |
 | 201 | (orphaned cc-andrey dup) | — | noted in [servers/cc-andrey/inventory.md](../cc-andrey/inventory.md) | — | Stopped 2026-04-14, disk retained (D-15) |
 | 202 | cc-dan | [lxc-202-cc-dan.conf](lxc-202-cc-dan.conf) | [servers/cc-dan/inventory.md](../cc-dan/inventory.md) | — | Dev worker |
