@@ -39,7 +39,14 @@ function buildRedirectUrl(req: NextRequest, pathname: string): URL {
   url.search = "";
   const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const fwdProto = req.headers.get("x-forwarded-proto");
-  if (fwdHost) url.host = fwdHost;
+  if (fwdHost) {
+    if (fwdHost.includes(":")) {
+      url.host = fwdHost;
+    } else {
+      url.hostname = fwdHost;
+      url.port = "";
+    }
+  }
   if (fwdProto) url.protocol = `${fwdProto}:`;
   return url;
 }
