@@ -1,16 +1,33 @@
 # Tower ingress
 
-External ingress is handled by **iptables DNAT on vmbr0**, not an L7 proxy.
-There is no nginx / caddy / haproxy on tower.
+External ingress to service LXCs is handled by **socat systemd forwards**, not
+iptables DNAT and not an L7 proxy. There is no nginx / caddy / haproxy on tower.
 
-## Files
+## Why socat, not DNAT
 
-| File | Purpose |
-|------|---------|
-| `jellyfin.iptables` | Canonical DNAT rule for `vmbr0:8096 → 10.10.20.11:8096` (CT 101 Jellyfin) |
+Tower runs Tailscale with exit-node rules that install a policy route for
+`10.10.20.0/24` via table 100 (and default via table 52 → `tailscale0`). A
+kernel DNAT'd flow forwards reply packets from the service LXC back through
+tower, where the FORWARD-path routing decision picks `tailscale0` — asymmetric
+to the original WAN ingress path, so external clients silently time out on SYN.
 
-Canonical persisted location on tower: `/etc/iptables/rules.v4` (restored by
-`netfilter-persistent.service` on boot).
+A userspace `socat TCP-LISTEN → TCP` relay terminates the inbound TCP on tower
+itself, so reply packets are OUTPUT from tower (src = tower LAN IP, matched by
+`ip rule prio 80: from 192.168.1.103 lookup main`) and egress `vmbr0` via the
+default gateway. Hairpin-only vs real-WAN UAT is the tell: DNAT passes hairpin,
+fails WAN.
+
+## Services
+
+| Unit | Listen | Backend | Purpose |
+|------|--------|---------|---------|
+| `jellyfin-fwd-22098.service` | `:22098` | `10.10.20.11:8096` | External Jellyfin (`http://jellyfin.makscee.ru:22098/`) |
+| `cc-fwd-20{1,2,3}.service`   | `:220{2,3,4}` | cc-* LXC :22 | SSH forwards for cc-andrey/cc-dan/cc-yuri |
+
+Internal hairpin for `:8096 → CT 101` is still provided by iptables DNAT on
+`vmbr0` (in `/etc/iptables/rules.v4`, reapplied by `netfilter-persistent`), so
+LAN clients resolving `jellyfin.makscee.ru` to the router's WAN IP can reach
+Jellyfin without leaving the LAN.
 
 ## Leaf-LXC Tailscale pitfall (REQUIRED for service LXCs on vmbr1)
 

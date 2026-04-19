@@ -158,7 +158,7 @@ Plans:
 
 ### Phase 17.1: Migrate Jellyfin to dedicated LXC on tower (INSERTED)
 
-**Goal:** Jellyfin runs natively on its own Proxmox LXC (CT 101) on tower with exclusive /dev/dri ownership and RO media bindmounts, serving 1080p + 4K without buffering via iptables DNAT on tower → 10.10.20.11:8096. Old Docker container kept as hot standby through 2026-04-25. (Ingress: jellyfin.makscee.ru → router → tower vmbr0 DNAT → 10.10.20.11:8096; D-17 HW transcode formally deferred until BIOS iGPU enable — operator signed off CPU-only playback 2026-04-19.)
+**Goal:** Jellyfin runs natively on its own Proxmox LXC (CT 101) on tower with exclusive /dev/dri ownership and RO media bindmounts, serving 1080p + 4K without buffering. Old Docker container kept as hot standby through 2026-04-25. (External ingress: `http://jellyfin.makscee.ru:22098/` → router :22098 forward → tower socat `jellyfin-fwd-22098.service` → 10.10.20.11:8096; LAN hairpin :8096 still via iptables DNAT on vmbr0; D-17 HW transcode formally deferred until BIOS iGPU enable — operator signed off CPU-only playback 2026-04-19. 17.1-04's DNAT approach failed WAN UAT — replies policy-routed onto tailscale0 — corrected post-phase 2026-04-19 by replacing with socat.)
 **Requirements**: D-01..D-18 (see 17.1-CONTEXT.md)
 **Depends on:** Phase 17
 **Plans:** 5/5 plans complete
