@@ -193,7 +193,13 @@ Plans:
 **Depends on**: Phase 17 (parallel-safe with Phases 18 and 20)
 **Requirements**: PROXMOX-01, PROXMOX-05, PROXMOX-06 (IN) · PROXMOX-02, PROXMOX-03, PROXMOX-04 (DEFERRED)
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — Ansible: provision PVE role/user/token + tower CA into SOPS; extend deploy to render env + CA on mcow
+- [ ] 19-02-PLAN.md — Next.js API proxy: lib/proxmox.server.ts (CA-pinned undici) + 4 read-only routes (lxcs list, detail, tasks, task log)
+- [ ] 19-03-PLAN.md — UI: /proxmox list (10s poll) + /proxmox/[vmid] detail (30s poll, click-to-expand task log) + Playwright MCP smoke + grep gate
+
 **UI hint**: yes
 
 ---
