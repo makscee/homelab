@@ -5,6 +5,7 @@
 - **Network:** vmbr1 10.10.20.11/24, Tailscale hostname `jellyfin` (100.77.246.74)
 - **Services:** jellyfin.service (8096), tailscaled.service, var-cache-jellyfin-transcodes.mount (tmpfs 4G)
 - **iGPU:** /dev/dri/renderD128 via Proxmox dev0: passthrough (driver currently nouveau — Intel iGPU BIOS-disabled; D-17 deferred per `17.1-02-IGPU-PROBE.md`)
+- **Transcode:** CPU-only. `/etc/jellyfin/encoding.xml` must have `HardwareAccelerationType=none` + `EnableHardwareEncoding=false`. If either gets flipped to `qsv`/`true` via admin UI before D-17 lands, ffmpeg exits 187 on every HLS segment and clients see "Playback failed" / endless buffering.
 - **Media:** /media/wdc + /media/sea (mp0/mp1 RO bindmounts from /mnt/pve/*)
 - **External:** `http://jellyfin.makscee.ru:22098/` → router :22098 → tower socat `jellyfin-fwd-22098.service` → 10.10.20.11:8096 (HTTP only, no TLS — router/ISP does not forward :80/:443)
 - **Hairpin (LAN):** :8096 → tower vmbr0 iptables DNAT → 10.10.20.11:8096
