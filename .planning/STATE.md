@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed 17.1-05-PLAN.md (phase 17.1 closed; operator CPU-only signoff captured)
-last_updated: "2026-04-19T09:00:00.000Z"
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-04-19T10:43:41.488Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 7
-  total_plans: 32
+  total_plans: 34
   completed_plans: 32
-  percent: 100
+  percent: 94
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 Phase: 17.1 (migrate-jellyfin-to-dedicated-lxc-on-tower) — COMPLETE (ready_for_verification)
 Plan: 5 of 5 complete (17.1-01..05 all shipped; operator UAT signoff 2026-04-19 CPU-only; D-17 HW transcode formally deferred until BIOS iGPU enable)
 Prior phase: 15 (tailwind-v4-migration) — COMPLETE (15-01 + 15-02 shipped + Playwright-verified on prod)
-Status: Phase 17.1 complete — ready for verification
+Status: Phase complete — ready for verification
 Last activity: 2026-04-19
 
 Progress: [          ] 0% — v3.0 not started
@@ -83,6 +83,9 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 17.1-02 CLOSED w/ deferred acceptance]: 2026-04-18 operator chose to proceed CPU-only for perf testing before committing to wave-3 cutover; D-17 deferred. `scripts/verify-jellyfin-lxc.sh` extended with full runtime probe (LXC infra, service, tmpfs opts+size, user groups, bindmounts, apt holds, /health on Tailnet); VA-API/iHD/vmbr1-ingress checks are WARN-not-FAIL while D-17 is deferred and Plan 04 ingress is pending. Final: 17 PASS / 3 WARN / 0 FAIL. Auto-fixes this session: (a) Rule 3 — added jellyfin host key to controller known_hosts; (b) Rule 1 — relaxed `findmnt SIZE` regex for leading whitespace; (c) Rule 1 — downgraded vmbr1 `/health` to WARN (that path is Plan 04 ingress territory; Tailnet 100.77.246.74:8096 is authoritative). Wave-3 gate now: operator perf signoff on CPU-only.
 - [Phase 17.1]: Jellyfin 10.10+ schema: BaseItems (not MediaItems) in unified jellyfin.db
 - [Phase 17.1]: Rsync in PULL mode (jellyfin->docker-tower) due to Tailscale ACL blocking reverse SSH
+- [Phase 19]: Token role hard-coded to VM.Audit+Datastore.Audit only (D-03); no VM.PowerMgmt
+- [Phase 19]: pveum shell used instead of community.proxmox (no token module); token_list guard prevents rotation
+- [Phase 19]: tower cert SAN includes DNS:tower — no connect.servername override needed in Plan 02
 
 ### Blockers/Concerns
 
@@ -109,6 +112,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-19T09:00:00.000Z
-Stopped at: Completed 17.1-05-PLAN.md (phase 17.1 closed; CPU-only operator signoff; D-17 deferred)
+Last session: 2026-04-19T10:43:36.892Z
+Stopped at: Completed 19-01-PLAN.md
 Resume file: None

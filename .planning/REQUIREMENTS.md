@@ -60,7 +60,7 @@
 - [ ] **PROXMOX-03**: Spawn new LXC from template — form for vmid, hostname, template, resources — calls Proxmox API, polls task-id until complete, shows progress
 - [ ] **PROXMOX-04**: Destroy LXC (with confirmation guard + typed-hostname check to prevent slip); audit-logged
 - [ ] **PROXMOX-05**: LXC detail panel: config dump, recent log tail, network info
-- [ ] **PROXMOX-06**: Proxmox API token with role `dashboard-operator` (scoped to `VM.PowerMgmt`, `VM.Audit`, `Datastore.Audit`); token + CA cert in SOPS; CA cert pinned (never `NODE_TLS_REJECT_UNAUTHORIZED=0`)
+- [x] **PROXMOX-06**: Proxmox API token with role `dashboard-operator` (scoped to `VM.PowerMgmt`, `VM.Audit`, `Datastore.Audit`); token + CA cert in SOPS; CA cert pinned (never `NODE_TLS_REJECT_UNAUTHORIZED=0`)
 
 ### TERM — Web Terminal
 
@@ -157,7 +157,7 @@
 | PROXMOX-03 | Phase 16 | Pending |
 | PROXMOX-04 | Phase 16 | Pending |
 | PROXMOX-05 | Phase 16 | Pending |
-| PROXMOX-06 | Phase 16 | Pending |
+| PROXMOX-06 | Phase 16 | Complete |
 | TERM-01 | Phase 18 | Pending |
 | TERM-02 | Phase 18 | Pending |
 | TERM-03 | Phase 18 | Pending |

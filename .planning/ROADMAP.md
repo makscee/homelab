@@ -196,7 +196,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Ansible: provision PVE role/user/token + tower CA into SOPS; extend deploy to render env + CA on mcow
+- [x] 19-01-PLAN.md — Ansible: provision PVE role/user/token + tower CA into SOPS; extend deploy to render env + CA on mcow
 - [ ] 19-02-PLAN.md — Next.js API proxy: lib/proxmox.server.ts (CA-pinned undici) + 4 read-only routes (lxcs list, detail, tasks, task log)
 - [ ] 19-03-PLAN.md — UI: /proxmox list (10s poll) + /proxmox/[vmid] detail (30s poll, click-to-expand task log) + Playwright MCP smoke + grep gate
 
@@ -252,7 +252,7 @@ Plans:
 | 17. ESLint 10 + Node Types 24 | v3.0 | 1/1 | Complete   | 2026-04-17 |
 | 17.1. Jellyfin LXC Migration | v3.0 | 5/5 | Complete | 2026-04-19 |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
-| 19. Proxmox Ops | v3.0 | 0/? | Not started | - |
+| 19. Proxmox Ops | v3.0 | 1/3 | In Progress|  |
 | 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
 | 21. Web Terminal | v3.0 | 0/? | Not started | - |
 | 22. Security Review + Launch | v3.0 | 0/? | Not started | - |
