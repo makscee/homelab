@@ -184,12 +184,14 @@ Plans:
 
 ---
 
-### Phase 19: Proxmox Ops
+### Phase 19: Proxmox Ops (read-only)
 
-**Goal**: Operator can manage LXC containers on tower from the admin dashboard — view all containers, start/shutdown/restart with graceful default, spawn new containers, and inspect config — all destructive operations guarded and audit-logged.
+**Goal**: Operator can open `/proxmox` in the admin dashboard and see a live, read-only list of all LXCs on tower with health/resources, plus drill into a detail panel (config dump + recent task log + network info). No destructive or mutating operations from the dashboard — start/stop/spawn/destroy remain in Proxmox web UI. Observability + stability check, not remote control.
+
+**Scope note (2026-04-19):** Shrunk from original "full ops" scope. PROXMOX-02/03/04 deferred to future phases pending operator demand. PROXMOX-06 tightened: role scoped to VM.Audit + Datastore.Audit only (no VM.PowerMgmt).
 
 **Depends on**: Phase 17 (parallel-safe with Phases 18 and 20)
-**Requirements**: PROXMOX-01..06
+**Requirements**: PROXMOX-01, PROXMOX-05, PROXMOX-06 (IN) · PROXMOX-02, PROXMOX-03, PROXMOX-04 (DEFERRED)
 
 **Plans**: TBD
 **UI hint**: yes
