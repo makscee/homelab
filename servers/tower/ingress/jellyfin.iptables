@@ -1,0 +1,17 @@
+# Jellyfin external ingress DNAT (tower)
+#
+# External path: internet → router:22098 → tower vmbr0:8096 → DNAT → CT 101:8096
+# Canonical persisted file on tower: /etc/iptables/rules.v4 (via netfilter-persistent.service)
+#
+# Current rule (as of Phase 17.1 Plan 04 cutover, 2026-04-19):
+-A PREROUTING -i vmbr0 -p tcp -m tcp --dport 8096 -j DNAT --to-destination 10.10.20.11:8096
+#
+# Apply manually (if rebuilding tower):
+#   iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 8096 -j DNAT --to-destination 10.10.20.11:8096
+#   netfilter-persistent save
+#
+# NOTE: This is pure L4 DNAT. WebSocket Upgrade/Connection headers pass through unchanged
+# because DNAT operates below the application layer. If an L7 concern emerges later
+# (rate limiting, TLS termination, host-based routing) an nginx/caddy L7 proxy can be
+# added without touching this rule — point proxy at 10.10.20.11:8096 and flip the DNAT
+# target to the proxy's listener.

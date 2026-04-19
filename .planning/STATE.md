@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed 17.1-03-PLAN.md (cutover)
-last_updated: "2026-04-19T08:27:47.201Z"
+stopped_at: Completed 17.1-04-PLAN.md (ingress + tailscale accept-routes fix)
+last_updated: "2026-04-19T08:51:41.132Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 6
   total_plans: 31
-  completed_plans: 29
-  percent: 94
+  completed_plans: 30
+  percent: 97
 ---
 
 # Project State
@@ -104,6 +104,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-19T08:27:47.196Z
-Stopped at: Completed 17.1-03-PLAN.md (cutover)
+Last session: 2026-04-19T08:51:41.124Z
+Stopped at: Completed 17.1-04-PLAN.md (ingress + tailscale accept-routes fix)
 Resume file: None
