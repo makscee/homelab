@@ -119,23 +119,15 @@ export async function pveGet<T>(path: string): Promise<T> {
       },
       dispatcher: agent,
     });
-  } catch (e) {
-    const code = (e as { code?: string } | null)?.code ?? "";
-    const causeCode =
-      (e as { cause?: { code?: string } } | null)?.cause?.code ?? "";
-    const c = code || causeCode;
-    if (
-      c === "ECONNREFUSED" ||
-      c === "ETIMEDOUT" ||
-      c === "ENOTFOUND" ||
-      c === "EAI_AGAIN" ||
-      c === "UND_ERR_SOCKET" ||
-      c === "UND_ERR_CONNECT_TIMEOUT"
-    ) {
-      throw new PveError("PVE_UNREACHABLE", 0, "tower unreachable");
-    }
-    // Unknown network failure — still treat as unreachable rather than
-    // echoing the underlying message (which may include hostnames/paths).
+  } catch {
+    // Any fetch failure — connection refused, timeout, DNS, TLS — is treated
+    // as tower-unreachable. We don't echo the underlying message since it can
+    // include hostnames/paths.
+    //
+    // NOTE: do not introduce a branch that ends with two identical `throw
+    // new PveError(...)` statements. Next's minifier collapses them into
+    // `throw (cond, new PveError(...))` which bun 1.1.38's require parser
+    // rejects with "Unexpected token ','". Keep this as a single throw.
     throw new PveError("PVE_UNREACHABLE", 0, "tower unreachable");
   }
 
