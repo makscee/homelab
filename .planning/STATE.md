@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-04-19T10:43:41.488Z"
+stopped_at: Completed 19-02-PLAN.md
+last_updated: "2026-04-19T10:50:20.072Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 34
-  completed_plans: 32
-  percent: 94
+  completed_plans: 33
+  percent: 97
 ---
 
 # Project State
@@ -86,6 +86,8 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 19]: Token role hard-coded to VM.Audit+Datastore.Audit only (D-03); no VM.PowerMgmt
 - [Phase 19]: pveum shell used instead of community.proxmox (no token module); token_list guard prevents rotation
 - [Phase 19]: tower cert SAN includes DNS:tower — no connect.servername override needed in Plan 02
+- [Phase 19]: D-07 enforced: all proxmox fetches via undici.Agent with connect.ca pinned; no TLS-verify bypass
+- [Phase 19]: PROXMOX_TLS_SERVERNAME override not needed — tower cert SAN has DNS:tower
 
 ### Blockers/Concerns
 
@@ -112,6 +114,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-19T10:43:36.892Z
-Stopped at: Completed 19-01-PLAN.md
+Last session: 2026-04-19T10:50:20.066Z
+Stopped at: Completed 19-02-PLAN.md
 Resume file: None
