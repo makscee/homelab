@@ -170,14 +170,16 @@ Plans:
 - [x] 17.1-04-PLAN.md — iptables DNAT ingress swap on tower vmbr0 + Tailscale accept-routes=false
 - [x] 17.1-05-PLAN.md — verification + docs + 2026-04-25 cleanup scheduling
 
-### Phase 18: VoidNet Management
+### Phase 18: VoidNet Management (DEFERRED — handled in voidnet repo)
 
 **Goal**: Operator can manage VoidNet users and Claude boxes from the admin dashboard — view user list, adjust credits, ban/unban, and inspect per-user boxes with masked SSH credentials — all writes audit-logged.
 
-**Depends on**: Phase 17 (parallel-safe with Phases 19 and 20)
-**Requirements**: VOIDNET-01..08
+**Status**: Deferred 2026-04-19 — ongoing work by another agent in the voidnet repo supersedes this scope in the homelab admin dashboard. Revisit if/when operator wants admin-dashboard surfacing; VOIDNET-01..08 remain pending under that future reopen.
 
-**Plans**: TBD
+**Depends on**: Phase 17 (parallel-safe with Phases 19 and 20)
+**Requirements**: VOIDNET-01..08 (pending, deferred)
+
+**Plans**: deferred
 **UI hint**: yes
 
 ---
