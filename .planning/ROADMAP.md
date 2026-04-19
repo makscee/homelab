@@ -161,12 +161,12 @@ Plans:
 **Goal:** Jellyfin runs natively on its own Proxmox LXC (CT 101) on tower with exclusive /dev/dri ownership and RO media bindmounts, serving 1080p + 4K without buffering via tower:22098 → 10.10.20.11:8096 reverse proxy. Old Docker container kept as hot standby through 2026-04-25.
 **Requirements**: D-01..D-18 (see 17.1-CONTEXT.md)
 **Depends on:** Phase 17
-**Plans:** 5 plans
+**Plans:** 3/5 plans executed
 
 Plans:
 - [x] 17.1-01-PLAN.md — LXC 101 provisioning (pct create, dev0:, mp0/mp1 RO, Tailscale join, inventory)
 - [x] 17.1-02-PLAN.md — Jellyfin deb install + systemd tmpfs + verify probe *(complete with deferred acceptance: D-17 HW transcode deferred to later BIOS window — operator chose CPU-only for perf testing; see 17.1-02-SUMMARY.md)*
-- [ ] 17.1-03-PLAN.md — state rsync + cutover (user-gated maintenance window)
+- [x] 17.1-03-PLAN.md — state rsync + cutover (user-gated maintenance window)
 - [ ] 17.1-04-PLAN.md — tower:22098 ingress swap with WebSocket headers
 - [ ] 17.1-05-PLAN.md — verification + docs + 2026-04-25 cleanup scheduling
 
@@ -240,7 +240,7 @@ Plans:
 | 15. Tailwind v4 Migration | v3.0 | 1/2 | In Progress | - |
 | 16. TypeScript 6.0 Upgrade | v3.0 | 1/1 | Complete   | 2026-04-17 |
 | 17. ESLint 10 + Node Types 24 | v3.0 | 1/1 | Complete   | 2026-04-17 |
-| 17.1. Jellyfin LXC Migration | v3.0 | 2/5 | In Progress (deferred D-17) | - |
+| 17.1. Jellyfin LXC Migration | v3.0 | 3/5 | In Progress|  |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 19. Proxmox Ops | v3.0 | 0/? | Not started | - |
 | 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |

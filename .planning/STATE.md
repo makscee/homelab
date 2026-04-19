@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
-status: executing
-stopped_at: 17.1-02 closed with deferred acceptance (D-17 deferred by operator); awaiting operator CPU-only perf signoff before wave-3 cutover
-last_updated: "2026-04-18T17:00:00.000Z"
-last_activity: 2026-04-18 -- 17.1-02 closed CPU-only; verify-script extended (17 PASS / 3 WARN / 0 FAIL); D-17 deferred to later BIOS window
+status: verifying
+stopped_at: Completed 17.1-03-PLAN.md (cutover)
+last_updated: "2026-04-19T08:27:47.201Z"
+last_activity: 2026-04-19
 progress:
   total_phases: 12
   completed_phases: 6
   total_plans: 31
-  completed_plans: 26
-  percent: 84
+  completed_plans: 29
+  percent: 94
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 Phase: 15 (tailwind-v4-migration) — COMPLETE (ready_for_verification)
 Plan: 2 of 2 complete (15-01 + 15-02 both shipped + Playwright-verified on prod)
-Status: Ready to execute
-Last activity: 2026-04-18 -- Phase 17.1 planning complete
+Status: Phase complete — ready for verification
+Last activity: 2026-04-19
 
 Progress: [          ] 0% — v3.0 not started
 
@@ -80,6 +80,8 @@ Progress: [          ] 0% — v3.0 not started
 - [Phase 17.1-01]: CT 101 provisioned on tower (unprivileged Debian 12, dev0: renderD128 gid=993, mp0/mp1 ro=1, vmbr1 10.10.20.11/24). Tailscale IP 100.77.246.74 assigned as `jellyfin`; operator approved node. Added to ansible `monitored_hosts` (NOT docker_hosts per D-05); `ansible jellyfin -m ping` SUCCESS. SSH host-key acceptance required one-time `ssh-keyscan` on controller (Rule 3 auto-fix).
 - [Phase 17.1-02 PARTIAL]: `deploy-jellyfin.yml` playbook + `jellyfin-transcodes.mount.j2` written and applied idempotently to CT 101. Jellyfin service active, `/health` returns Healthy, tmpfs mount active, apt holds + groups set. Auto-deviations applied (Rule 1/3): (a) added Debian non-free + non-free-firmware apt source — required for `intel-media-va-driver-non-free`; (b) renamed `libva-utils` → `vainfo` (correct Debian 12 package name). **D-17 (HW transcode) BLOCKED**: `/dev/dri/renderD128` on tower resolves to NVIDIA RTX 2060 (nouveau), not Intel UHD 630. `lspci` shows no `00:02.0` Intel VGA device — iGPU is BIOS-disabled (auto-off when dGPU present). i915 module available but no device to bind. See `17.1-02-IGPU-PROBE.md` for full diagnosis + BIOS setting to toggle (`iGPU Multi-Monitor: Enabled`) + post-reboot resume checklist. Wave 3 gated.
 - [Phase 17.1-02 CLOSED w/ deferred acceptance]: 2026-04-18 operator chose to proceed CPU-only for perf testing before committing to wave-3 cutover; D-17 deferred. `scripts/verify-jellyfin-lxc.sh` extended with full runtime probe (LXC infra, service, tmpfs opts+size, user groups, bindmounts, apt holds, /health on Tailnet); VA-API/iHD/vmbr1-ingress checks are WARN-not-FAIL while D-17 is deferred and Plan 04 ingress is pending. Final: 17 PASS / 3 WARN / 0 FAIL. Auto-fixes this session: (a) Rule 3 — added jellyfin host key to controller known_hosts; (b) Rule 1 — relaxed `findmnt SIZE` regex for leading whitespace; (c) Rule 1 — downgraded vmbr1 `/health` to WARN (that path is Plan 04 ingress territory; Tailnet 100.77.246.74:8096 is authoritative). Wave-3 gate now: operator perf signoff on CPU-only.
+- [Phase 17.1]: Jellyfin 10.10+ schema: BaseItems (not MediaItems) in unified jellyfin.db
+- [Phase 17.1]: Rsync in PULL mode (jellyfin->docker-tower) due to Tailscale ACL blocking reverse SSH
 
 ### Blockers/Concerns
 
@@ -102,6 +104,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-18T17:00:00.000Z
-Stopped at: 17.1-02 closed with deferred acceptance; awaiting operator CPU-only perf signoff on http://100.77.246.74:8096 before wave-3 cutover (plan 03)
-Resume file: .planning/phases/17.1-migrate-jellyfin-to-dedicated-lxc-on-tower/17.1-02-SUMMARY.md → 17.1-03-PLAN.md (on operator signoff) / 17.1-02-IGPU-PROBE.md (if BIOS window opens first)
+Last session: 2026-04-19T08:27:47.196Z
+Stopped at: Completed 17.1-03-PLAN.md (cutover)
+Resume file: None
