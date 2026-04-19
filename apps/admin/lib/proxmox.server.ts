@@ -1,6 +1,6 @@
 import "server-only";
 import { readFileSync } from "node:fs";
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 
 // --------------------------------------------------------------------------
 // Proxmox read-only API client (server-only).
@@ -105,19 +105,19 @@ export async function pveGet<T>(path: string): Promise<T> {
   const agent = loadAgent();
   const authHeader = buildAuthHeader();
 
-  let resp: Response;
+  let resp: Awaited<ReturnType<typeof undiciFetch>>;
   try {
-    // Node's global fetch is implemented by undici and supports the
-    // `dispatcher` option, which lets us attach our CA-pinned Agent.
-    resp = await fetch(url, {
+    // Use undici.fetch directly (not Node's global fetch) so the userland
+    // Agent dispatcher interface matches. Passing a userland undici Agent
+    // to Node's bundled fetch triggers "invalid onRequestStart method"
+    // when Node's and userland undici versions diverge.
+    resp = await undiciFetch(url, {
       method: "GET",
       headers: {
         authorization: authHeader,
         accept: "application/json",
       },
-      // @ts-expect-error - `dispatcher` is an undici extension recognized by Node's global fetch
       dispatcher: agent,
-      cache: "no-store",
     });
   } catch (e) {
     const code = (e as { code?: string } | null)?.code ?? "";

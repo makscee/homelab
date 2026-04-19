@@ -1,7 +1,21 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { writeFileSync, unlinkSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+type UndiciFetch = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
+let undiciFetchImpl: UndiciFetch = async () => new Response("{}", { status: 200 });
+class StubAgent {
+  constructor(_opts: unknown) {}
+}
+mock.module("undici", () => ({
+  Agent: StubAgent,
+  fetch: (input: string | URL | Request, init?: RequestInit) =>
+    undiciFetchImpl(input, init),
+}));
 
 // NOTE: we re-require the module in beforeEach so env changes + singleton
 // reset take effect per test. Bun's module cache is cleared via delete require.cache.
@@ -18,11 +32,10 @@ let lastCall: { url: string; init: RequestInit | undefined } = {
   init: undefined,
 };
 
-type FetchLike = typeof globalThis.fetch;
-const originalFetch = globalThis.fetch;
+type FetchLike = UndiciFetch;
 
 function installFetch(impl: FetchLike): void {
-  (globalThis as { fetch: FetchLike }).fetch = impl;
+  undiciFetchImpl = impl;
 }
 
 function resetMod(): void {
@@ -49,7 +62,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  (globalThis as { fetch: FetchLike }).fetch = originalFetch;
+  undiciFetchImpl = async () => new Response("{}", { status: 200 });
   try {
     unlinkSync(tmpCaPath);
   } catch {}
