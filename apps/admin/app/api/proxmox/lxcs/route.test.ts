@@ -26,6 +26,7 @@ mock.module("@/lib/proxmox.server", () => {
   return {
     PveError,
     pveGet: (path: string) => pveGetImpl(path),
+    parseNet0: () => ({ name: null, bridge: null, hwaddr: null, ip: null, gw: null }),
   };
 });
 

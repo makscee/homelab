@@ -10,28 +10,52 @@ mock.module("@/auth", () => ({
   auth: async () => authResult,
 }));
 
-mock.module("@/lib/proxmox.server", () => {
-  class PveError extends Error {
-    constructor(
-      public readonly code: string,
-      public readonly status: number,
-      message: string,
-    ) {
-      super(message);
-      this.name = "PveError";
-    }
+class PveError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PveError";
   }
-  return {
-    PveError,
-    pveGet: (path: string) => {
-      seenPaths.push(path);
-      return pveGetImpl(path);
-    },
-  };
-});
+}
 
-const { GET, parseNet0 } = await import("./route");
-const { PveError } = await import("@/lib/proxmox.server");
+function parseNet0(raw: string | undefined) {
+  const out = {
+    name: null,
+    bridge: null,
+    hwaddr: null,
+    ip: null,
+    gw: null,
+  } as {
+    name: string | null;
+    bridge: string | null;
+    hwaddr: string | null;
+    ip: string | null;
+    gw: string | null;
+  };
+  if (!raw) return out;
+  for (const part of raw.split(",")) {
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    const k = part.slice(0, idx).trim();
+    const v = part.slice(idx + 1).trim();
+    if (k in out) (out as Record<string, string | null>)[k] = v;
+  }
+  return out;
+}
+
+mock.module("@/lib/proxmox.server", () => ({
+  PveError,
+  parseNet0,
+  pveGet: (path: string) => {
+    seenPaths.push(path);
+    return pveGetImpl(path);
+  },
+}));
+
+const { GET } = await import("./route");
 
 function req(): Request {
   return new Request("https://homelab.makscee.ru/x");
