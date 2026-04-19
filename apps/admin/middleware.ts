@@ -33,6 +33,17 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
+function buildRedirectUrl(req: NextRequest, pathname: string): URL {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const fwdProto = req.headers.get("x-forwarded-proto");
+  if (fwdHost) url.host = fwdHost;
+  if (fwdProto) url.protocol = `${fwdProto}:`;
+  return url;
+}
+
 function applySecurityHeaders(res: NextResponse, nonce: string): NextResponse {
   res.headers.set("Content-Security-Policy", buildCsp(nonce));
   res.headers.set(
@@ -78,18 +89,20 @@ export default async function middleware(req: NextRequest) {
     cookieName: "__Secure-authjs.session-token",
   });
   if (!token) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    return applySecurityHeaders(NextResponse.redirect(url), nonce);
+    return applySecurityHeaders(
+      NextResponse.redirect(buildRedirectUrl(req, "/login")),
+      nonce,
+    );
   }
 
   const login = typeof (token as { login?: unknown }).login === "string"
     ? (token as { login: string }).login
     : undefined;
   if (!isLoginAllowedEdge(login)) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/403";
-    return applySecurityHeaders(NextResponse.redirect(url), nonce);
+    return applySecurityHeaders(
+      NextResponse.redirect(buildRedirectUrl(req, "/403")),
+      nonce,
+    );
   }
 
   if (login) requestHeaders.set("x-user-login", login);
