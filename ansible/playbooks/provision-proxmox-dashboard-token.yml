@@ -1,0 +1,109 @@
+---
+# Provision the Proxmox VE read-only dashboard token + role on tower, fetch the
+# tower PVE root CA, and persist both into secrets/mcow.sops.yaml for later
+# consumption by homelab-admin on mcow (Plan 19-01, PROXMOX-06).
+#
+# Run:
+#   cd ansible
+#   ansible-playbook -i inventory/homelab.yml playbooks/provision-proxmox-dashboard-token.yml
+#
+# Idempotent: re-run yields all-ok and DOES NOT rotate the token.
+# To rotate, manually `pveum user token remove dashboard-operator@pve readonly`
+# on tower first, then re-run this playbook.
+#
+# Security (T-19-01, T-19-02, T-19-03):
+#   - `no_log: true` on every task that touches the token secret
+#   - token_list guard ensures `token add` runs only when missing
+#   - role hard-coded to VM.Audit,Datastore.Audit — no VM.PowerMgmt (D-03)
+#
+# Prereqs on controller:
+#   - sops + age installed, age key at ~/.config/sops/age/keys.txt
+#   - `secrets/mcow.sops.yaml` present and decryptable by current age key
+#   - SSH access to root@tower (Tailnet)
+
+- name: Provision Proxmox read-only dashboard token on tower
+  hosts: tower
+  gather_facts: false
+  become: true
+  vars:
+    pve_role: DashboardReadOnly
+    pve_user: dashboard-operator@pve
+    pve_token_id: readonly
+    pve_privs: "VM.Audit,Datastore.Audit"
+    _sops_file: "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
+
+  tasks:
+    - name: Create read-only PVE role (idempotent — pveum role add fails if exists)
+      ansible.builtin.command: "pveum role add {{ pve_role }} -privs {{ pve_privs }}"
+      register: role_add
+      failed_when: role_add.rc != 0 and 'already exists' not in role_add.stderr
+      changed_when: role_add.rc == 0
+
+    - name: Create dashboard operator user
+      ansible.builtin.command: "pveum user add {{ pve_user }} --comment 'mcow homelab-admin read-only'"
+      register: user_add
+      failed_when: user_add.rc != 0 and 'already exists' not in user_add.stderr
+      changed_when: user_add.rc == 0
+
+    - name: Grant DashboardReadOnly role at root path (pveum acl modify is a SET)
+      ansible.builtin.command: "pveum acl modify / -user {{ pve_user }} -role {{ pve_role }}"
+      changed_when: false
+
+    - name: List existing tokens for dashboard-operator (idempotence guard)
+      ansible.builtin.command: "pveum user token list {{ pve_user }} --output-format json"
+      register: token_list
+      changed_when: false
+
+    - name: Create API token (privsep=0 → token inherits user's perms)
+      ansible.builtin.command: >
+        pveum user token add {{ pve_user }} {{ pve_token_id }}
+        --privsep 0 --output-format json
+      register: token_create
+      when: pve_token_id not in (token_list.stdout | from_json | map(attribute='tokenid') | list)
+      no_log: true
+
+    - name: Capture token secret (only available at creation time)
+      ansible.builtin.set_fact:
+        proxmox_token_secret: "{{ (token_create.stdout | from_json).value }}"
+      when: token_create is changed
+      no_log: true
+
+    - name: Fetch tower PVE root CA
+      ansible.builtin.slurp:
+        src: /etc/pve/pve-root-ca.pem
+      register: pve_ca
+
+    - name: Persist tower CA into SOPS (controller-side, idempotent)
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        CA_CONTENT=$(printf '%s' {{ (pve_ca.content | b64decode) | quote }} | jq -Rs .)
+        sops set {{ _sops_file | quote }} \
+          '["proxmox_dashboard"]["tower_ca_pem"]' "$CA_CONTENT"
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
+    - name: Persist token secret into SOPS (only on creation)
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        sops set {{ _sops_file | quote }} \
+          '["proxmox_dashboard"]["token_secret"]' '"{{ proxmox_token_secret }}"'
+      args:
+        executable: /bin/bash
+      when: proxmox_token_secret is defined
+      changed_when: true
+      no_log: true
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Role: {{ pve_role }} (privs: {{ pve_privs }})"
+          - "User: {{ pve_user }}"
+          - "Token id: {{ pve_user }}!{{ pve_token_id }} (privsep=0)"
+          - "Token created this run: {{ token_create is changed }}"
+          - "SOPS updated: {{ _sops_file }}"
