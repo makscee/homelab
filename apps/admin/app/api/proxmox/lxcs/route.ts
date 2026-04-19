@@ -59,7 +59,6 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
     );
     return NextResponse.json({ data: merged });
   } catch (e) {
-    console.error("[proxmox-list] GET error:", e instanceof Error ? e.stack : e);
     if (e instanceof PveError) {
       if (e.code === "PVE_UNREACHABLE") {
         return NextResponse.json(

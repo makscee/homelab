@@ -120,8 +120,6 @@ export async function pveGet<T>(path: string): Promise<T> {
       dispatcher: agent,
     });
   } catch (e) {
-    console.error("[proxmox] pveGet error:", e);
-    console.error("[proxmox] cause:", (e as { cause?: unknown } | null)?.cause);
     const code = (e as { code?: string } | null)?.code ?? "";
     const causeCode =
       (e as { cause?: { code?: string } } | null)?.cause?.code ?? "";

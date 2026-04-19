@@ -10,6 +10,11 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // Keep undici out of the webpack bundle: bun 1.1.38's require parser
+  // chokes on the minified webpacked undici output. Externalizing makes
+  // route.js a thin `require("undici")` shim resolved from node_modules
+  // at runtime, which bun loads correctly.
+  serverExternalPackages: ['undici'],
   experimental: {
     // Nonce-based CSP via middleware (Plan 04). No runtime config here.
   },
