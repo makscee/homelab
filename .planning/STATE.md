@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed 17.1-04-PLAN.md (ingress + tailscale accept-routes fix)
-last_updated: "2026-04-19T08:51:41.132Z"
+stopped_at: Completed 17.1-05-PLAN.md (phase 17.1 closed; operator CPU-only signoff captured)
+last_updated: "2026-04-19T09:00:00.000Z"
 last_activity: 2026-04-19
 progress:
   total_phases: 12
-  completed_phases: 6
-  total_plans: 31
-  completed_plans: 30
-  percent: 97
+  completed_phases: 7
+  total_plans: 32
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 15 (tailwind-v4-migration) — COMPLETE (ready_for_verification)
-Plan: 2 of 2 complete (15-01 + 15-02 both shipped + Playwright-verified on prod)
-Status: Phase complete — ready for verification
+Phase: 17.1 (migrate-jellyfin-to-dedicated-lxc-on-tower) — COMPLETE (ready_for_verification)
+Plan: 5 of 5 complete (17.1-01..05 all shipped; operator UAT signoff 2026-04-19 CPU-only; D-17 HW transcode formally deferred until BIOS iGPU enable)
+Prior phase: 15 (tailwind-v4-migration) — COMPLETE (15-01 + 15-02 shipped + Playwright-verified on prod)
+Status: Phase 17.1 complete — ready for verification
 Last activity: 2026-04-19
 
 Progress: [          ] 0% — v3.0 not started
@@ -94,6 +95,10 @@ Progress: [          ] 0% — v3.0 not started
 ### Pending Todos
 
 - 2026-04-22: docker-tower volume cleanup (grafana + alertmanager data volumes)
+- 2026-04-25: Phase 17.1 cleanup step 1 — remove `jellyfin:` service block from `servers/docker-tower/media/docker-compose.yml` in a dedicated commit; run `ansible-playbook deploy-docker-tower.yml`; confirm old Jellyfin container gone; delete `Jellyfin QSV` banner from `servers/docker-tower/README.md` (D-15).
+- 2026-05-02: Phase 17.1 cleanup step 2 — purge `/opt/docker-configs/shared/jellyfin/` on docker-tower LXC 100 (`ssh root@docker-tower 'rm -rf /opt/docker-configs/shared/jellyfin'`) after 1 week of offline retention (D-15).
+- Phase 17.1 rollback drill (D-16, optional but recommended before 2026-04-25): exercise the rollback block in `17.1-03-CUTOVER-LOG.md` + `17.1-04-INGRESS-LOG.md` once during the soak window, confirm service restores in <5 min.
+- Phase 17.1 D-17 re-open (undated): when BIOS iGPU Multi-Monitor enabled on tower, re-run `bash scripts/verify-jellyfin-lxc.sh` — promote the 2 `check_warn` iHD blocks back to hard `check`; reconfirm VA-API transcode in Jellyfin dashboard.
 - Backlog 999.1: /tokens sops PATH fix — extend `homelab-admin.service` unit `Environment=PATH=` to include `/usr/local/bin`, or use `BindReadOnlyPaths=/usr/local/bin/sops`. See ROADMAP.md Backlog.
 
 ### Resolved Pre-Phase-12 Todos (closed 2026-04-17 by Plan 12-03)
@@ -104,6 +109,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-19T08:51:41.124Z
-Stopped at: Completed 17.1-04-PLAN.md (ingress + tailscale accept-routes fix)
+Last session: 2026-04-19T09:00:00.000Z
+Stopped at: Completed 17.1-05-PLAN.md (phase 17.1 closed; CPU-only operator signoff; D-17 deferred)
 Resume file: None
