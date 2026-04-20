@@ -211,8 +211,13 @@ Plans:
 **Depends on**: Phase 17 (parallel-safe with Phases 18 and 19)
 **Requirements**: ALERT-01..06
 
-**Plans**: TBD
+**Plans:** 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 20-01-PLAN.md — /alerts page + /api/alerts/list + SWR table (ALERT-01, ALERT-02, ALERT-06)
+- [ ] 20-02-PLAN.md — claude-usage.yml rule migration + promtool tests + ALERTMANAGER_URL env (ALERT-03, ALERT-04)
+- [ ] 20-03-PLAN.md — Telegram E2E smoke ritual (ALERT-05)
 
 ---
 

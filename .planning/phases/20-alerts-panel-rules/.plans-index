@@ -1,0 +1,4 @@
+# Phase 20 plans index (for orchestrator cross-ref)
+20-01-PLAN.md — /alerts page + /api/alerts/list + SWR table (ALERT-01, ALERT-02, ALERT-06) — wave 1
+20-02-PLAN.md — claude-usage.yml migration + promtool tests + ALERTMANAGER_URL ansible (ALERT-03, ALERT-04) — wave 1
+20-03-PLAN.md — Telegram E2E smoke ritual (ALERT-05) — wave 2, depends on 20-02
