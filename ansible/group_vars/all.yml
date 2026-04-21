@@ -36,3 +36,11 @@ claude_usage_exporter:
   install_dir: /opt/claude-usage-exporter
   poll_interval: 300
   reload_interval: 30
+
+# ── v3.0 Phase 13 gap closure (Plan 13-06) — SOPS age recipients for re-encrypt
+# Used by homelab-admin.service runtime when sops -e re-writes
+# secrets/claude-tokens.sops.yaml after a mutation. Order matters only for
+# human grep — sops treats the set as unordered.
+homelab_admin_age_recipients:
+  - age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp  # operator workstation
+  - age12hpz529aeuwq0nlqh5ccxe055ghqtzd36t7d548u36er57kx6p0qg4q5pv  # mcow runtime (Plan 13-06)

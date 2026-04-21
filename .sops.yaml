@@ -4,8 +4,12 @@ creation_rules:
   # keeps labels/metadata greppable in the checked-in file.
   - path_regex: secrets/claude-tokens\.sops\.yaml$
     encrypted_regex: '^(tokens|value)$'
-    age: age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp
+    age: >-
+      age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp,
+      age12hpz529aeuwq0nlqh5ccxe055ghqtzd36t7d548u36er57kx6p0qg4q5pv
 
   # All other repo secrets — catch-all, full-file encryption.
   - path_regex: secrets/.*\.sops\.yaml$
-    age: age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp
+    age: >-
+      age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp,
+      age12hpz529aeuwq0nlqh5ccxe055ghqtzd36t7d548u36er57kx6p0qg4q5pv
