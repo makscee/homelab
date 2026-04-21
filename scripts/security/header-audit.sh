@@ -25,10 +25,12 @@ check "HSTS max-age >= 31536000"                       '^strict-transport-securi
 check "X-Frame-Options: DENY"                          '^x-frame-options:[[:space:]]*DENY'
 check "Referrer-Policy: strict-origin-when-cross-origin" '^referrer-policy:[[:space:]]*strict-origin-when-cross-origin'
 
-# Separate fail if CSP contains unsafe-inline
+# WARN (not FAIL) if CSP contains unsafe-inline — SEC-11 deferred to v3.1 per
+# operator decision 2026-04-21 (internal 2-user panel + GitHub OAuth gated;
+# strict CSP belongs in v3.1 hardening). Mirrors Phase 17.1 WARN-not-FAIL pattern.
+# HSTS, X-Frame-Options, Referrer-Policy above remain FAIL-gated.
 if echo "$HEADERS" | grep -i '^content-security-policy:' | grep -qi 'unsafe-inline'; then
-  echo "[FAIL] CSP contains unsafe-inline"
-  fail=1
+  echo "[WARN] CSP contains unsafe-inline — SEC-11 deferred to v3.1 (nonce-based CSP)"
 else
   echo "[ok] CSP has no unsafe-inline"
 fi
