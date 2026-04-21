@@ -24,13 +24,19 @@ if [ ! -f "$SOPS_FILE" ]; then
   exit 1
 fi
 
-# Extract top-level SOPS keys via yq — no value decryption. We only need NAMES.
-if ! command -v yq >/dev/null 2>&1; then
-  echo "[scan] FAIL — yq not installed (brew install yq or apt install yq)"
-  exit 1
-fi
-
-KEYS=$(yq -r 'keys[] | select(. != "sops")' "$SOPS_FILE")
+# Extract top-level SOPS keys via awk — no value decryption, just NAMES.
+# SOPS-YAML keeps top-level keys unencrypted (only values are ENC[...]), so a
+# pure awk pass is sufficient and avoids a yq dependency on operator machines.
+# Match: start-of-line identifier followed by ":" — skip the "sops:" metadata block.
+KEYS=$(awk '
+  /^sops:[[:space:]]*$/ { insops=1; next }
+  /^[^[:space:]#]/ { insops=0 }
+  insops { next }
+  /^[A-Za-z_][A-Za-z0-9_]*:/ {
+    k=$1; sub(/:.*$/,"",k);
+    if (k != "sops") print k
+  }
+' "$SOPS_FILE")
 KEY_COUNT=$(echo "$KEYS" | grep -c . || true)
 echo "[scan] checking $STATIC for leakage of $KEY_COUNT SOPS key names"
 echo "$KEYS" | sed 's/^/  - /'
@@ -44,10 +50,21 @@ while IFS= read -r k; do
   fi
 done <<< "$KEYS"
 
-# Well-known token prefixes — fail-fast on raw token leakage regardless of key name.
-for PREFIX in 'sk-ant-oat01-' 'sk-ant-api03-' 'ghp_' 'github_pat_' 'ghs_' 'gho_'; do
-  if grep -rIn --include='*.js' --include='*.json' -- "$PREFIX" "$STATIC" 2>/dev/null; then
-    echo "[scan] LEAK: token prefix '$PREFIX' present in client static bundle"
+# Well-known token prefixes — fail-fast on raw token leakage.
+# Pattern requires prefix + >=20 key-charset chars to distinguish a real
+# leaked token from UI placeholder strings (e.g. "sk-ant-oat01-...") and
+# regex validators in bundled zod schemas (e.g. /^sk-ant-oat01-[A-Za-z0-9_-]+$/).
+PATTERNS=(
+  'sk-ant-oat01-[A-Za-z0-9_-]{20,}'
+  'sk-ant-api03-[A-Za-z0-9_-]{20,}'
+  'ghp_[A-Za-z0-9]{30,}'
+  'github_pat_[A-Za-z0-9_]{30,}'
+  'ghs_[A-Za-z0-9]{30,}'
+  'gho_[A-Za-z0-9]{30,}'
+)
+for PAT in "${PATTERNS[@]}"; do
+  if grep -rInE --include='*.js' --include='*.json' -- "$PAT" "$STATIC" 2>/dev/null; then
+    echo "[scan] LEAK: token-like string matching '$PAT' in client static bundle"
     LEAKED=1
   fi
 done
