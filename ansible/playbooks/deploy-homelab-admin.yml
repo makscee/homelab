@@ -281,6 +281,32 @@
     - name: Provision /var/lib/homelab-admin for audit SQLite DB
       ansible.builtin.include_tasks: tasks/homelab-admin-audit-dir.yml
 
+    # ── Stage 7c — audit.db backup (Phase 22 D-22-14) ───────────────────────
+    - name: Ensure /var/backups/homelab-admin exists (root-only)
+      ansible.builtin.file:
+        path: /var/backups/homelab-admin
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Install audit.db backup script to /usr/local/sbin
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/scripts/launch/backup-audit-db.sh"
+        dest: /usr/local/sbin/backup-audit-db.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install audit.db backup cron (Phase 22 D-22-14)
+      ansible.builtin.cron:
+        name: "homelab-admin audit.db backup"
+        minute: "17"
+        hour: "3"
+        user: root
+        job: "/usr/local/sbin/backup-audit-db.sh >> /var/log/homelab-admin-backup.log 2>&1"
+        state: present
+
     # ── Stage 8 — systemd unit install ──────────────────────────────────────
     - name: Install homelab-admin.service unit
       ansible.builtin.copy:
