@@ -87,6 +87,23 @@ groups:
         annotations:
           summary: "Alertmanager is unreachable from Prometheus"
 
+  - name: homelab.admin
+    interval: 1m
+    rules:
+
+      # --- homelab-admin self-monitoring (D-22-17, plan 22-06) ---
+      - alert: HomelabAdminDown
+        expr: up{service="homelab-admin"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: homelab-admin
+          phase: "22"
+        annotations:
+          summary: "Homelab admin dashboard is down"
+          description: "homelab-admin.service on mcow has been unreachable for >2m. Check systemctl status homelab-admin and journalctl -u homelab-admin on mcow. Runbook §9 (Common Failure Modes)."
+          runbook_url: "file:///Users/admin/hub/workspace/homelab/.planning/milestones/v3.0-RUNBOOK.md#9-common-failure-modes"
+
   - name: homelab.claude-5h
     interval: 1m
     rules:

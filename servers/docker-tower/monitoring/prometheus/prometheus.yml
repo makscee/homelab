@@ -41,3 +41,19 @@ scrape_configs:
     scrape_interval: 60s
     static_configs:
       - targets: ['100.101.0.9:9101']
+
+  # homelab-admin self-monitoring (D-22-17, plan 22-06)
+  # Scrapes /api/health over HTTPS. Endpoint returns JSON (not Prometheus text
+  # format); fallback_scrape_protocol keeps `up` metric populated without a
+  # parse error. Any non-2xx → up=0 → HomelabAdminDown alert.
+  - job_name: 'homelab-admin'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metrics_path: '/api/health'
+    scheme: 'https'
+    fallback_scrape_protocol: 'PrometheusText0.0.4'
+    static_configs:
+      - targets: ['homelab.makscee.ru']
+        labels:
+          service: 'homelab-admin'
+          host: 'mcow'

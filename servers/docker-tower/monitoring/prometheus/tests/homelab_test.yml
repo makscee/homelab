@@ -28,13 +28,13 @@ tests:
               description: "node-exporter on 100.101.0.8:9100 has been unreachable for 5 minutes."
               runbook: "servers/100.101.0.8:9100/inventory.md"
 
-  # ─── DiskUsageCritical — (size-avail)/size > 0.90 for 5m ──────────────────
+  # ─── DiskUsageCritical — (size-avail)/size > 0.98 for 5m ──────────────────
   - interval: 1m
     input_series:
       - series: 'node_filesystem_size_bytes{fstype="ext4",instance="100.101.0.9:9100",mountpoint="/",job="node"}'
         values: '100 100 100 100 100 100 100 100'
       - series: 'node_filesystem_avail_bytes{fstype="ext4",instance="100.101.0.9:9100",mountpoint="/",job="node"}'
-        values: '5 5 5 5 5 5 5 5'
+        values: '1 1 1 1 1 1 1 1'
     alert_rule_test:
       - eval_time: 7m
         alertname: DiskUsageCritical
@@ -47,8 +47,8 @@ tests:
               fstype: "ext4"
               job: "node"
             exp_annotations:
-              summary: "Disk >90% on 100.101.0.9:9100 (/)"
-              description: "Disk / is 95% full."
+              summary: "Disk >98% on 100.101.0.9:9100 (/)"
+              description: "Disk / is 99% full."
 
   # ─── PrometheusSelfScrapeFailure — up{job=prometheus}==0 for 2m ───────────
   - interval: 1m
@@ -89,6 +89,28 @@ tests:
             exp_annotations:
               summary: "Container void-bot restarting on 100.101.0.9:8080"
               description: "Container void-bot has restarted 4 times in 15 minutes."
+
+  # ─── HomelabAdminDown — up{service=homelab-admin}==0 for 2m (D-22-17) ─────
+  - interval: 1m
+    input_series:
+      - series: 'up{job="homelab-admin",service="homelab-admin",host="mcow",instance="homelab.makscee.ru"}'
+        values: '0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: HomelabAdminDown
+        exp_alerts:
+          - exp_labels:
+              alertname: HomelabAdminDown
+              severity: critical
+              service: homelab-admin
+              phase: "22"
+              host: mcow
+              job: homelab-admin
+              instance: "homelab.makscee.ru"
+            exp_annotations:
+              summary: "Homelab admin dashboard is down"
+              description: "homelab-admin.service on mcow has been unreachable for >2m. Check systemctl status homelab-admin and journalctl -u homelab-admin on mcow. Runbook §9 (Common Failure Modes)."
+              runbook_url: "file:///Users/admin/hub/workspace/homelab/.planning/milestones/v3.0-RUNBOOK.md#9-common-failure-modes"
 
   # ─── MemoryPressure — MemAvailable/MemTotal < 0.10 for 10m ────────────────
   - interval: 1m
