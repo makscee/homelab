@@ -19,6 +19,11 @@
       - jellyfin-ffmpeg7
       - intel-media-va-driver-non-free
       - vainfo   # Debian 12 packaging; Ubuntu ships this binary as `libva-utils`
+    jellyfin_font_packages:
+      # Fallback fonts for libass/ASS subtitle rendering when mkv-embedded
+      # fonts are missing or attachment extraction misses (anime .ass tracks).
+      - fonts-noto-cjk
+      - fonts-noto-core
 
   tasks:
     - name: Ensure keyrings dir
@@ -69,6 +74,26 @@
         name: "{{ jellyfin_packages }}"
         state: present
         update_cache: true
+
+    - name: Install fallback fonts for ASS subtitle rendering
+      ansible.builtin.apt:
+        name: "{{ jellyfin_font_packages }}"
+        state: present
+
+    - name: Enable ASS subtitle fallback font in encoding.xml
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/encoding.xml
+        regexp: '<EnableFallbackFont>.*</EnableFallbackFont>'
+        line: '  <EnableFallbackFont>true</EnableFallbackFont>'
+      notify: Restart jellyfin
+
+    - name: Set fallback font path in encoding.xml
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/encoding.xml
+        regexp: '<FallbackFontPath>.*</FallbackFontPath>'
+        line: '  <FallbackFontPath>/usr/share/fonts/opentype/noto</FallbackFontPath>'
+        insertafter: '<EnableFallbackFont>'
+      notify: Restart jellyfin
 
     - name: Hold Jellyfin packages (Ansible-managed upgrades only — D-06)
       ansible.builtin.dpkg_selections:
