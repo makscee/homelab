@@ -3,6 +3,7 @@
 > **DECOMMISSIONED 2026-04-15** — Alertmanager moved to mcow.
 > See `servers/mcow/monitoring/alertmanager/README.md` for the live deploy flow.
 > Volume `monitoring_alertmanager-data` on docker-tower preserved until 2026-04-22 for rollback.
+> Phase 20 `ClaudeUsageSmokeTest` ritual lives in the mcow README (§Smoke-Test Ritual).
 
 Alertmanager is part of the monitoring stack on docker-tower (`docker-compose.monitoring.yml`).
 It routes alerts from Prometheus to Telegram via a Telegram Bot.

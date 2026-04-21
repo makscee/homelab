@@ -75,3 +75,50 @@ Wait ~30s for group_wait to fire. The alert should appear in the Telegram chat.
 
 Alertmanager publishes `:9093` on `100.101.0.9` (Tailnet IP) — **never** `0.0.0.0`.
 Verified by compose YAML port string `100.101.0.9:9093:9093`.
+
+## Smoke-Test Ritual (Phase 20 / ALERT-05)
+
+Prove the Prometheus → Alertmanager → Telegram path end-to-end whenever the
+bot token rotates, the AM host moves, or Moscow ISP egress behavior shifts.
+
+1. Add the `ClaudeUsageSmokeTest` rule to
+   `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml`:
+
+   ```yaml
+   - alert: ClaudeUsageSmokeTest
+     expr: vector(1)
+     for: 0m
+     labels:
+       severity: warning
+       smoke_test: "true"
+     annotations:
+       summary: "Smoke test — Telegram E2E (ignore, rule will be removed)"
+       description: "Phase 20 ALERT-05 smoke. If you see this, E2E works."
+   ```
+
+2. Deploy to docker-tower (rule file + Prometheus reload) via
+   `ansible-playbook ansible/playbooks/deploy-docker-tower.yml` (or `scp` +
+   `POST http://docker-tower:9090/-/reload` if ansible is unavailable).
+3. Confirm the rule is loaded:
+
+   ```bash
+   ssh root@docker-tower "curl -fsS http://localhost:9090/api/v1/rules | grep -q ClaudeUsageSmokeTest"
+   ```
+
+4. Wait ~30s for group_wait to dispatch. Run
+   `bash scripts/smoke-telegram-e2e.sh` — the script greps
+   `alertmanager_notifications_failed_total{integration="telegram"}` on
+   `100.101.0.9:9093/metrics` and fails if any reason bucket is non-zero.
+5. Verify the message landed in chat `193835258`. Two options:
+   - Operator: open Telegram, look for the "Smoke test — Telegram E2E" message.
+   - Automated: run `python ~/hub/telethon/tests/smoke_alert_check.py`
+     which resolves the homelab bot DM and asserts the smoke summary exists
+     within the last `WINDOW_SECONDS` (default 600).
+6. Remove the `ClaudeUsageSmokeTest` rule block from `claude-usage.yml` and
+   redeploy. Commit both changes separately (`add smoke rule` + `remove smoke
+   rule`) with Phase 20 / ALERT-05 references in the message.
+
+Note: `alertmanager_notifications_failed_total` counts Telegram API attempts,
+not deliveries — Moscow ISP can L4-block Telegram with the API still
+returning 200. Operator/telethon verification in step 5 is the ground truth.
+See memory `project_mcow_egress_lesson`.
