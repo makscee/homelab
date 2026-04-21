@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: executing
 stopped_at: Phase 20 UAT complete (commit 46ccb76). Security review pending.
-last_updated: "2026-04-21T20:40:00.000Z"
-last_activity: 2026-04-21 -- Phase 22 plan 05 complete (SEC-08 closed, v3.0-SECURITY.md aggregated)
+last_updated: "2026-04-21T17:18:37.567Z"
+last_activity: 2026-04-21 -- Phase 22 plan 05 complete
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 39
-  completed_plans: 39
+  completed_plans: 44
   percent: 100
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 ## Current Position
 
 Phase: 22 (Security Review + Launch)
-Plan: 22-05 complete (SEC-08 D-22-10/11/12/13 closed; v3.0-SECURITY.md aggregated 68 threats, 0 open across non-gap phases). SEC-01 + SEC-11 deferred to v3.1.
-Prior plans complete: 22-01, 22-02, 22-03, 22-05. 22-04 + 22-06 remaining.
-Status: Ready to execute 22-04 (ui-kit molecules + admin migration) then 22-06 (launch self-monitoring + handoff)
-Next: `/gsd-execute-phase 22-04` or `/gsd-execute-phase 22-06` per wave order
-Last activity: 2026-04-21 -- Phase 22 plan 05 complete
+Plan: 22-06 complete (D-22-17 self-monitoring, D-22-18 DNS/TLS gate, D-22-19 operator handoff README). `up{service="homelab-admin"}==1` live; `HomelabAdminDown` alert proven via promtool; cert valid 85 days.
+Prior plans complete: 22-01, 22-02, 22-03, 22-05, 22-06. Only 22-04 remaining.
+Status: Wave 2 launch-gate done. 22-04 (ui-kit molecules + admin migration) is the last open plan in Phase 22.
+Next: `/gsd-execute-phase 22-04`
+Last activity: 2026-04-21 -- Phase 22 plan 06 complete (self-monitoring + handoff)
 
 ## Performance Metrics
 

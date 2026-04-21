@@ -89,7 +89,7 @@
 - [x] **SEC-05**: Zod schema validation on every Route Handler input; Drizzle prepared statements for every query (no raw SQL)
 - [x] **SEC-06**: GitHub OAuth state param + PKCE enforced (Auth.js default — verify)
 - [x] **SEC-07**: Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, short TTL (8h) with rolling refresh
-- [ ] **SEC-08**: Security review phase before launch: `bun audit`, bundle analysis for secret leakage, header-spoofing integration test, Proxmox token scope audit
+- [x] **SEC-08**: Security review phase before launch: `bun audit`, bundle analysis for secret leakage, header-spoofing integration test, Proxmox token scope audit
 
 ## Future Requirements (Deferred to v3.x / later)
 

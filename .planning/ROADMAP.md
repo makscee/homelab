@@ -251,7 +251,7 @@ Plans:
 - [ ] 22-03-PLAN.md — launch backup/restore drill + v3.0 runbook + rollback doc (SEC-08)
 - [ ] 22-04-PLAN.md — ui-kit molecules + apps/admin migration to @ui-kit (UI-02)
 - [ ] 22-05-PLAN.md — security aggregation + header-spoofing/proxmox-token/tailnet-ingress tests (SEC-08)
-- [ ] 22-06-PLAN.md — self-monitoring + DNS/TLS check + operator handoff README (SEC-08)
+- [x] 22-06-PLAN.md — self-monitoring + DNS/TLS check + operator handoff README (SEC-08)
 
 ---
 
