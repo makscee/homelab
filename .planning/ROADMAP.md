@@ -48,8 +48,10 @@ Phase 14 (Overview + Audit Log) → depends on Phase 13
 Phases 15, 16, 17 (Tailwind v4, TypeScript 6, ESLint 10) → frontend stack upgrades, sequential after Phase 14
 Phases 18, 19, 20 (VoidNet, Proxmox, Alerts) → parallel-safe after Phase 17
 Phase 21 (Web Terminal) → depends on Phase 19 (needs Proxmox LXC context)
-Phase 22 (Security + Launch) → depends on all others
+Phase 22 (Security + Launch) → depends on 12-17, 19, 20 (Phases 18 and 21 deferred to v4.0)
 ```
+
+**Scope cut 2026-04-21:** Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0. v3.0 ships with Phase 22 directly after Phase 20 security review.
 
 - [x] **Phase 12: Infra Foundation** - Next.js scaffold, Caddy site block, GitHub OAuth, secrets wiring, base layout, security headers (completed 2026-04-17)
 - [x] **Phase 13: Claude Tokens Page** - SOPS registry CRUD, per-token gauges, history chart, exporter rebind (v2.0 debt) (completed 2026-04-17)
@@ -57,10 +59,10 @@ Phase 22 (Security + Launch) → depends on all others
 - [ ] **Phase 15: Tailwind v4 Migration (3.4 → 4.2) + tailwind-merge 3** - Frontend stack upgrade
 - [x] **Phase 16: TypeScript 6.0 Upgrade with Deprecation Fixes** - Frontend stack upgrade (completed 2026-04-17)
 - [x] **Phase 17: ESLint 10 + Node Types 24 Upgrade** - Frontend stack upgrade (completed 2026-04-17)
-- [ ] **Phase 18: VoidNet Management** - Proxy to voidnet-api admin JSON endpoints: users, credits, boxes (parallel-safe after Phase 17)
-- [ ] **Phase 19: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (parallel-safe after Phase 17)
-- [ ] **Phase 20: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 17)
-- [ ] **Phase 21: Web Terminal** - xterm.js + ssh2 PTY relay; node-pty feasibility spike required first
+- [~] **Phase 18: VoidNet Management** - DEFERRED to v4.0 (2026-04-21) — blocked on voidnet-api admin JSON endpoints; not required to ship v3.0
+- [x] **Phase 19: Proxmox Ops** - LXC lifecycle management via Proxmox REST API (read-only token; completed 2026-04-21, UAT 4/2/0)
+- [x] **Phase 20: Alerts Panel + Rules** - Alertmanager consumer + Prometheus rules + Telegram delivery (parallel-safe after Phase 17) (completed 2026-04-21)
+- [~] **Phase 21: Web Terminal** - DEFERRED to v4.0 (2026-04-21) — node-pty LXC spike + xterm.js integration; not required to ship v3.0
 - [ ] **Phase 22: Security Review + Launch** - Hardening, audit, ui-kit extraction finalization, launch checklist
 
 ## Phase Details
@@ -84,7 +86,7 @@ Phase 22 (Security + Launch) → depends on all others
 **Depends on**: Phase 12
 **Requirements**: TOKEN-01..07, SEC-03
 
-**Plans**: 7 plans (5 complete, 2 gap-closure pending)
+**Plans**: 7 plans (all complete)
 **UI hint**: yes
 
 Plans:
@@ -94,7 +96,7 @@ Plans:
 - [x] 14-04-PLAN.md — /overview host tiles + PromQL
 - [x] 14-05-PLAN.md — alerts card + nav badge
 - [x] 14-06-PLAN.md — gap closure: bun:sqlite shim runtime proxy (UAT tests 3, 4, 6)
-- [ ] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
+- [x] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
 
 ---
 
@@ -105,7 +107,7 @@ Plans:
 **Depends on**: Phase 13
 **Requirements**: DASH-01..05, INFRA-05
 
-**Plans**: 7 plans (5 complete, 2 gap-closure pending)
+**Plans**: 7 plans (all complete)
 **UI hint**: yes
 
 Plans:
@@ -114,8 +116,8 @@ Plans:
 - [x] 14-03-PLAN.md — emitAudit wiring across mutation routes
 - [x] 14-04-PLAN.md — /overview host tiles + PromQL
 - [x] 14-05-PLAN.md — alerts card + nav badge
-- [ ] 14-06-PLAN.md — gap closure: bun:sqlite shim runtime proxy (UAT tests 3, 4, 6)
-- [ ] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
+- [x] 14-06-PLAN.md — gap closure: bun:sqlite shim runtime proxy (UAT tests 3, 4, 6)
+- [x] 14-07-PLAN.md — gap closure: PROMETHEUS_URL env + default (UAT test 5)
 
 ---
 
@@ -211,13 +213,13 @@ Plans:
 **Depends on**: Phase 17 (parallel-safe with Phases 18 and 19)
 **Requirements**: ALERT-01..06
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 Plans:
 - [x] 20-01-PLAN.md — /alerts page + /api/alerts/list + SWR table (ALERT-01, ALERT-02, ALERT-06)
 - [x] 20-02-PLAN.md — claude-usage.yml rule migration + promtool tests + ALERTMANAGER_URL env (ALERT-03, ALERT-04)
-- [ ] 20-03-PLAN.md — Telegram E2E smoke ritual (ALERT-05)
+- [x] 20-03-PLAN.md — Telegram E2E smoke ritual (ALERT-05)
 
 ---
 
@@ -258,7 +260,7 @@ Plans:
 | 17.1. Jellyfin LXC Migration | v3.0 | 5/5 | Complete    | 2026-04-21 |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 19. Proxmox Ops | v3.0 | 2/3 | In Progress|  |
-| 20. Alerts Panel + Rules | v3.0 | 2/3 | In Progress|  |
+| 20. Alerts Panel + Rules | v3.0 | 3/3 | Complete    | 2026-04-21 |
 | 21. Web Terminal | v3.0 | 0/? | Not started | - |
 | 22. Security Review + Launch | v3.0 | 0/? | Not started | - |
 

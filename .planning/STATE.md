@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Phase 20 executed (3/3 plans shipped), awaiting UAT
-last_updated: "2026-04-21T12:05:00.000Z"
+stopped_at: Completed Phase 20 UAT (8 pass / 1 skip / 0 issues)
+last_updated: "2026-04-21T14:00:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 12
-  completed_phases: 10
-  total_plans: 40
-  completed_plans: 40
+  completed_phases: 9
+  total_plans: 39
+  completed_plans: 39
   percent: 100
 ---
 
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 20
-Plan: All shipped (20-01, 20-02, 20-03 summaries present)
-Prior phase: 19 (proxmox-ops-readonly) — COMPLETE (UAT 4 pass / 2 skip / 0 issues, G1+G2 resolved)
-Status: Phase 20 executed — ready for verification (no UAT yet)
+Phase: 21 (Web Terminal — not started; node-pty feasibility spike required first)
+Plan: Not started
+Prior phase: 20 (alerts-panel-rules) — COMPLETE (UAT 8 pass / 1 skip / 0 issues, committed 46ccb76)
+Status: Phase 20 verified and closed. Security review (/gsd-secure-phase 20) still pending — required before advancing.
+Next open phases in v3.0: 22 (Security Review + Launch). Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0 (scope cut 2026-04-21). Phase 15 (Tailwind) already landed via plans 15-01/15-02.
+Pre-22 gate: run `/gsd-secure-phase 20` (outstanding security review on alerts phase).
 Last activity: 2026-04-21
-
-Progress: [          ] 0% — v3.0 not started
 
 ## Performance Metrics
 
 **v1.0 reference (shipped 2026-04-15):**
 
-- Total plans completed: 38
+- Total plans completed: 41
 - Timeline: 2026-04-10 → 2026-04-15 (6 days)
 
 **v3.0 scope:** 8 phases (12-19), 58 requirements across 9 categories
@@ -113,6 +113,6 @@ Progress: [          ] 0% — v3.0 not started
 
 ## Session Continuity
 
-Last session: 2026-04-19T10:50:20.066Z
-Stopped at: Completed 19-02-PLAN.md
+Last session: 2026-04-21T14:00:00.000Z
+Stopped at: Phase 20 UAT complete (commit 46ccb76). Security review pending.
 Resume file: None
