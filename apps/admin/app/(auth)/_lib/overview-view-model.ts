@@ -28,6 +28,14 @@ export type ClaudeUsageEntry = {
   session: number | null;
   /** 7d weekly utilization ratio 0..1, or null if no sample yet. */
   weekly: number | null;
+  /** Seconds until 5h window resets, or null if unknown. */
+  resetSeconds5h: number | null;
+  /** Seconds until 7d window resets, or null if unknown. */
+  resetSeconds7d: number | null;
+  /** [unixSec, pct] sparkline for 5h window (~last 5h, 5-min step). */
+  sparkline5h: Array<[number, number]>;
+  /** [unixSec, pct] sparkline for 7d window (~last 7d, 1-hour step). */
+  sparkline7d: Array<[number, number]>;
 };
 
 export type OverviewResponse = {

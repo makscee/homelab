@@ -2,8 +2,10 @@ import "server-only";
 
 import {
   queryInstant,
+  queryRange,
   queryRangeByInstance,
   type PromInstantSample,
+  type PromRangeSeries,
 } from "@/lib/prometheus.server";
 import {
   HOST_BY_INSTANCE,
@@ -24,11 +26,16 @@ const Q_L5 = `node_load5`;
 const Q_L15 = `node_load15`;
 const Q_LAST = `timestamp(up{job="node"})`;
 const Q_NETRX = `sum by(instance)(rate(node_network_receive_bytes_total{device!~"lo|veth.*|docker.*|br-.*|tailscale.*"}[1m]))`;
-// Claude usage — exporter emits one series per token label.
-// 0..1 fraction; null in the view-model means "no sample yet"
-// (new token / exporter down / hasn't polled once).
-const Q_CLAUDE_SESSION = `claude_code_session_used_ratio`;
-const Q_CLAUDE_WEEKLY = `claude_code_weekly_used_ratio`;
+// Claude usage — exporter (servers/mcow/claude-usage-exporter/exporter.py)
+// emits one series per token label as `claude_usage_{5h,7d}_utilization`
+// (0..1) plus absolute reset timestamps. Label key is `name`, not `label`.
+// null in the view-model means "no sample yet" (new token / exporter down).
+const Q_CLAUDE_SESSION = `claude_usage_5h_utilization`;
+const Q_CLAUDE_WEEKLY = `claude_usage_7d_utilization`;
+const Q_CLAUDE_RESET_5H = `claude_usage_5h_reset_timestamp - time()`;
+const Q_CLAUDE_RESET_7D = `claude_usage_7d_reset_timestamp - time()`;
+const Q_CLAUDE_RANGE_5H = `claude_usage_5h_utilization * 100`;
+const Q_CLAUDE_RANGE_7D = `claude_usage_7d_utilization * 100`;
 
 /**
  * Merge session + weekly claude samples into one ClaudeUsageEntry per token
@@ -38,29 +45,50 @@ const Q_CLAUDE_WEEKLY = `claude_code_weekly_used_ratio`;
 export function buildClaudeEntries(
   sessionSamples: PromInstantSample[],
   weeklySamples: PromInstantSample[],
+  reset5hSamples: PromInstantSample[] = [],
+  reset7dSamples: PromInstantSample[] = [],
+  sparkline5h: PromRangeSeries[] = [],
+  sparkline7d: PromRangeSeries[] = [],
 ): ClaudeUsageEntry[] {
-  const byLabelSession: Record<string, number> = {};
-  for (const s of sessionSamples) {
-    const label = s.labels.label;
-    if (!label) continue;
-    const n = Number(s.value);
-    if (Number.isFinite(n)) byLabelSession[label] = n;
-  }
-  const byLabelWeekly: Record<string, number> = {};
-  for (const s of weeklySamples) {
-    const label = s.labels.label;
-    if (!label) continue;
-    const n = Number(s.value);
-    if (Number.isFinite(n)) byLabelWeekly[label] = n;
-  }
-  const labels = new Set([
-    ...Object.keys(byLabelSession),
-    ...Object.keys(byLabelWeekly),
+  const indexInstant = (samples: PromInstantSample[]) => {
+    const out: Record<string, number> = {};
+    for (const s of samples) {
+      const name = s.labels.name;
+      if (!name) continue;
+      const n = Number(s.value);
+      if (Number.isFinite(n)) out[name] = n;
+    }
+    return out;
+  };
+  const indexRange = (series: PromRangeSeries[]) => {
+    const out: Record<string, Array<[number, number]>> = {};
+    for (const s of series) {
+      const name = s.labels.name;
+      if (!name) continue;
+      out[name] = s.samples;
+    }
+    return out;
+  };
+
+  const byNameSession = indexInstant(sessionSamples);
+  const byNameWeekly = indexInstant(weeklySamples);
+  const byNameReset5h = indexInstant(reset5hSamples);
+  const byNameReset7d = indexInstant(reset7dSamples);
+  const byNameSpark5h = indexRange(sparkline5h);
+  const byNameSpark7d = indexRange(sparkline7d);
+
+  const names = new Set([
+    ...Object.keys(byNameSession),
+    ...Object.keys(byNameWeekly),
   ]);
-  return [...labels].sort().map((label) => ({
+  return [...names].sort().map((label) => ({
     label,
-    session: byLabelSession[label] ?? null,
-    weekly: byLabelWeekly[label] ?? null,
+    session: byNameSession[label] ?? null,
+    weekly: byNameWeekly[label] ?? null,
+    resetSeconds5h: byNameReset5h[label] ?? null,
+    resetSeconds7d: byNameReset7d[label] ?? null,
+    sparkline5h: byNameSpark5h[label] ?? [],
+    sparkline7d: byNameSpark7d[label] ?? [],
   }));
 }
 
@@ -84,6 +112,8 @@ export async function getOverviewSnapshot(): Promise<OverviewResponse> {
   const nowUnix = Math.floor(now);
   const rangeEnd = new Date(nowUnix * 1000);
   const rangeStart = new Date((nowUnix - 15 * 60) * 1000);
+  const claude5hStart = new Date((nowUnix - 5 * 3600) * 1000);
+  const claude7dStart = new Date((nowUnix - 7 * 24 * 3600) * 1000);
 
   try {
     const [
@@ -99,6 +129,10 @@ export async function getOverviewSnapshot(): Promise<OverviewResponse> {
       netRxMap,
       claudeSession,
       claudeWeekly,
+      claudeReset5h,
+      claudeReset7d,
+      claudeSpark5h,
+      claudeSpark7d,
     ] = await Promise.all([
       queryInstant(Q_CPU).catch(() => []),
       queryInstant(Q_MEM).catch(() => []),
@@ -114,6 +148,14 @@ export async function getOverviewSnapshot(): Promise<OverviewResponse> {
       ),
       queryInstant(Q_CLAUDE_SESSION).catch(() => []),
       queryInstant(Q_CLAUDE_WEEKLY).catch(() => []),
+      queryInstant(Q_CLAUDE_RESET_5H).catch(() => []),
+      queryInstant(Q_CLAUDE_RESET_7D).catch(() => []),
+      queryRange(Q_CLAUDE_RANGE_5H, claude5hStart, rangeEnd, 300, {
+        revalidateSec: 60,
+      }).catch(() => [] as PromRangeSeries[]),
+      queryRange(Q_CLAUDE_RANGE_7D, claude7dStart, rangeEnd, 3600, {
+        revalidateSec: 60,
+      }).catch(() => [] as PromRangeSeries[]),
     ]);
 
     // uptimeRaw carries boot time (unix seconds); translate to seconds since
@@ -146,7 +188,14 @@ export async function getOverviewSnapshot(): Promise<OverviewResponse> {
       nowUnix: now,
     });
 
-    const claude = buildClaudeEntries(claudeSession, claudeWeekly);
+    const claude = buildClaudeEntries(
+      claudeSession,
+      claudeWeekly,
+      claudeReset5h,
+      claudeReset7d,
+      claudeSpark5h,
+      claudeSpark7d,
+    );
 
     return { ts: Date.now(), prometheusHealthy: true, hosts, claude };
   } catch {

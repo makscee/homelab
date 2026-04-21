@@ -4,7 +4,11 @@ import Link from "next/link";
 import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { thresholdClass } from "@/app/(auth)/tokens/_lib/view-model";
+import {
+  humanizeResetSeconds,
+  thresholdClass,
+} from "@/app/(auth)/tokens/_lib/view-model";
+import { Sparkline } from "@/app/(auth)/tokens/_components/Sparkline";
 import type {
   ClaudeUsageEntry,
   OverviewResponse,
@@ -43,51 +47,54 @@ const fetcher = async (url: string): Promise<OverviewResponse> => {
   return (await r.json()) as OverviewResponse;
 };
 
-function UsageBar({
+function UsageRow({
   label,
   ratio,
+  resetSeconds,
+  sparkline,
+  sparkFormat,
 }: {
   label: "5h usage" | "7d usage";
   ratio: number | null;
+  resetSeconds: number | null;
+  sparkline: Array<[number, number]>;
+  sparkFormat: "time" | "date";
 }) {
-  if (ratio === null) {
-    return (
-      <div className="flex items-center gap-3">
-        <span className="w-20 text-xs text-muted-foreground">{label}</span>
-        <div
-          role="progressbar"
-          aria-label={`${label}: pending`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={0}
-          className="h-2 flex-1 rounded bg-muted"
-        />
-        <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-          —
+  const pending = ratio === null;
+  const pct = pending ? 0 : Math.min(100, Math.max(0, ratio * 100));
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="text-muted-foreground tabular-nums">
+          resets in {humanizeResetSeconds(resetSeconds)}
         </span>
       </div>
-    );
-  }
-  const pct = Math.min(100, Math.max(0, ratio * 100));
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-20 text-xs text-muted-foreground">{label}</span>
-      <div
-        role="progressbar"
-        aria-label={`${label}: ${Math.round(pct)}%`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(pct)}
-        className="h-2 flex-1 overflow-hidden rounded bg-muted"
-      >
+      <div className="flex items-center gap-3">
         <div
-          className={cn("h-full", fillClassForRatio(ratio))}
-          style={{ width: `${pct}%` }}
+          role="progressbar"
+          aria-label={pending ? `${label}: pending` : `${label}: ${Math.round(pct)}%`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pct)}
+          className="h-2 flex-1 overflow-hidden rounded bg-muted"
+        >
+          {!pending && (
+            <div
+              className={cn("h-full", fillClassForRatio(ratio!))}
+              style={{ width: `${pct}%` }}
+            />
+          )}
+        </div>
+        <span className="w-10 text-right text-xs tabular-nums">
+          {pending ? "—" : `${Math.round(pct)}%`}
+        </span>
+        <Sparkline
+          samples={sparkline}
+          tooltipLabel={label}
+          labelFormat={sparkFormat}
         />
       </div>
-      <span className="w-10 text-right text-xs tabular-nums">
-        {Math.round(pct)}%
-      </span>
     </div>
   );
 }
@@ -113,8 +120,20 @@ export function ClaudeSummaryCard({ entry }: { entry: ClaudeUsageEntry }) {
             </p>
           ) : (
             <>
-              <UsageBar label="5h usage" ratio={entry.session} />
-              <UsageBar label="7d usage" ratio={entry.weekly} />
+              <UsageRow
+                label="5h usage"
+                ratio={entry.session}
+                resetSeconds={entry.resetSeconds5h}
+                sparkline={entry.sparkline5h}
+                sparkFormat="time"
+              />
+              <UsageRow
+                label="7d usage"
+                ratio={entry.weekly}
+                resetSeconds={entry.resetSeconds7d}
+                sparkline={entry.sparkline7d}
+                sparkFormat="date"
+              />
             </>
           )}
         </CardContent>

@@ -2,7 +2,12 @@
 
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 
-type Props = { samples: Array<[number, number]> };
+type Props = {
+  samples: Array<[number, number]>;
+  tooltipLabel?: string;
+  /** "date" = toLocaleDateString (default, 7d), "time" = toLocaleTimeString (5h). */
+  labelFormat?: "date" | "time";
+};
 
 /**
  * 96px wide, 24px tall trend line from the 7-day sparkline Prometheus range
@@ -11,7 +16,11 @@ type Props = { samples: Array<[number, number]> };
  * Empty state renders a muted placeholder block — per UI-SPEC §Empty state
  * "exporter healthy but token just added".
  */
-export function Sparkline({ samples }: Props) {
+export function Sparkline({
+  samples,
+  tooltipLabel = "7d usage",
+  labelFormat = "date",
+}: Props) {
   if (samples.length === 0) {
     return (
       <div
@@ -36,11 +45,13 @@ export function Sparkline({ samples }: Props) {
           <Tooltip
             formatter={(v) => [
               `${typeof v === "number" ? v.toFixed(0) : v}%`,
-              "7d usage",
+              tooltipLabel,
             ]}
             labelFormatter={(t) =>
               typeof t === "number"
-                ? new Date(t * 1000).toLocaleDateString()
+                ? labelFormat === "time"
+                  ? new Date(t * 1000).toLocaleTimeString()
+                  : new Date(t * 1000).toLocaleDateString()
                 : String(t)
             }
             contentStyle={{
