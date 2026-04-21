@@ -105,6 +105,7 @@
 - **SEC-09**: Fail2ban integration at Caddy
 - **SEC-10**: Age-based encrypt-at-rest for in-app secret storage
 - **SEC-01** (deferred from v3.0): Caddy per-IP rate limit on `/api/auth/*` — pick up via xcaddy self-build or successor module in v3.1
+- **SEC-11** (deferred from v3.0): Strict CSP (nonce-based, drop `unsafe-inline`) on homelab-admin. Deferred from v3.0 phase 22-02 2026-04-21 — internal 2-user panel, GitHub OAuth gated, XSS surface ≈ zero today; defense-in-depth against future regressions belongs in v3.1 hardening pass.
 
 ## Out of Scope
 
@@ -178,7 +179,8 @@
 | SEC-05 | Phase 12 | Complete |
 | SEC-06 | Phase 12 | Complete |
 | SEC-07 | Phase 12 | Complete |
-| SEC-08 | Phase 19 | Pending |
+| SEC-08 | Phase 22 | Complete |
+| SEC-11 | Phase 22 → v3.1 | Deferred |
 
 ---
 *Total active: 58 requirements across 9 categories (INFRA, UI, DASH, TOKEN, VOIDNET, PROXMOX, TERM, ALERT, SEC)*

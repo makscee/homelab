@@ -88,6 +88,7 @@ Last activity: 2026-04-21 -- Phase 22 planning complete
 - [Phase 19]: D-07 enforced: all proxmox fetches via undici.Agent with connect.ca pinned; no TLS-verify bypass
 - [Phase 19]: PROXMOX_TLS_SERVERNAME override not needed — tower cert SAN has DNS:tower
 - [Phase 22-02]: SEC-01 (Caddy per-IP rate limit) DEFERRED to v3.1 2026-04-21 — stock apt Caddy 2.6.2 on mcow lacks `rate_limit` module; `caddyserver.com/api/download` custom-build API verified broken (0-byte responses) from mcow + nether; operator chose defer over xcaddy self-build to accelerate launch. SEC-08 executed standalone in plan 22-02.
+- [Phase 22-02]: SEC-11 (strict CSP / nonce-based, drop `unsafe-inline`) DEFERRED to v3.1 2026-04-21 — internal 2-user admin panel, GitHub OAuth gated, XSS surface ≈ zero today; defense-in-depth belongs in v3.1 hardening pass. header-audit.sh downgraded to WARN on `unsafe-inline` (HSTS/X-Frame-Options/Referrer-Policy remain FAIL-gated). Plan 22-02 closed with SEC-08 evidence logged.
 
 ### Blockers/Concerns
 
