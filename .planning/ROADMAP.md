@@ -211,12 +211,12 @@ Plans:
 **Depends on**: Phase 17 (parallel-safe with Phases 18 and 19)
 **Requirements**: ALERT-01..06
 
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 **UI hint**: yes
 
 Plans:
-- [ ] 20-01-PLAN.md — /alerts page + /api/alerts/list + SWR table (ALERT-01, ALERT-02, ALERT-06)
-- [ ] 20-02-PLAN.md — claude-usage.yml rule migration + promtool tests + ALERTMANAGER_URL env (ALERT-03, ALERT-04)
+- [x] 20-01-PLAN.md — /alerts page + /api/alerts/list + SWR table (ALERT-01, ALERT-02, ALERT-06)
+- [x] 20-02-PLAN.md — claude-usage.yml rule migration + promtool tests + ALERTMANAGER_URL env (ALERT-03, ALERT-04)
 - [ ] 20-03-PLAN.md — Telegram E2E smoke ritual (ALERT-05)
 
 ---
@@ -258,7 +258,7 @@ Plans:
 | 17.1. Jellyfin LXC Migration | v3.0 | 5/5 | Complete | 2026-04-19 |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 19. Proxmox Ops | v3.0 | 2/3 | In Progress|  |
-| 20. Alerts Panel + Rules | v3.0 | 0/? | Not started | - |
+| 20. Alerts Panel + Rules | v3.0 | 2/3 | In Progress|  |
 | 21. Web Terminal | v3.0 | 0/? | Not started | - |
 | 22. Security Review + Launch | v3.0 | 0/? | Not started | - |
 

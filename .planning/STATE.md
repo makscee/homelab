@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
 stopped_at: Completed 19-02-PLAN.md
-last_updated: "2026-04-19T10:50:20.072Z"
-last_activity: 2026-04-19
+last_updated: "2026-04-21T08:30:34.389Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 12
-  completed_phases: 7
-  total_plans: 34
-  completed_plans: 33
+  completed_phases: 8
+  total_plans: 37
+  completed_plans: 36
   percent: 97
 ---
 
@@ -29,7 +29,7 @@ Phase: 17.1 (migrate-jellyfin-to-dedicated-lxc-on-tower) — COMPLETE (ready_for
 Plan: 5 of 5 complete (17.1-01..05 all shipped; operator UAT signoff 2026-04-19 CPU-only; D-17 HW transcode formally deferred until BIOS iGPU enable)
 Prior phase: 15 (tailwind-v4-migration) — COMPLETE (15-01 + 15-02 shipped + Playwright-verified on prod)
 Status: Phase complete — ready for verification
-Last activity: 2026-04-19
+Last activity: 2026-04-21
 
 Progress: [          ] 0% — v3.0 not started
 

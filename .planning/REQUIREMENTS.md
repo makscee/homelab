@@ -75,8 +75,8 @@
 
 - [ ] **ALERT-01**: Page `/alerts` shows current Alertmanager firing alerts with severity, summary, duration, labels
 - [ ] **ALERT-02**: Read-only for v3.0 (no ack/silence from UI) — link-out to Alertmanager web UI for those ops
-- [ ] **ALERT-03**: Prometheus alert rules for Claude Code quota (replaces v2.0 Phase 09 scope): `ClaudeWeeklyQuotaHigh` (≥0.80 for 15m), `ClaudeWeeklyQuotaCritical` (≥0.95 for 15m), `ClaudeExporterDown` (up==0 for 10m)
-- [ ] **ALERT-04**: Alert rules unit-tested via `promtool test rules` — file checked into `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml`
+- [x] **ALERT-03**: Prometheus alert rules for Claude Code quota (replaces v2.0 Phase 09 scope): `ClaudeWeeklyQuotaHigh` (≥0.80 for 15m), `ClaudeWeeklyQuotaCritical` (≥0.95 for 15m), `ClaudeExporterDown` (up==0 for 10m)
+- [x] **ALERT-04**: Alert rules unit-tested via `promtool test rules` — file checked into `servers/docker-tower/monitoring/prometheus/alerts/claude-usage.yml`
 - [ ] **ALERT-05**: Telegram delivery proven E2E — induced rule fire results in message landing in chat 193835258; `alertmanager_notifications_failed_total{integration="telegram"}` == 0 over smoke window
 - [ ] **ALERT-06**: Alert badge in shared nav layout (shows firing count on every page)
 
@@ -166,8 +166,8 @@
 | TERM-06 | Phase 18 | Pending |
 | ALERT-01 | Phase 17 | Pending |
 | ALERT-02 | Phase 17 | Pending |
-| ALERT-03 | Phase 17 | Pending |
-| ALERT-04 | Phase 17 | Pending |
+| ALERT-03 | Phase 17 | Complete |
+| ALERT-04 | Phase 17 | Complete |
 | ALERT-05 | Phase 17 | Pending |
 | ALERT-06 | Phase 17 | Pending |
 | SEC-01 | Phase 19 | Pending |
