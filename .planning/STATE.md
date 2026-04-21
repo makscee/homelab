@@ -4,8 +4,8 @@ milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: executing
 stopped_at: Phase 20 UAT complete (commit 46ccb76). Security review pending.
-last_updated: "2026-04-21T15:41:10.891Z"
-last_activity: 2026-04-21 -- Phase 22 planning complete
+last_updated: "2026-04-21T20:40:00.000Z"
+last_activity: 2026-04-21 -- Phase 22 plan 05 complete (SEC-08 closed, v3.0-SECURITY.md aggregated)
 progress:
   total_phases: 12
   completed_phases: 9
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 22 (Security Review + Launch — CONTEXT.md captured 2026-04-21)
-Plan: Not started — run `/gsd-plan-phase 22`
-Prior phase: 20 (alerts-panel-rules) — COMPLETE (UAT 8 pass / 1 skip / 0 issues, committed 46ccb76); 20-SECURITY.md 18/18 closed.
-Status: Ready to execute
-Next: `/gsd-plan-phase 22` — final v3.0 phase. Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0.
-Last activity: 2026-04-21 -- Phase 22 planning complete
+Phase: 22 (Security Review + Launch)
+Plan: 22-05 complete (SEC-08 D-22-10/11/12/13 closed; v3.0-SECURITY.md aggregated 68 threats, 0 open across non-gap phases). SEC-01 + SEC-11 deferred to v3.1.
+Prior plans complete: 22-01, 22-02, 22-03, 22-05. 22-04 + 22-06 remaining.
+Status: Ready to execute 22-04 (ui-kit molecules + admin migration) then 22-06 (launch self-monitoring + handoff)
+Next: `/gsd-execute-phase 22-04` or `/gsd-execute-phase 22-06` per wave order
+Last activity: 2026-04-21 -- Phase 22 plan 05 complete
 
 ## Performance Metrics
 
