@@ -255,7 +255,7 @@ Plans:
 | 15. Tailwind v4 Migration | v3.0 | 2/2 | Complete | 2026-04-19 |
 | 16. TypeScript 6.0 Upgrade | v3.0 | 1/1 | Complete   | 2026-04-17 |
 | 17. ESLint 10 + Node Types 24 | v3.0 | 1/1 | Complete   | 2026-04-17 |
-| 17.1. Jellyfin LXC Migration | v3.0 | 5/5 | Complete | 2026-04-19 |
+| 17.1. Jellyfin LXC Migration | v3.0 | 5/5 | Complete    | 2026-04-21 |
 | 18. VoidNet Management | v3.0 | 0/? | Not started | - |
 | 19. Proxmox Ops | v3.0 | 2/3 | In Progress|  |
 | 20. Alerts Panel + Rules | v3.0 | 2/3 | In Progress|  |
