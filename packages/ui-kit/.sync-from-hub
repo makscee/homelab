@@ -1,0 +1,4 @@
+hub-sha: 3183dd5ddb87be69e458b16ba698c0a2ef94cc63
+synced-at: 2026-04-21
+source: /Users/admin/hub/knowledge/standards/ui-kit/
+note: Vendored mirror of the hub ui-kit SoT (Decision A, 2026-04-21). Do not edit manually. Re-sync via scripts/sync-ui-kit.sh after hub changes.
