@@ -17,6 +17,7 @@ EnvironmentFile=/etc/homelab-admin/env
 Environment=NODE_ENV=production
 Environment=PORT=3847
 Environment=HOSTNAME=127.0.0.1
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
 # --bun forces Bun runtime for child processes (next CLI spawns node by default;
 # we need Bun globals so bun:sqlite native module resolves via the shim proxy).
 ExecStart=/usr/local/bin/bun --bun run start

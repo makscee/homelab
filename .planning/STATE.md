@@ -104,7 +104,6 @@ Progress: [          ] 0% — v3.0 not started
 - 2026-05-02: Phase 17.1 cleanup step 2 — purge `/opt/docker-configs/shared/jellyfin/` on docker-tower LXC 100 (`ssh root@docker-tower 'rm -rf /opt/docker-configs/shared/jellyfin'`) after 1 week of offline retention (D-15).
 - Phase 17.1 rollback drill (D-16, optional but recommended before 2026-04-25): exercise the rollback block in `17.1-03-CUTOVER-LOG.md` + `17.1-04-INGRESS-LOG.md` once during the soak window, confirm service restores in <5 min.
 - Phase 17.1 D-17 re-open (undated): when BIOS iGPU Multi-Monitor enabled on tower, re-run `bash scripts/verify-jellyfin-lxc.sh` — promote the 2 `check_warn` iHD blocks back to hard `check`; reconfirm VA-API transcode in Jellyfin dashboard.
-- Backlog 999.1: /tokens sops PATH fix — extend `homelab-admin.service` unit `Environment=PATH=` to include `/usr/local/bin`, or use `BindReadOnlyPaths=/usr/local/bin/sops`. See ROADMAP.md Backlog.
 
 ### Resolved Pre-Phase-12 Todos (closed 2026-04-17 by Plan 12-03)
 

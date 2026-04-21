@@ -43,12 +43,17 @@
     # Explicit play-level copies to work around Ansible 2.20 strict task-arg finalization.
     # group_vars/all.yml is the source of truth; these are resolved aliases for play scope.
     _bun_version: "{{ bun_version | default('1.1.38') }}"
+    # Plan 13-07 gap closure: sops binary pinned release (bump only with checksum revalidation).
+    # Source: https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.checksums.txt
+    _sops_version: "3.9.4"
+    _sops_linux_amd64_sha256: "5488e32bc471de7982ad895dd054bbab3ab91c417a118426134551e9626e4e85"
     _homelab_admin_service_group: "{{ homelab_admin_service_group | default('homelab-admin') }}"
     _homelab_admin_service_user: "{{ homelab_admin_service_user | default('homelab-admin') }}"
     _homelab_admin_install_dir: "{{ homelab_admin_install_dir | default('/opt/homelab-admin/app') }}"
     _homelab_admin_port: "{{ homelab_admin_port | default(3847) }}"
     _homelab_admin_domain: "{{ homelab_admin_domain | default('homelab.makscee.ru') }}"
     _homelab_admin_env_dir: "{{ homelab_admin_env_dir | default('/etc/homelab-admin') }}"
+    _homelab_admin_age_recipients: "{{ homelab_admin_age_recipients | default([]) }}"
 
   handlers:
     - name: Reload systemd
@@ -127,6 +132,37 @@
         state: absent
       when: bun_installed.rc != 0 or _bun_version not in (bun_installed.stdout | default(''))
 
+    # ── Stage 1b — sops + age (Plan 13-07 gap closure) ──────────────────────
+    # Runtime decrypt path for /opt/homelab-admin/app/secrets/claude-tokens.sops.yaml.
+    - name: Check current sops version on mcow
+      ansible.builtin.command: /usr/local/bin/sops --version
+      register: sops_installed
+      failed_when: false
+      changed_when: false
+
+    - name: Download sops {{ _sops_version }} binary
+      ansible.builtin.get_url:
+        url: "https://github.com/getsops/sops/releases/download/v{{ _sops_version }}/sops-v{{ _sops_version }}.linux.amd64"
+        dest: /usr/local/bin/sops
+        mode: '0755'
+        owner: root
+        group: root
+        checksum: "sha256:{{ _sops_linux_amd64_sha256 }}"
+      when: sops_installed.rc != 0 or _sops_version not in (sops_installed.stdout | default(''))
+
+    - name: Install age via apt (idempotent)
+      ansible.builtin.apt:
+        name: age
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Verify sops binary reports pinned version
+      ansible.builtin.command: /usr/local/bin/sops --version
+      changed_when: false
+      register: sops_verify
+      failed_when: _sops_version not in sops_verify.stdout
+
     # ── Stage 2 — OS user + group ───────────────────────────────────────────
     - name: Ensure homelab-admin group exists
       ansible.builtin.group:
@@ -177,6 +213,9 @@
           - "--exclude=.next.prev"
           - "--exclude=.env.local"
           - "--exclude=.env.*.local"
+          # Plan 13-07: secrets/ is rendered separately by homelab-admin-secrets.yml
+          # and must survive rsync --delete.
+          - "--exclude=secrets"
       register: rsync_result
 
     - name: Chown install dir to homelab-admin

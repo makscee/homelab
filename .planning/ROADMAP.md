@@ -266,4 +266,4 @@ Plans:
 
 Captured issues not yet scoped to a phase. Promote to a numbered phase when ready.
 
-- **999.1 — /tokens sops PATH (homelab-admin.service)** — Captured 2026-04-17 during Phase 15-01 UAT. `/tokens` throws digest error `1852942543`; journal: `Error [TypeError]: Executable not found in $PATH: "sops"`. Root cause: systemd unit `homelab-admin.service` uses `ProtectSystem=strict` which hides `/usr/local/bin/sops` from the admin user's `$PATH`. **Not a Tailwind regression.** Fix: extend service unit `Environment=PATH=...` to include `/usr/local/bin` (or add explicit `BindReadOnlyPaths=/usr/local/bin/sops`) in `ansible/playbooks/deploy-homelab-admin.yml`. Likely Phase 13 follow-up.
+- ~~**999.1 — /tokens sops PATH (homelab-admin.service)**~~ — CLOSED 2026-04-21 by Phase 13 gap Plan 13-07 (Task 3). `Environment=PATH=/usr/local/bin:/usr/bin:/bin` added to `servers/mcow/homelab-admin.service`.

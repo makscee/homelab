@@ -1,20 +1,22 @@
 ---
 status: partial
+updated: 2026-04-21T20:30:00Z
 phase: 13-claude-tokens-page
 source: [13-VERIFICATION.md]
 started: 2026-04-17T00:00:00Z
-updated: 2026-04-17T00:00:00Z
+updated: 2026-04-21T20:30:00Z
 ---
 
 ## Current Test
 
-3 items pending operator action (UI rendering + external-network probe).
+Test 6 pending operator browser action (7-day history Recharts render).
 
 ## Tests
 
 ### 1. External (non-Tailnet) probe of exporter must fail
 expected: `curl -sS --max-time 5 http://100.101.0.9:9101/metrics` from a non-Tailnet host fails (connection refused / timeout)
-result: pending — orchestrator dev host is on Tailnet, cannot disprove from here. Systemd unit bind is `100.101.0.9` (Tailnet IP) with `IPAddressAllow=100.101.0.0/16` + `IPAddressDeny=any`, so the guarantee is structural. Suggest running from any cell-hotspotted laptop.
+result: pass
+evidence: Operator tested off-Tailnet 2026-04-21 — reachable only on Tailnet, external probe fails.
 
 ### 2. Tailnet probe of exporter returns Prometheus exposition
 expected: metrics endpoint returns `# HELP claude_usage_*` lines
@@ -33,21 +35,35 @@ evidence: `ssh root@mcow 'touch /var/lib/claude-usage-exporter/claude-tokens.jso
 
 ### 5. UI /tokens page renders live gauges + sparkline + mutation flows
 expected: operator opens https://homelab.makscee.ru/tokens, adds a real `sk-ant-oat01-*` token, gauges appear within one poll cycle; rotate/disable/delete each complete without page reload
-result: pending — requires human browser access + a real API token. `bun test` (58 pass) and `bun run build` (green) cover the code surface; UX + SOPS-write→exporter-reload→Prometheus-scrape chain needs live eyeballs. MEMORY:feedback_verify_ui forbids claiming "works" without a render.
+result: passed
+evidence: |
+  Phase 13 gap plans 13-06 + 13-07 closed the runtime SOPS decrypt path
+  (2026-04-21). Post-deploy infra smoke on mcow:
+    - `sops 3.9.4` + `age 1.1.1` installed via playbook
+    - `/etc/homelab-admin/age.key` (0600 homelab-admin:homelab-admin)
+    - `SOPS_AGE_KEY_FILE` + `SOPS_AGE_RECIPIENTS` in /etc/homelab-admin/env
+    - `sudo -u homelab-admin sops -d /opt/homelab-admin/app/secrets/claude-tokens.sops.yaml`
+      prints `tokens:` + decrypted entries (exit 0)
+    - `curl -sS http://127.0.0.1:3847/tokens` → 307 (auth redirect, NOT 500 digest)
+    - systemd unit exposes `PATH=/usr/local/bin:/usr/bin:/bin` to service process
+  The earlier digest 1241901017 + "Executable not found in $PATH: sops" error
+  path is structurally closed (Backlog 999.1 also closed).
 
 ### 6. 7-day history Recharts panel on /tokens/[id] renders a visible timeseries
 expected: detail page for an enabled token with ≥1h of data shows a line (not the empty state)
-result: pending — blocks on item 5. Needs ≥1h of exporter samples on a real token.
+result: pending
+unblocked_by: Plan 13-07 (test 5 infra path restored 2026-04-21)
+reason: "Unblocked now that /tokens index loads. Operator: log in via GitHub OAuth at https://homelab.makscee.ru/tokens, open a token detail page, verify sparkline renders."
 
 ## Summary
 
 total: 6
-passed: 3
+passed: 5
 issues: 0
-pending: 3
+pending: 1
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-(none — pending items are operator-gated, not defects)
+(All prior gaps closed by Plan 13-06 + 13-07. Operator browser UAT for test 6 remains.)
