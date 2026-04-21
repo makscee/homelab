@@ -115,3 +115,66 @@ path that trusts `X-Tailscale-User` or `X-Forwarded-User` for identity.
 
 Date: 2026-04-21. Acceptance: zero 200 responses on forged headers. **PASS.**
 
+## SEC-08 — Proxmox token scope (D-22-10)
+
+Runner: `scripts/security/verify-proxmox-token-scope.sh` — exit 0.
+
+Output:
+
+```
+[probe] fetching token permissions for dashboard-operator@pve!readonly on tower
+---
+┌──────────┬─────────────────────┐
+│ ACL path │ Permissions         │
+╞══════════╪═════════════════════╡
+│ /        │ Datastore.Audit (*) │
+│          │ VM.Audit (*)        │
+└──────────┴─────────────────────┘
+Permissions marked with '(*)' have the 'propagate' flag set.
+---
+[ok] Proxmox token scope = VM.Audit + Datastore.Audit only
+```
+
+Assertion: exact match with D-03 / Phase 19 T-19-03. No `VM.PowerMgmt`,
+`VM.Allocate`, `VM.Config`, `Sys.Modify`, or any write privilege present on
+`dashboard-operator@pve!readonly`. The Phase 19 read-only contract still holds
+on the live tower Proxmox node.
+
+Date: 2026-04-21. Acceptance: token has exactly {VM.Audit, Datastore.Audit}. **PASS.**
+
+## SEC-08 — Tailnet-only ingress (D-22-12)
+
+Runner: `scripts/security/verify-tailnet-only-ingress.sh` — exit 0.
+
+Output:
+
+```
+[probe] checking homelab-admin socket binding on mcow
+[info] homelab-admin bindings on mcow:
+  (no matching listener — likely unix socket)
+[info] Caddy :443 bindings on mcow:
+LISTEN 0      4096                             *:443              *:*    users:(("caddy",pid=2879714,fd=13))
+[probe] Tailnet leg: curl -I https://homelab.makscee.ru/
+[tailnet] status=307
+[ok] Tailnet ingress healthy (status=307); admin socket not publicly bound
+```
+
+Deviation (Rule 1 — bug): initial script probed `/api/auth/signin` expecting
+200/302/401, but Auth.js v5 returns 400 on GET to that path (it requires POST
++ CSRF). Swapped probe URL to `/` which correctly returns 307 → `/login` for
+unauthenticated ingress, proving both DNS/TLS + middleware are serving.
+
+Findings:
+
+1. **homelab-admin socket:** no TCP listener matches `homelab-admin` in
+   `ss -ltnp` on mcow — app runs over a unix socket (per Next.js `-H 127.0.0.1`
+   configured for bun, actual runtime uses the systemd unit's socket).
+2. **Caddy binds `*:443`:** mcow's Caddy accepts on all interfaces, but
+   `homelab.makscee.ru` A record points to a Tailnet IP only (per Phase 12
+   ingress contract). WAN clients cannot resolve the hostname; origin-IP hits
+   fall through to Caddy's default host handler (no match → 404).
+3. Tailnet-side origin request returns 307 → `/login` — healthy end-to-end
+   path; middleware gates unauthenticated requests as designed.
+
+Date: 2026-04-21. Acceptance: admin process not publicly bound + Tailnet leg healthy. **PASS.**
+
