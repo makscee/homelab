@@ -28,14 +28,3 @@ groups:
         annotations:
           summary: "Claude usage exporter unreachable"
           description: "Prometheus cannot scrape mcow:9101 for 10 minutes — quota visibility lost."
-
-      # SMOKE — ALERT-05 Telegram E2E test. MUST be removed before end of session.
-      - alert: ClaudeUsageSmokeTest
-        expr: vector(1)
-        for: 0m
-        labels:
-          severity: warning
-          smoke_test: "true"
-        annotations:
-          summary: "Smoke test — Telegram E2E (ignore, rule will be removed)"
-          description: "Phase 20 ALERT-05 smoke. If you see this, E2E works."
