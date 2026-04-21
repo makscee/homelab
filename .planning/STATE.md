@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
 status: verifying
-stopped_at: Completed Phase 20 UAT (8 pass / 1 skip / 0 issues)
-last_updated: "2026-04-21T14:00:00.000Z"
+stopped_at: Phase 22 CONTEXT.md captured — ready for /gsd-plan-phase 22
+last_updated: "2026-04-21T15:00:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 12
@@ -25,12 +25,11 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Phase: 21 (Web Terminal — not started; node-pty feasibility spike required first)
-Plan: Not started
-Prior phase: 20 (alerts-panel-rules) — COMPLETE (UAT 8 pass / 1 skip / 0 issues, committed 46ccb76)
-Status: Phase 20 verified and closed. Security review (/gsd-secure-phase 20) still pending — required before advancing.
-Next open phases in v3.0: 22 (Security Review + Launch). Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0 (scope cut 2026-04-21). Phase 15 (Tailwind) already landed via plans 15-01/15-02.
-Pre-22 gate: run `/gsd-secure-phase 20` (outstanding security review on alerts phase).
+Phase: 22 (Security Review + Launch — CONTEXT.md captured 2026-04-21)
+Plan: Not started — run `/gsd-plan-phase 22`
+Prior phase: 20 (alerts-panel-rules) — COMPLETE (UAT 8 pass / 1 skip / 0 issues, committed 46ccb76); 20-SECURITY.md 18/18 closed.
+Status: Phase 22 discuss-phase done. 19 locked decisions (D-22-01..19) covering ui-kit extraction, security review surface, launch checklist. Ready to plan.
+Next: `/gsd-plan-phase 22` — final v3.0 phase. Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0.
 Last activity: 2026-04-21
 
 ## Performance Metrics
