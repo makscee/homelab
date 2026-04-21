@@ -80,6 +80,71 @@
         name: "{{ jellyfin_font_packages }}"
         state: present
 
+    # ---- NVIDIA NVENC/NVDEC userspace libs (match host driver exactly) ----
+    # Host tower runs Nvidia 590.48.01 from developer.download.nvidia.com/compute/cuda/repos/debian12.
+    # LXC needs matching userspace libs. Kernel module lives on host only.
+    # LXC conf /etc/pve/lxc/101.conf must have dev2-dev6 for /dev/nvidia0, nvidiactl, nvidia-uvm, nvidia-uvm-tools, nvidia-modeset.
+    - name: Fetch Nvidia CUDA keyring from tower
+      ansible.builtin.slurp:
+        src: /usr/share/keyrings/cuda-archive-keyring.gpg
+      delegate_to: tower
+      register: cuda_keyring_blob
+
+    - name: Install Nvidia CUDA keyring on jellyfin
+      ansible.builtin.copy:
+        dest: /usr/share/keyrings/cuda-archive-keyring.gpg
+        content: "{{ cuda_keyring_blob.content | b64decode }}"
+        mode: '0644'
+
+    - name: Add Nvidia CUDA apt source (debian12)
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/cuda-debian12.list
+        mode: '0644'
+        content: |
+          deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /
+
+    - name: Pin Nvidia packages to 590.48.01-1 (must match host driver)
+      ansible.builtin.copy:
+        dest: /etc/apt/preferences.d/nvidia-590
+        mode: '0644'
+        content: |
+          Package: libcuda1 libnvcuvid1 libnvidia-encode1 libnvidia-ml1 libnvidia-ptxjitcompiler1 libnvidia-pkcs11-openssl3 libnvidia-gpucomp libnvidia-nvvm4 libnvidia-cfg1
+          Pin: version 590.48.01-1
+          Pin-Priority: 1001
+
+    - name: Install Nvidia NVENC/NVDEC userspace libs
+      ansible.builtin.apt:
+        name:
+          - libnvidia-encode1
+          - libnvcuvid1
+          - libnvidia-ml1
+          - libcuda1
+        state: present
+        update_cache: true
+        install_recommends: false
+
+    # ---- Jellyfin hardware acceleration config ----
+    - name: Enable NVENC hardware acceleration in encoding.xml
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/encoding.xml
+        regexp: '<HardwareAccelerationType>.*</HardwareAccelerationType>'
+        line: '  <HardwareAccelerationType>nvenc</HardwareAccelerationType>'
+      notify: Restart jellyfin
+
+    - name: Enable hardware encoding
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/encoding.xml
+        regexp: '<EnableHardwareEncoding>.*</EnableHardwareEncoding>'
+        line: '  <EnableHardwareEncoding>true</EnableHardwareEncoding>'
+      notify: Restart jellyfin
+
+    - name: Enable GPU tone mapping (HDR→SDR)
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/encoding.xml
+        regexp: '<EnableTonemapping>.*</EnableTonemapping>'
+        line: '  <EnableTonemapping>true</EnableTonemapping>'
+      notify: Restart jellyfin
+
     - name: Enable ASS subtitle fallback font in encoding.xml
       ansible.builtin.lineinfile:
         path: /etc/jellyfin/encoding.xml
@@ -93,6 +158,23 @@
         regexp: '<FallbackFontPath>.*</FallbackFontPath>'
         line: '  <FallbackFontPath>/usr/share/fonts/opentype/noto</FallbackFontPath>'
         insertafter: '<EnableFallbackFont>'
+      notify: Restart jellyfin
+
+    # ---- network.xml: make URLs use client's Host header ----
+    # Fixes sub/attachment URLs when external client connects via jellyfin.makscee.ru:22098
+    # (PublicHttpPort=8096 would otherwise make Jellyfin emit port-8096 URLs that external clients can't reach).
+    - name: Enable PublishedServerUriByRequest (Host-header-based URL generation)
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/network.xml
+        regexp: '<EnablePublishedServerUriByRequest>.*</EnablePublishedServerUriByRequest>'
+        line: '  <EnablePublishedServerUriByRequest>true</EnablePublishedServerUriByRequest>'
+      notify: Restart jellyfin
+
+    - name: Register KnownProxies (tower vmbr1 gw + LXC self) for X-Forwarded-For trust
+      ansible.builtin.lineinfile:
+        path: /etc/jellyfin/network.xml
+        regexp: '<KnownProxies\s*/>|<KnownProxies>.*</KnownProxies>'
+        line: '  <KnownProxies><string>10.10.20.1</string><string>10.10.20.11</string></KnownProxies>'
       notify: Restart jellyfin
 
     - name: Hold Jellyfin packages (Ansible-managed upgrades only — D-06)

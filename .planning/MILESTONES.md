@@ -1,5 +1,49 @@
 # Milestones
 
+## v3.0 Unified Stack Migration (Shipped: 2026-04-21)
+
+**Phases completed:** 10 phases, 39 plans, 22 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- Task 1 — group_vars/all.yml extended (commit 90636ac)
+- One-liner:
+- next-auth version resolved:
+- One-liner:
+- One-liner:
+- One-liner:
+- SOPS-encrypted homelab_admin OAuth block added to mcow.sops.yaml + Ansible task include that decrypts on controller and renders /etc/homelab-admin/env with mode 0600
+- 1. [Rule 1 - Bug] blockinfile FQCN corrected from community.general to ansible.builtin
+- Ansible playbook deployed homelab-admin to mcow at homelab.makscee.ru; all 5 ROADMAP Phase 12 success criteria captured as evidence and verified GREEN in 12-VERIFICATION.md
+- 1. [Rule 3 — Blocking] `server-only` sentinel module throws in bun test runner
+- None — spec executed as written.
+- 1. [Rule 3 — Blocking] Pre-existing `server-only` ESLint rule flagged `.server.test.ts` files
+- 1. [Rule 1 — Bug] Sparkline Tooltip formatter type mismatch in recharts v3
+- 1. [Rule 3 — Blocking] shadcn Textarea not installed from Plan 13-01
+- node_exporter playbook extended to all 6 Tailnet hosts + cAdvisor playbook created for docker-tower/mcow, both binding exclusively to Tailscale IPs; Prometheus file_sd targets updated with hostname labels
+- Task 1 — redactPayload() (TDD)
+- Task 1 — /audit RSC page + AuditTable + PayloadCell (TDD)
+- 1. [Rule 3 — Blocking] `import "server-only"` moved out of `route.ts`
+- Fixed /audit digest crash by proxying native bun:sqlite through the shim under Bun runtime and forcing `next start` to run under Bun via systemd `--bun` flag.
+- Overview host tiles now populate with live CPU/Mem/Disk/Uptime/Load/Containers from Prometheus via a two-sided fix: code default flipped to docker-tower:9090, and ansible renders PROMETHEUS_URL into /etc/homelab-admin/env on mcow.
+- apps/admin upgraded from Tailwind 3.4 → 4.2 via CSS-first config, autoprefixer removed, shadcn primitives pixel-verified via Playwright against prod v3 baseline.
+- tailwind-merge bumped to ^3.0.0 paired with Tailwind v4.2 — single-file dep upgrade, zero code changes, Playwright-verified pixel-identical on prod.
+- 1. [Rule 1 - Bug] TS2882 on CSS side-effect import
+- 1. [Rule 3 - P-1 fallback] eslint-plugin-server-only crashed on ESLint 10
+- One-liner:
+- One-liner:
+- 1. [Rule 3 - Blocking] Plan assumed vainfo would report iHD/Intel — it reports nouveau
+- Not needed.
+- One-liner:
+- 1. [Rule 3 - Blocking] Ansible rule deploy blocked by pre-existing /opt/homelab drift
+- 1. [Rule 3 — Blocking] `yq` not installed on operator machine
+- 1. [Decision 2] Admin migration skipped (Tasks 3 and 4 of original plan)
+- 1. [Rule 1 - Bug] Tailnet ingress probe URL
+- 1. [Rule 1 – Bug] Prometheus scrape parse error on JSON body.
+
+---
+
 ## v1.0 — Homelab Infrastructure-as-Code
 
 **Shipped:** 2026-04-15

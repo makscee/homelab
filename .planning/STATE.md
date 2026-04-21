@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Unified Stack Migration
-status: executing
+status: completed
 stopped_at: Phase 20 UAT complete (commit 46ccb76). Security review pending.
-last_updated: "2026-04-21T17:18:37.567Z"
-last_activity: 2026-04-21 -- Phase 22 plan 05 complete
+last_updated: "2026-04-21T18:19:33.811Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 12
   completed_phases: 9
   total_plans: 39
-  completed_plans: 44
+  completed_plans: 45
   percent: 100
 ---
 
@@ -30,7 +30,7 @@ Plan: 22-06 complete (D-22-17 self-monitoring, D-22-18 DNS/TLS gate, D-22-19 ope
 Prior plans complete: 22-01, 22-02, 22-03, 22-05, 22-06. Only 22-04 remaining.
 Status: Wave 2 launch-gate done. 22-04 (ui-kit molecules + admin migration) is the last open plan in Phase 22.
 Next: `/gsd-execute-phase 22-04`
-Last activity: 2026-04-21 -- Phase 22 plan 06 complete (self-monitoring + handoff)
+Last activity: 2026-04-21
 
 ## Performance Metrics
 
@@ -111,6 +111,23 @@ Last activity: 2026-04-21 -- Phase 22 plan 06 complete (self-monitoring + handof
 - ~~Before Phase 12: verify Cloudflare API token exists~~ — OBSOLETE. Phase 12 CONTEXT.md D-12-12 switched from LE DNS-01 to LE HTTP-01 (mirrors `vibe.makscee.ru`); no Cloudflare API integration needed.
 - ~~Before Phase 12: confirm tailscale-nginx-auth socket path on mcow~~ — OBSOLETE. Phase 12 CONTEXT.md D-12-06 switched from Tailscale header auth to GitHub OAuth (Auth.js v5); tailscale-nginx-auth not used.
 - ~~Before Phase 12: confirm mcow LXC privilege level~~ — RESOLVED. mcow is KVM (not LXC). See `servers/mcow/lxc-probe.md`; strict hardening block wired into Plan 12-07.
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-21:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | knowledge-base | unknown |
+| quick_task | 260415-fd2-fix-alertmanager-scrape-job-suppress-ani | missing |
+| quick_task | 260416-nyb-feasibility-probe-claude-code-oauth-toke | missing |
+| uat_gap | Phase 13 13-HUMAN-UAT.md (1 pending scenario) | partial |
+| verification_gap | Phase 02 02-VERIFICATION.md | human_needed |
+| verification_gap | Phase 13 13-VERIFICATION.md | human_needed |
+| verification_gap | Phase 22 22-VERIFICATION.md | human_needed |
+| context_questions | Phase 15 15-CONTEXT.md (3 open) | open |
+| context_questions | Phase 16 16-CONTEXT.md (3 open) | open |
+| context_questions | Phase 17 17-CONTEXT.md (3 open) | open |
 
 ## Session Continuity
 

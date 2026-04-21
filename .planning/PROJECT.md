@@ -12,30 +12,22 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 **v1.0 shipped 2026-04-15.** Foundations, service docs, monitoring, operator dashboard — 18/18 active requirements. See `.planning/milestones/v1.0-ROADMAP.md`.
 
-**v2.0 closed 2026-04-16 with pivot.** Feasibility gate PASSED formally (ADR D-07); exporter + Prometheus scraping running operationally on mcow. Phases 08-11 pivoted into v3.0. See `.planning/MILESTONE-CLOSE-v2.0.md`.
+**v2.0 closed 2026-04-16 with pivot.** Feasibility gate PASSED formally (ADR D-07); exporter + Prometheus scraping running operationally on mcow. Phases 08-11 pivoted into v3.0. See `.planning/milestones/v2.0-MILESTONE-CLOSE.md`.
 
-## Current Milestone: v3.0 Unified Stack Migration (homelab scope)
+**v3.0 shipped 2026-04-21.** Unified Stack Migration — homelab admin dashboard live at `homelab.makscee.ru` (Tailnet-only, GitHub OAuth gated, Caddy + LE HTTP-01). 10 phases delivered (12-17, 17.1, 19, 20, 22). Frontend stack bumped (Tailwind v4.2, TS 6.0, ESLint 10). Jellyfin migrated to dedicated LXC 101 on tower. Phases 18 (VoidNet) and 21 (Web Terminal) deferred to v4.0. See `.planning/milestones/v3.0-ROADMAP.md`.
 
-**Goal:** Build the homelab admin dashboard at `homelab.makscee.ru` using a new TypeScript/Next.js stack, consuming a shared `hub-shared/ui-kit` component library that will later be reused by VoidNet + Animaya (separate milestones in their own repos). Kill Grafana-as-dashboard.
+## Next Milestone: v4.0 (Planned)
 
-**Target features:**
-- Shared ui-kit repo (`hub-shared/ui-kit`) — design tokens, shadcn components extracted/adopted, referenced by homelab-admin as git submodule
-- Homelab admin Next.js app on mcow — Tailnet-only bind, auth via Tailscale identity headers, Caddy + LE DNS-01 via Cloudflare for `homelab.makscee.ru`
-- Global overview page — Prometheus HTTP client + Recharts, key homelab metrics in one view
-- Claude Code tokens page — SOPS registry CRUD + per-token graphs (consumes mcow:9101 exporter) + add/rotate flow; absorbs v2.0 Phases 08/11
-- VoidNet management page — consumes voidnet-api admin endpoints over Tailnet: users, credits, boxes
-- Proxmox ops — LXC restart/spawn/destroy, box info (ssh cmd + password view), token rotation, xterm.js web terminal
-- Alerts — Prometheus rules → Telegram (absorbs v2.0 Phase 09)
-- Ansible playbook for deploy + exporter hardening (rebind Tailnet-only, uid 65534 — v2.0 tech-debt)
-- Security review + launch
+**Deferred from v3.0:**
+- Phase 18: VoidNet Management — blocked on voidnet-api admin JSON endpoints
+- Phase 21: Web Terminal — node-pty LXC feasibility spike + xterm.js integration
 
-**Key context:**
-- **Stack:** Bun + Next.js 15 + React 19 + TypeScript + Tailwind + shadcn/ui (see ADR D-08 when written)
-- **Auth:** Tailscale identity headers (`Tailscale-User-Login`), zero-config, no login form
-- **DNS/TLS:** public A-record `homelab.makscee.ru` → `100.101.0.9`, LE DNS-01 via Cloudflare API, ACL-restricted to Tailnet
-- **Repo layout:** hybrid — this repo hosts `apps/admin/` (or similar) Next.js app; `hub-shared/ui-kit` is a separate repo referenced via git submodule
-- **Scope boundary:** VoidNet + Animaya migrations are NOT part of this milestone — they are parallel milestones in their own repos that consume the ui-kit once stable
-- **Host:** runs on mcow alongside existing services, systemd-managed Bun runtime
+**v3.1 hardening backlog** (may fold into v4.0 or ship separately):
+- SEC-01: Caddy per-IP rate limit on auth routes (xcaddy self-build)
+- SEC-11: Strict CSP / nonce-based (drop `unsafe-inline`)
+- D-17: Jellyfin HW transcode — re-enable iGPU via BIOS `iGPU Multi-Monitor`, promote WARN→check in `verify-jellyfin-lxc.sh`
+
+Run `/gsd-new-milestone` to scope.
 
 ## Deferred for Future Milestones
 
@@ -70,12 +62,27 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 
 ### Active
 
-(v3.0 requirements pending — captured in `.planning/REQUIREMENTS.md` after scope locked.)
+(v4.0 requirements pending — run `/gsd-new-milestone` to define.)
 
 **v2.0 validated (carried forward):**
 - Direct Moscow ISP egress to api.anthropic.com confirmed (Phase 05)
 - OAuth endpoint-scrape approach for Claude Code quotas validated operationally (ADR D-07; 2 tokens live on mcow:9101)
-- Exporter + Prometheus scraping operational (Phases 06/07 short-circuit) — tech-debt carried to v3.0
+- Exporter + Prometheus scraping operational (Phases 06/07 short-circuit)
+
+**v3.0 validated:**
+- Next.js admin dashboard deployed to mcow behind Caddy + GitHub OAuth — v3.0 (Phase 12)
+- SOPS-backed Claude token CRUD with live per-token quota gauges — v3.0 (Phase 13)
+- /overview + /audit pages with Prometheus-backed host tiles and mutation audit log — v3.0 (Phase 14)
+- Tailwind v4.2 CSS-first migration + tailwind-merge 3 (zero visual regression) — v3.0 (Phase 15)
+- TypeScript 6.0.3 + ESLint 10 + Node types 24 — v3.0 (Phases 16-17)
+- Jellyfin on dedicated LXC 101 (tower) with tmpfs transcodes + RO media bindmounts, CPU-only transcode signed off — v3.0 (Phase 17.1)
+- Read-only Proxmox ops page (CA-pinned undici, VM.Audit+Datastore.Audit token) — v3.0 (Phase 19)
+- /alerts panel + Claude quota alert rules + Telegram E2E — v3.0 (Phase 20)
+- Security review (bun audit, bundle scan, header re-audit, aggregation tests, self-monitoring, DNS/TLS gate, operator handoff) — v3.0 (Phase 22)
+
+**Deferred / scope cuts:**
+- SEC-01 (Caddy rate limit), SEC-11 (strict CSP), D-17 (Jellyfin HW transcode) → v3.1 hardening
+- Phase 18 (VoidNet admin) + Phase 21 (Web Terminal) → v4.0
 
 ### Out of Scope
 
@@ -119,6 +126,14 @@ Any server's full stack can be reliably reproduced from this repo alone — no t
 | Tailscale App Connector on nether | IPv4 Telegram egress fallback (Moscow IPv6-only path blocked by Telegram) | Validated (v1.0 via E2E Telegram smoke) |
 | Token file perms `install -m 0440 root:65534` | prom/alertmanager container user is `nobody(65534)` | Validated (v1.0) |
 | D-07: Claude Code quota access strategy | Endpoint-scrape `/api/oauth/usage` with 300s+jitter cadence, halt on persistent 401/403. No official API exists. Own tokens, own homelab, own-quota reads only. ToS residual A-01 accepted: Feb 2026 OAuth-token policy is gray not red; fingerprint-minimal UA mitigates detection. | Validated (Phase 05, 2026-04-16 — production exporter `mcow:9101` polling 2 tokens with 0% 429 rate; formal 24h soak short-circuited by operational evidence) |
+| v3.0 stack lock: Bun + Next.js 15.5 + React 19 + Tailwind v4 + shadcn/ui + Caddy + Drizzle + bun:sqlite | Single-stack consolidation for homelab/VoidNet/Animaya; Bun runtime pinned to 1.1.38 (QEMU no-AVX); Next.js 15.5.15 floor for GHSA-q4gf-8mx6-v5v3 | ✓ Validated (v3.0) |
+| Auth: GitHub OAuth (Auth.js v5) replacing Tailscale identity headers | Eliminates P-02 header-spoofing risk on Tailnet-bound app | ✓ Validated (v3.0 Phase 12) |
+| DNS/TLS: LE HTTP-01 via Caddy on mcow (mirrors `vibe.makscee.ru`) | Dropped LE DNS-01 + Cloudflare API integration — HTTP-01 simpler, no API credentials | ✓ Validated (v3.0 Phase 12) |
+| ui-kit as vendored mirror at `packages/ui-kit` with `@ui-kit/*` alias (SoT in `hub/knowledge/standards/ui-kit/`) | Relative-import shared source; no npm publish; sync via `scripts/sync-ui-kit.sh` | ✓ Validated (v3.0 Phase 22-04) |
+| Tower ingress: userspace socat, not iptables DNAT | DNAT replies policy-route onto `tailscale0` (asymmetric); socat on tower forwards :22098 → 10.10.20.11:8096 correctly | ✓ Validated (v3.0 Phase 17.1-04 post-hoc fix) |
+| Proxmox ops scope: read-only (VM.Audit + Datastore.Audit) | Cut from "full ops" — observability only, no power mgmt from dashboard | ✓ Validated (v3.0 Phase 19) |
+| SEC-01 + SEC-11 deferred to v3.1 | Stock apt Caddy lacks `rate_limit` module (upstream build API broken); strict CSP is defense-in-depth for a 2-user internal panel behind OAuth | ⚠️ Revisit in v3.1 |
+| Phases 18/21 deferred to v4.0 | VoidNet admin blocked on voidnet-api; Web Terminal requires node-pty LXC spike | — Pending |
 
 ### ADR D-07 detail (2026-04-16, Phase 05 feasibility gate)
 
@@ -160,4 +175,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — v2.0 closed with pivot; v3.0 milestone started (Unified Stack Migration — homelab admin dashboard)*
+*Last updated: 2026-04-21 — v3.0 Unified Stack Migration shipped*
