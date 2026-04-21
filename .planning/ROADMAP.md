@@ -237,13 +237,21 @@ Plans:
 
 ### Phase 22: Security Review + Launch
 
-**Goal**: The dashboard passes a security review (bundle analysis, header audit, Proxmox token scope check, bun audit), the shared ui-kit repo is fully extracted and wired as a git submodule, and the app is ready for ongoing operator use.
+**Goal**: The dashboard passes a security review (Caddy per-IP rate limit on auth routes, bun audit, bundle secret scan, deployed-header re-audit, header-spoofing integration test, Proxmox token scope verify, Tailnet-only ingress verify, cross-phase SECURITY aggregation), the shared ui-kit is extracted to /Users/admin/hub/knowledge/standards/ui-kit/ and consumed by apps/admin via @ui-kit/* path alias (relative-import shared source — no package/publish), and the launch checklist is complete (audit.db backup/restore drill + cron, operator runbook, documented rollback, admin self-monitoring + alert rule, DNS/TLS validity check, operator handoff README).
 
-**Depends on**: Phase 21 (all features complete)
+**Depends on**: Phase 20 (Phase 21 deferred to v4.0)
 **Requirements**: UI-01, UI-02, SEC-01, SEC-08
 
-**Plans**: TBD
+**Plans**: 6 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 22-01-PLAN.md — ui-kit tokens + primitives extract (UI-01)
+- [ ] 22-02-PLAN.md — security rate limit + bun audit + bundle scan + header re-audit (SEC-01, SEC-08)
+- [ ] 22-03-PLAN.md — launch backup/restore drill + v3.0 runbook + rollback doc (SEC-08)
+- [ ] 22-04-PLAN.md — ui-kit molecules + apps/admin migration to @ui-kit (UI-02)
+- [ ] 22-05-PLAN.md — security aggregation + header-spoofing/proxmox-token/tailnet-ingress tests (SEC-08)
+- [ ] 22-06-PLAN.md — self-monitoring + DNS/TLS check + operator handoff README (SEC-08)
 
 ---
 
