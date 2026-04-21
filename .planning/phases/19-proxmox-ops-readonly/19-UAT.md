@@ -1,22 +1,17 @@
 ---
-status: testing
+status: complete
 phase: 19-proxmox-ops-readonly
 source:
   - 19-01-SUMMARY.md
   - 19-02-SUMMARY.md
   - 19-03-SUMMARY.md
 started: 2026-04-19T11:00:00Z
-updated: 2026-04-19T14:15:00Z
+updated: 2026-04-21T00:00:00Z
 ---
 
 ## Current Test
 
-number: 4
-name: Click-to-expand task log
-expected: |
-  In detail page tasks list, click a task row to expand inline log (first 500 lines).
-  Blocked: no recent tasks returned by tower for vmid 100 or 101 at test time.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
