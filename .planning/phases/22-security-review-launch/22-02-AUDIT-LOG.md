@@ -90,3 +90,28 @@ Mirrors Phase 17.1 WARN-not-FAIL pattern.
 
 Date: 2026-04-21. Acceptance: all FAIL-gated headers present + correct;
 CSP WARN acknowledged. **PASS.**
+
+## SEC-08 — Header spoofing test (D-22-11)
+
+Runner: `apps/admin/tests/integration/header-spoofing.test.ts`.
+
+Command: `cd apps/admin && ADMIN_BASE_URL=https://homelab.makscee.ru bun test tests/integration/header-spoofing.test.ts`
+
+Output:
+
+```
+bun test v1.3.5 (1e86cebd)
+ 20 pass
+ 0 fail
+ 60 expect() calls
+Ran 20 tests across 1 file. [3.57s]
+```
+
+Matrix: 5 protected routes × 4 forged header variants = 20 cases. All returned
+401/302/307/403 against live `https://homelab.makscee.ru` — no 200, no leaked
+`makscee@` marker in bodies. `apps/admin/middleware.ts` confirms auth decision
+is JWT-only (`getToken` on `__Secure-authjs.session-token`); there is no code
+path that trusts `X-Tailscale-User` or `X-Forwarded-User` for identity.
+
+Date: 2026-04-21. Acceptance: zero 200 responses on forged headers. **PASS.**
+
