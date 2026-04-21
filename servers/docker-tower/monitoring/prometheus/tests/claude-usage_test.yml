@@ -1,0 +1,57 @@
+# promtool rule unit tests for claude-usage alert rules (Phase 20 ALERT-04).
+# Run: docker exec prometheus promtool test rules /etc/prometheus/tests/claude-usage_test.yml
+rule_files:
+  - ../alerts/claude-usage.yml
+
+tests:
+  # ClaudeWeeklyQuotaHigh: 0.85 sustained ≥15m → fires; pending before 15m
+  - interval: 1m
+    input_series:
+      - series: 'claude_usage_7d_utilization{name="prod"}'
+        values: '0.5 0.5 0.85x20'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ClaudeWeeklyQuotaHigh
+        exp_alerts: []
+      - eval_time: 18m
+        alertname: ClaudeWeeklyQuotaHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              name: "prod"
+            exp_annotations:
+              summary: "Claude weekly quota high for prod (85%)"
+              description: "Token prod 7-day utilization at or above 80% for 15 minutes."
+
+  # ClaudeWeeklyQuotaCritical: 0.97 sustained ≥15m → fires critical
+  - interval: 1m
+    input_series:
+      - series: 'claude_usage_7d_utilization{name="prod"}'
+        values: '0.5x2 0.97x20'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: ClaudeWeeklyQuotaCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              name: "prod"
+            exp_annotations:
+              summary: "Claude weekly quota CRITICAL for prod (97%)"
+              description: "Token prod 7-day utilization at or above 95% — effectively rate-limited."
+
+  # ClaudeExporterDown: up==0 sustained ≥10m → fires critical (upgraded from warning)
+  - interval: 1m
+    input_series:
+      - series: 'up{job="claude-usage",instance="100.101.0.9:9101"}'
+        values: '1 1 0x15'
+    alert_rule_test:
+      - eval_time: 13m
+        alertname: ClaudeExporterDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: "claude-usage"
+              instance: "100.101.0.9:9101"
+            exp_annotations:
+              summary: "Claude usage exporter unreachable"
+              description: "Prometheus cannot scrape mcow:9101 for 10 minutes — quota visibility lost."

@@ -1,0 +1,30 @@
+groups:
+  - name: claude-usage
+    interval: 1m
+    rules:
+      - alert: ClaudeWeeklyQuotaHigh
+        expr: claude_usage_7d_utilization >= 0.80
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Claude weekly quota high for {{ $labels.name }} ({{ $value | humanizePercentage }})"
+          description: "Token {{ $labels.name }} 7-day utilization at or above 80% for 15 minutes."
+
+      - alert: ClaudeWeeklyQuotaCritical
+        expr: claude_usage_7d_utilization >= 0.95
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Claude weekly quota CRITICAL for {{ $labels.name }} ({{ $value | humanizePercentage }})"
+          description: "Token {{ $labels.name }} 7-day utilization at or above 95% — effectively rate-limited."
+
+      - alert: ClaudeExporterDown
+        expr: up{job="claude-usage"} == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Claude usage exporter unreachable"
+          description: "Prometheus cannot scrape mcow:9101 for 10 minutes — quota visibility lost."
