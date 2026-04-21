@@ -82,7 +82,7 @@
 
 ### SEC — Security + Deploy Hardening
 
-- [ ] **SEC-01**: Rate limit at Caddy layer on `homelab.makscee.ru` (per-IP, e.g. 60 req/min for auth endpoints)
+- [ ] **SEC-01**: Rate limit at Caddy layer on `homelab.makscee.ru` (per-IP, e.g. 60 req/min for auth endpoints) — **DEFERRED to v3.1** (2026-04-21: stock apt Caddy 2.6.2 lacks `rate_limit` module; caddyserver.com/api/download upstream outage verified from mcow + nether; operator chose defer over xcaddy self-build to accelerate launch)
 - [x] **SEC-02**: CSP, HSTS, X-Frame-Options headers set via Next.js middleware; strict CSP (no inline scripts); OWASP baseline
 - [ ] **SEC-03**: Exporter rebinding (v2.0 tech-debt): claude-usage-exporter listens on `100.101.0.9:9101` only (not `0.0.0.0`); runs as `nobody(65534)` with read-only token mount
 - [x] **SEC-04**: Server-only lint rule enforces `"use server"` directive usage; prevents RSC → client secret leakage
@@ -104,6 +104,7 @@
 - **ALERT-07**: In-UI silence + acknowledge
 - **SEC-09**: Fail2ban integration at Caddy
 - **SEC-10**: Age-based encrypt-at-rest for in-app secret storage
+- **SEC-01** (deferred from v3.0): Caddy per-IP rate limit on `/api/auth/*` — pick up via xcaddy self-build or successor module in v3.1
 
 ## Out of Scope
 
@@ -170,7 +171,7 @@
 | ALERT-04 | Phase 17 | Complete |
 | ALERT-05 | Phase 17 | Pending |
 | ALERT-06 | Phase 17 | Pending |
-| SEC-01 | Phase 19 | Pending |
+| SEC-01 | Phase 19 → v3.1 | Deferred |
 | SEC-02 | Phase 12 | Complete |
 | SEC-03 | Phase 13 | Pending |
 | SEC-04 | Phase 12 | Complete |

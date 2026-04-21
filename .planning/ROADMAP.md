@@ -240,14 +240,14 @@ Plans:
 **Goal**: The dashboard passes a security review (Caddy per-IP rate limit on auth routes, bun audit, bundle secret scan, deployed-header re-audit, header-spoofing integration test, Proxmox token scope verify, Tailnet-only ingress verify, cross-phase SECURITY aggregation), the shared ui-kit is extracted to /Users/admin/hub/knowledge/standards/ui-kit/ and consumed by apps/admin via @ui-kit/* path alias (relative-import shared source — no package/publish), and the launch checklist is complete (audit.db backup/restore drill + cron, operator runbook, documented rollback, admin self-monitoring + alert rule, DNS/TLS validity check, operator handoff README).
 
 **Depends on**: Phase 20 (Phase 21 deferred to v4.0)
-**Requirements**: UI-01, UI-02, SEC-01, SEC-08
+**Requirements**: UI-01, UI-02, SEC-08 · **SEC-01 deferred to v3.1** (2026-04-21: caddyserver.com/api/download upstream outage + operator chose defer over xcaddy self-build to accelerate launch)
 
 **Plans**: 6 plans
 **UI hint**: yes
 
 Plans:
 - [ ] 22-01-PLAN.md — ui-kit tokens + primitives extract (UI-01)
-- [ ] 22-02-PLAN.md — security rate limit + bun audit + bundle scan + header re-audit (SEC-01, SEC-08)
+- [ ] 22-02-PLAN.md — security bun audit + bundle scan + header re-audit (SEC-08) · SEC-01 rate limit deferred to v3.1
 - [ ] 22-03-PLAN.md — launch backup/restore drill + v3.0 runbook + rollback doc (SEC-08)
 - [ ] 22-04-PLAN.md — ui-kit molecules + apps/admin migration to @ui-kit (UI-02)
 - [ ] 22-05-PLAN.md — security aggregation + header-spoofing/proxmox-token/tailnet-ingress tests (SEC-08)
