@@ -36,9 +36,11 @@
     - name: Run cAdvisor container
       community.docker.docker_container:
         name: cadvisor
-        image: "gcr.io/cadvisor/cadvisor:v0.56.1"
+        image: "gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}"
         state: started
         restart_policy: unless-stopped
+        networks:
+          - name: monitoring
         ports:
           - "{{ tailscale_ip }}:{{ cadvisor_host_port | default('8080') }}:8080"
         volumes:
@@ -47,6 +49,40 @@
           - /sys:/sys:ro
           - /var/lib/docker/:/var/lib/docker:ro
           - /dev/disk/:/dev/disk:ro
+
+    # Reboot-safe restart: container bind to Tailscale IP races with tailscaled
+    # on boot (Docker retries exhaust before IP assigned). This unit waits for
+    # the Tailscale IP then starts the container. Incident: 2026-04-21 tower
+    # reboot left cadvisor exited with "cannot assign requested address".
+    - name: Install cadvisor-boot.service (wait for Tailscale IP, then start)
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/cadvisor-boot.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Start cAdvisor container after Tailscale IP is assigned
+          After=docker.service tailscaled.service
+          Requires=docker.service tailscaled.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStart=/bin/bash -c 'for i in $(seq 1 60); do if /usr/bin/tailscale ip -4 | grep -q .; then exec /usr/bin/docker start cadvisor; fi; sleep 1; done; echo "tailscale IP never appeared"; exit 1'
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: reload systemd
+
+    - name: Enable cadvisor-boot.service
+      ansible.builtin.systemd:
+        name: cadvisor-boot.service
+        enabled: true
+        daemon_reload: true
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
 
   post_tasks:
     - name: Probe cAdvisor metrics endpoint (via Tailscale IP)

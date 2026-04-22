@@ -5,7 +5,7 @@ node_exporter_web_listen_address: "{{ tailscale_ip }}:9100"
 # tailscale_ip is set per-host in inventory/homelab.yml.
 # If per-host override is needed, add to host_vars/<host>.yml
 
-cadvisor_version: "v0.56.1"   # pinned 2026-04-17 (Plan 14-01)
+cadvisor_version: "v0.55.1"   # matches running container; v0.56.1 pin from Plan 14-01 was never released to gcr (404). Upgrade attempt deferred.
 
 # ── v3.0 Phase 12 — homelab-admin dashboard on mcow ─────────────────────
 # Port 3847 chosen because Docker (Grafana stack) already owns 3000 on mcow.
