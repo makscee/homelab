@@ -1,158 +1,110 @@
 # Homelab Infrastructure
 
-## Servers
+Infrastructure-as-code for the Tailscale mesh (tower + mcow + nether + LXCs). Single source of truth: if a server dies, this repo rebuilds it.
 
-| Server | Location | Tailscale IP | Role |
-|--------|----------|--------------|------|
-| tower | Moscow | 100.101.0.7 | Proxmox host (i7-8700 12C, 16GB RAM) |
-| docker-tower | Moscow (LXC 100) | 100.101.0.8 | Media stack: Navidrome, *arr (Jellyfin moved to CT 101 on 2026-04-18) |
-| jellyfin | Moscow (LXC 101) | 100.77.246.74 | Jellyfin (native deb, iGPU QSV when BIOS enabled; CPU-only as of 2026-04-19) |
-| cc-worker | Moscow (LXC 204) | 100.99.133.9 | Claude Code runner (renamed from cc-vk 2026-04-14) |
-| cc-andrey | Moscow (LXC 200) | — | Developer worker (SSH via tower:2201 → 10.10.20.200:22) |
-| cc-dan | Moscow (LXC 202) | — | Developer worker |
-| cc-yuri | Moscow (LXC 203) | — | Developer worker |
-| animaya-dev | Moscow (LXC 205) | 100.119.15.122 | Animaya development LXC |
-| mcow | Moscow | 100.101.0.9 | VoidNet bot, API, portal, SQLite DB |
-| nether | Netherlands | 100.101.0.3 | VPN entry/exit: AmneziaWG, XRay/VLESS |
+> **GSD is frozen** in this repo (`.planning/` kept for history only). Active work tracked in `hub/tasks/` with `HMB-*` prefix (or multi-project `HMB_VDN-*`, `ANI_HMB-*`). Do **not** invoke `/gsd-*` commands.
 
-## Architecture
+## Cross-references (hub knowledge)
 
-- All servers on Tailscale mesh
-- Proxmox on tower hosts LXCs
-- VoidNet users access docker-tower services via VPN
-- SSH: `ssh root@<hostname>` via Tailnet
+- **Project index:** `hub/knowledge/projects/homelab/README.md`
+- **Machine roster + network topology:** `hub/knowledge/infrastructure/overview.md`
+- **Per-LXC deep detail:** `hub/knowledge/infrastructure/tower.md`
+- **VPS:** `hub/knowledge/infrastructure/mcow.md`, `hub/knowledge/infrastructure/nether.md`
+- **cc-box egress (HMB-1/2):** `hub/knowledge/infrastructure/cc-box-egress-{design,plan}.md`, `hub/knowledge/infrastructure/egress-gw.md`
+- **Admin app:** `hub/knowledge/infrastructure/admin-app.md`
+- **Secrets bootstrap:** `hub/knowledge/infrastructure/secrets-bootstrap.md`
 
-## Services on docker-tower
+## Servers (summary — see `infrastructure/overview.md` + `tower.md` for full detail)
 
-- **Jellyfin** (:8096) — media streaming
-- **Navidrome** (:4533) — music streaming
-- **Radarr/Sonarr/Lidarr/Prowlarr** — media automation
-- **qBittorrent** — downloads
+| Host | TS IP | Role |
+|---|---|---|
+| tower | 100.101.0.7 | Proxmox host, Moscow, home LAN 192.168.1.103 |
+| docker-tower (LXC 100) | 100.101.0.8 | Navidrome + *arr suite |
+| jellyfin (LXC 101) | 100.77.246.74 | Jellyfin (native deb, moved off docker-tower 2026-04-18) |
+| egress-gw (LXC 199) | — | amnezia-awg gateway for cc-box egress |
+| cc-andrey/dan/yuri (200/202/203) | — | CC boxes for other users, route via 199 |
+| cc-worker (LXC 204) | 100.99.133.9 | Dev worker (renamed from cc-vk 2026-04-14), stays on tailscale |
+| animaya-dev (LXC 205) | 100.119.15.122 | Animaya bot (see `workspace/animaya/`) |
+| cc-invernoa (LXC 211) / cc-maks-test (LXC 212) | — | Extra CC boxes, route via 199 |
+| mcow | 100.101.0.9 | Moscow VPS: voidnet portal/API, animaya prod |
+| nether | 100.101.0.3 | NL VPS: amnezia-awg, XRay/VLESS, TS exit, reverse proxies |
 
-## Planned
+## cc-box egress pattern (HMB-1/2, done 2026-04-23)
 
-- Monitoring (Grafana + Prometheus + node-exporter)
-- NAS on tower
-- ~~Self-hosted vibe-kanban~~ → cc-worker (LXC 204) deployed (renamed from cc-vk 2026-04-14)
-- Whisper speech-to-text API
+cc-* LXCs that need RU-unblocked egress (Telegram) route default through **egress-gw (LXC 199)** which peers with `amnezia-awg2` on nether.
 
-<!-- GSD:project-start source:PROJECT.md -->
-## Project
+**Topology:** `cc-box (10.10.20.X) → egress-gw (10.10.20.99) → awg0 → nether:46476 → NL exit (77.239.110.57)`
 
-**Homelab Infrastructure**
+**Per-box toggle:** `pct exec <id> -- egress on|off|status` (persists across reboots via `/etc/egress.mode` + `egress-apply.service`).
 
-A comprehensive infrastructure-as-code repository that tracks, documents, and automates everything running across the homelab (4 Tailnet hosts + Proxmox LXCs). The repo serves as the single source of truth — if a server dies or needs migration, Claude Code can use this repo to rebuild the entire stack without losing anything.
+**Not for cc-worker (204)** — intentionally keeps tailscale + nether exit for laptop SSH / mesh access.
 
-**Core Value:** Any server's full stack can be reliably reproduced from this repo alone — no tribal knowledge, no guessing, no data loss on migration.
+Add new cc-box: `scp` + `pct push` the `egress-script.sh` + `egress-apply.service` from `hub/knowledge/infrastructure/`, enable unit, `egress on`. Full runbook in `hub/knowledge/infrastructure/egress-gw.md`.
 
-### Constraints
+## Tech stack
 
-- **Operator**: Claude Code executes deployments — repo structure and docs must be AI-readable and unambiguous
-- **Networking**: All inter-server communication via Tailscale mesh — no public IPs except nether's VPN endpoints
-- **Secrets**: Managed globally at hub level — homelab references but doesn't store raw secrets
-- **Incremental**: Start by documenting what exists, then build toward automation — don't block on perfection
-<!-- GSD:project-end -->
+| Layer | Tool | Notes |
+|---|---|---|
+| Config management | **Ansible 2.17+** | `community.docker` (compose v2), `community.proxmox` (LXC lifecycle). Static YAML inventory. |
+| Secrets | **SOPS 3.9 + age 1.2** | Encrypted YAML in `secrets/`. Age keys at hub level, NOT in this repo. See `infrastructure/secrets-bootstrap.md`. |
+| Containers | Docker Compose v2 (docker-tower). LXC-native on tower. | |
+| Monitoring | Prometheus + Grafana + node-exporter + cAdvisor | Partial (cadvisor deployed, full stack pending) |
+| Mesh | Tailscale | `artis3n.tailscale` role for new nodes |
+| Admin UI | Next.js + Radix UI (`apps/admin/`) | Bun workspace. Deployed to **mcow** via Ansible (`deploy-homelab-admin.yml`), port 3847, Caddy at `homelab.makscee.ru`. See `infrastructure/admin-app.md`. |
+| Package manager | **Bun** | `bun.lock`, not `package-lock.json` / `pnpm-lock.yaml` |
 
-<!-- GSD:stack-start source:research/STACK.md -->
-## Technology Stack
+### Not used
+Terraform (no cloud state), Kubernetes (overkill), Portainer (extra service), Ansible Vault (SOPS wins across hub repos).
 
-## Recommended Stack
-### Configuration Management (Primary IaC Layer)
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Ansible | 2.17+ (core) | Server config, service deployment, Docker Compose orchestration | No state file complexity; YAML playbooks are AI-readable; works over SSH with no agent; perfect for Claude Code as operator |
-| community.docker collection | 5.1.0+ | Managing Docker Compose stacks on remote hosts | `docker_compose_v2` module is the current standard; old V1 module removed in collection 4.0.0 |
-| community.proxmox collection | 1.x (new) | LXC container lifecycle on tower | Migrated from `community.general.proxmox`; use `community.proxmox.proxmox` going forward |
-### Secrets Management
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| SOPS | 3.9+ | Encrypt secrets committed to git | Encrypts values, leaves keys readable; native git integration; no external service |
-| age | 1.2+ | Encryption backend for SOPS | Simpler than PGP, modern cryptography, no key management complexity, SSH key support |
-### Inventory and Host Management
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| Ansible static inventory (INI or YAML) | Declare all 6 servers with Tailscale IPs, groups, vars | Static is appropriate — servers are known and stable; dynamic inventory adds complexity with no benefit |
-### Repository Structure
-### Monitoring Stack
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Prometheus | 2.x (latest) | Metrics collection | Standard; integrates with all services |
-| Grafana | 11.x (latest) | Dashboards | Standard; node-exporter dashboards prebuilt |
-| node-exporter | 1.8+ | Host metrics | Standard; one per host |
-| cAdvisor | 0.49+ | Container metrics | Docker-native; integrates with Prometheus |
-### Networking (Tailscale)
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| Tailscale | Mesh VPN, all inter-server comms | Already deployed; SSH over Tailnet is the standard operator path |
-| Tailscale Ansible role (`artis3n.tailscale`) | Automate Tailscale install/auth on new nodes | Well-maintained community role; avoids reimplementing auth key flow |
-## Alternatives Considered
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Config management | Ansible | Terraform+Ansible | Terraform state file adds overhead; no cloud resources to justify it |
-| Config management | Ansible | SaltStack | More complex architecture (master+minions); smaller homelab community |
-| Secrets | SOPS+age | Ansible Vault | Per-project vault passwords; doesn't span hub repos cleanly |
-| Secrets | SOPS+age | HashiCorp Vault | Server to maintain; overkill for 6-node homelab |
-| Container management | Docker Compose (managed by Ansible) | Portainer | Portainer GitOps requires Portainer server; adds a service to maintain; Ansible direct is simpler for AI operator |
-| Container management | Docker Compose | Kubernetes/k3s | Massive complexity increase; no benefit at this scale |
-| Monitoring | Prometheus+Grafana | Netdata | Less flexible; harder to extend; Prometheus/Grafana is better for long-term |
-## Installation Bootstrap
-# On operator machine (Claude Code runner — cc-vk or local)
-# SOPS + age
-# or: curl -sLO sops release, apt install age
-# Verify connectivity
-## Confidence Notes
-| Decision | Confidence | Basis |
-|----------|------------|-------|
-| Ansible as primary tool | HIGH | Official docs + strong 2025 community consensus for homelab |
-| community.proxmox (new collection) | MEDIUM | Verified module migration in official Ansible docs; collection still maturing |
-| community.docker v2 module | HIGH | Official Ansible docs confirm V1 removed, V2 is current standard |
-| SOPS+age for secrets | HIGH | Multiple 2025 sources + active project (SOPS 3.9 released 2024) |
-| No Terraform | MEDIUM | Logical for this use case; no long-lived state needed; validated by homelab community advice |
-| Monitoring stack versions | MEDIUM | Current major versions correct as of training; verify latest tags at deploy time |
-## Sources
-- [Ansible community.docker collection — docker_compose_v2 module](https://docs.ansible.com/projects/ansible/latest/collections/community/docker/docker_compose_v2_module.html)
-- [Community.Proxmox Ansible collection](https://docs.ansible.com/projects/ansible/latest/collections/community/proxmox/index.html)
-- [SOPS GitHub](https://github.com/getsops/sops)
-- [Managing secrets with SOPS in homelab](https://www.codedge.de/posts/managing-secrets-sops-homelab/)
-- [Ansible made homelab reproducible](https://www.xda-developers.com/ansible-made-my-entire-homelab-reproducible-with-one-command/)
-- [Terraform vs Ansible for homelab 2025](https://medium.com/@kanishetty/terraform-vs-ansible-which-one-should-you-use-in-2025-6adc58ef84a6)
-- [Homelab GitOps IaC — Proxmox + Ansible](https://github.com/jarkinV/homelab-infrastructure)
-<!-- GSD:stack-end -->
+## Repo layout
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
-## Conventions
+```
+workspace/homelab/
+├── ansible/         — playbooks, inventory, group_vars, collections
+├── apps/admin/      — Next.js admin app
+├── docs/            — setup-github-oauth.md, network-topology.md, dependency-map.md
+├── monitoring/      — (placeholder for Grafana/Prometheus assets)
+├── packages/        — Bun workspace shared libs
+├── scripts/         — ops helpers
+├── secrets/         — SOPS+age encrypted YAML per host
+├── servers/         — per-server config snapshots
+├── shared/          — cross-workspace utilities
+├── package.json, bun.lock
+└── CLAUDE.md        — this file
+```
 
-Conventions not yet established. Will populate as patterns emerge during development.
-<!-- GSD:conventions-end -->
+## Constraints
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
-## Architecture
+- **Operator:** Claude Code executes ops. Repo structure and docs must be AI-readable and unambiguous.
+- **Networking:** All inter-server comms via Tailscale. No public IPs except nether's VPN + reverse proxy endpoints.
+- **Secrets:** Hub-level age key. Homelab references but doesn't store raw secrets.
+- **Incremental:** Document what exists first, then automate. Don't block on perfection.
+- **Tower must never use tailscale exit node** — breaks port forwards + caps LAN speed. Only docker-tower may. cc-worker uses it via the LXC, not the host.
 
-Architecture not yet mapped. Follow existing patterns found in the codebase.
-<!-- GSD:architecture-end -->
+## Common ops
 
-<!-- GSD:skills-start source:skills/ -->
-## Project Skills
+```bash
+# Inside an LXC
+ssh root@tower "pct exec <ID> -- <cmd>"
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, or `.github/skills/` with a `SKILL.md` index file.
-<!-- GSD:skills-end -->
+# Animaya restart (LXC 205, user systemd)
+ssh root@tower 'pct exec 205 -- sudo -u animaya XDG_RUNTIME_DIR=/run/user/1000 systemctl --user restart animaya.service'
 
-<!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
+# cc-box egress toggle
+ssh root@tower "pct exec <ID> -- egress on|off|status"
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+# Ansible run (needs age key + SOPS decrypt)
+cd workspace/homelab && ansible-playbook -i ansible/inventory ansible/playbooks/<file>.yml
 
-Use these entry points:
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
+# Bun
+bun install
+bun run --cwd apps/admin dev
+```
 
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
+## Workflow
 
-<!-- GSD:profile-start -->
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
+- Tasks: `hub/tasks/{active,backlog,completed}/HMB-*.md`
+- `/work HMB-<n>` to start, `/done HMB-<n>` to complete
+- `/task-new HMB "<title>"` to create
+- Cross-project: `ANI_HMB-*` or `HMB_VDN-*` prefix — agent loads all relevant workspace CLAUDE.mds
+- Commits route by cwd. Infra docs live in hub; code/playbooks in this workspace.
