@@ -32,7 +32,10 @@
                         | default('/Users/admin/hub/workspace/voidnet', true) }}"
     voidnet_install_dir: /opt/voidnet
     voidnet_build_target: x86_64-unknown-linux-gnu
-    voidnet_health_url: http://100.101.0.9:8081/health
+    # /health lives on the PUBLIC listener (0.0.0.0:8080) per
+    # crates/voidnet-api/src/main.rs route_list. We probe via the tailnet IP
+    # so the connection is still tailnet-only from the controller's POV.
+    voidnet_health_url: http://100.101.0.9:8080/health
     voidnet_services:
       - voidnet-api
       - voidnet-bot
@@ -120,10 +123,12 @@
       delegate_to: localhost
       become: false
       ansible.builtin.command:
+        # sops --extract on a plain-scalar key prints the unquoted value; no
+        # JSON framing. `from_json` would fail, so we consume stdout raw and
+        # trim whitespace when emitting the .env line.
         cmd: >
           sops --decrypt --extract
           '["VOIDNET_TEST_EMAIL_SUPPRESS_SEND"]'
-          --output-type json
           {{ voidnet_test_suppress_sops_file }}
       register: sops_suppress
       changed_when: false
@@ -134,14 +139,14 @@
       ansible.builtin.lineinfile:
         path: "{{ voidnet_env_file }}"
         regexp: '^VOIDNET_TEST_EMAIL_SUPPRESS_SEND='
-        line: "VOIDNET_TEST_EMAIL_SUPPRESS_SEND={{ sops_suppress.stdout | from_json }}"
+        line: "VOIDNET_TEST_EMAIL_SUPPRESS_SEND={{ sops_suppress.stdout | trim }}"
         owner: root
         group: root
         mode: "0600"
         backup: true
       when:
         - sops_suppress.rc == 0
-        - sops_suppress.stdout | length > 0
+        - (sops_suppress.stdout | default('') | trim | length) > 0
       no_log: true
 
     # -----------------------------------------------------------------
