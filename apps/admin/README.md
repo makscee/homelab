@@ -26,7 +26,7 @@ All day-2 operations — deploy, rollback, secret rotation, Caddy reload, Auth.j
 - Caddy on `mcow` reverse-proxies `homelab.makscee.ru` to the app socket (SEC-01 rate-limit planned for v3.1; see below).
 - SQLite audit log at `/var/lib/homelab-admin/audit.db`; nightly gzip backup at 03:17 UTC (runbook §8).
 - Prometheus on `docker-tower` scrapes `/api/health` every 30s (dual-format: JSON for humans, Prometheus text when `Accept: text/plain`). `HomelabAdminDown` alert fires after 2m.
-- Shared UI primitives live at `/Users/admin/hub/knowledge/standards/ui-kit/` — not a published package; imported relatively.
+- Shared UI primitives ship as the `@hub/ui-kit` yarn/bun workspace package (source at `/Users/admin/hub/workspace/ui-kit/`); imported via `@hub/ui-kit/registry/...`, not a published npm package.
 
 ## Links
 
