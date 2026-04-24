@@ -10,6 +10,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@hub/ui-kit": "*",
     "@auth/core": "^0.34.3",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
