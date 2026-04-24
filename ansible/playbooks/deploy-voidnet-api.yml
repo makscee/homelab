@@ -75,6 +75,10 @@
     voidnet_env_file: "{{ voidnet_install_dir }}/.env"
     voidnet_test_suppress_sops_file:
       "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
+    # Bun version pin (HMB_VDN-2). Matches deploy-homelab-admin.yml to keep
+    # a single source of truth for the bun binary on mcow. Bump only when
+    # both playbooks bump together.
+    voidnet_bun_version: "1.1.38"
 
   handlers:
     - name: reload systemd
@@ -185,12 +189,66 @@
         group: "{{ voidnet_portal_install_group }}"
         mode: "0755"
 
-    - name: "mcow: upload standalone tree (server.js + node_modules + package.json)"
+    # -----------------------------------------------------------------
+    # Ensure bun is installed on mcow (HMB_VDN-2). Idempotent: skip if
+    # /usr/local/bin/bun exists AND reports the expected version. Pinned
+    # to the same version as deploy-homelab-admin.yml to avoid divergence.
+    # -----------------------------------------------------------------
+    - name: "mcow: stat existing bun binary"
+      ansible.builtin.stat:
+        path: /usr/local/bin/bun
+      register: bun_stat
+
+    - name: "mcow: check installed bun version (if present)"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/bun --version
+      register: bun_installed_version
+      changed_when: false
+      failed_when: false
+      when: bun_stat.stat.exists
+
+    - name: "mcow: install bun {{ voidnet_bun_version }} (official install script)"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        export BUN_INSTALL=/root/.bun
+        curl -fsSL https://bun.sh/install | bash -s "bun-v{{ voidnet_bun_version }}"
+        install -m 0755 /root/.bun/bin/bun /usr/local/bin/bun
+      args:
+        executable: /bin/bash
+      when: >-
+        not bun_stat.stat.exists
+        or (bun_installed_version.stdout | default('') | trim) != voidnet_bun_version
+
+    - name: "mcow: verify bun --version matches pin"
+      ansible.builtin.command:
+        cmd: /usr/local/bin/bun --version
+      register: bun_version_final
+      changed_when: false
+      failed_when: (bun_version_final.stdout | trim) != voidnet_bun_version
+
+    # -----------------------------------------------------------------
+    # Portal ship (HMB_VDN-2, 2026-04-24): bun's isolated-install layout
+    # (symlink farm at apps/node_modules/.bun/<hash>/) is fundamentally
+    # incompatible with Next.js standalone tracer's flat-tree assumption —
+    # the tracer emits symlinks into `.bun/` that are dangling after rsync
+    # (and in some cases at build time). Earlier attempts: copy_links,
+    # --copy-unsafe-links, pre-rsync materialization, tar --dereference,
+    # outputFileTracingRoot='../..'. ALL failed structurally.
+    #
+    # Strategy: ship the standalone tree WITHOUT node_modules (deliberately
+    # excluded), plus package.json + bun.lock, then run `bun install
+    # --production --frozen-lockfile` on mcow. Source of truth for runtime
+    # deps is the target host's freshly installed node_modules, not the
+    # tracer output. Bun is pre-installed on mcow by the "ensure bun" task
+    # above.
+    # -----------------------------------------------------------------
+    - name: "mcow: upload standalone tree (server.js only — excludes tracer node_modules)"
       ansible.posix.synchronize:
         src: "{{ voidnet_portal_src_dir }}/.next/standalone/"
         dest: "{{ voidnet_portal_install_dir }}.new/"
         rsync_opts:
           - "--chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r"
+          - "--exclude=node_modules"
         delete: true
 
     - name: "mcow: ensure .next dir exists in staging"
@@ -213,11 +271,73 @@
         dest: "{{ voidnet_portal_install_dir }}.new/public/"
         delete: true
 
-    - name: "mcow: chown staging dir to voidnet:voidnet"
+    - name: "mcow: ship portal package.json (install manifest for bun on target)"
+      ansible.builtin.copy:
+        src: "{{ voidnet_portal_src_dir }}/package.json"
+        dest: "{{ voidnet_portal_install_dir }}.new/package.json"
+        mode: "0644"
+        owner: "{{ voidnet_portal_install_user }}"
+        group: "{{ voidnet_portal_install_group }}"
+
+    - name: "mcow: ship portal bun.lock (deterministic resolution)"
+      ansible.builtin.copy:
+        src: "{{ voidnet_portal_src_dir }}/bun.lock"
+        dest: "{{ voidnet_portal_install_dir }}.new/bun.lock"
+        mode: "0644"
+        owner: "{{ voidnet_portal_install_user }}"
+        group: "{{ voidnet_portal_install_group }}"
+
+    - name: "mcow: bun install --production --frozen-lockfile in staging dir"
+      # Bun writes node_modules owned by whoever runs this. We run as root
+      # (playbook become: true) and chown afterwards. --production drops
+      # devDependencies; --frozen-lockfile aborts if bun.lock is stale vs
+      # package.json (hard failure surfaces lockfile drift before swap).
+      ansible.builtin.command:
+        cmd: bun install --production --frozen-lockfile
+        chdir: "{{ voidnet_portal_install_dir }}.new"
+      environment:
+        # Keep bun's global install cache off the staging dir.
+        BUN_INSTALL: /root/.bun
+      register: portal_bun_install
+      changed_when: true
+
+    - name: "mcow: chown staging dir to voidnet:voidnet (after bun install)"
       ansible.builtin.command:
         cmd: chown -R {{ voidnet_portal_install_user }}:{{ voidnet_portal_install_group }}
              {{ voidnet_portal_install_dir }}.new
       changed_when: true
+
+    - name: "mcow: stat staged server.js (sanity check before swap)"
+      ansible.builtin.stat:
+        path: "{{ voidnet_portal_install_dir }}.new/server.js"
+      register: staged_server_stat
+      failed_when: not staged_server_stat.stat.exists
+
+    - name: "mcow: stat staged node_modules/next (bun install must have populated it)"
+      ansible.builtin.stat:
+        path: "{{ voidnet_portal_install_dir }}.new/node_modules/next/package.json"
+      register: staged_next_stat
+      failed_when: not staged_next_stat.stat.exists
+
+    - name: "mcow: measure staged install size (sanity ceiling)"
+      ansible.builtin.command:
+        cmd: du -sm {{ voidnet_portal_install_dir }}.new
+      register: staged_size
+      changed_when: false
+
+    - name: "mcow: assert staged portal size under ceiling (abort if bun blew up)"
+      ansible.builtin.assert:
+        # Real install measures ~540 MB (sharp + @next/swc + Radix +
+        # Tailwind v4 platform blobs). Ceiling at 800 MB leaves headroom
+        # for future deps while still catching runaway devDeps or a
+        # cache blowout (e.g. full dev install pulling all of node_modules).
+        that:
+          - (staged_size.stdout.split()[0] | int) < 800
+        fail_msg: >-
+          Staged portal dir {{ voidnet_portal_install_dir }}.new is
+          {{ staged_size.stdout.split()[0] }} MB, over 800 MB ceiling.
+          Something went wrong with bun install --production on mcow.
+        success_msg: "Staged portal size OK ({{ staged_size.stdout.split()[0] }} MB)"
 
     # -----------------------------------------------------------------
     # Phase 4 — VOIDNET_TEST_EMAIL_SUPPRESS_SEND management.
