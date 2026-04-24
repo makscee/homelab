@@ -33,6 +33,7 @@
     _state_dir: "{{ claude_usage_exporter.state_dir }}"
     _install_dir: "{{ claude_usage_exporter.install_dir }}"
     _read_path: "{{ claude_usage_exporter.read_path }}"
+    _shared_read_group: "{{ claude_usage_exporter.shared_read_group }}"
 
   handlers:
     - name: reload systemd
@@ -45,12 +46,30 @@
         state: restarted
 
   tasks:
-    - name: Ensure state dir exists (owned by nobody)
+    # VDN-3 Phase 6: shared read group so voidnet-api can read the decrypted
+    # registry without being granted world-read. Exporter keeps writing as
+    # nobody; additional readers join `claude-secrets` and the registry file
+    # is chgrp'd to that group with 0440 (group read, no world).
+    - name: Ensure shared read group exists (claude-secrets)
+      ansible.builtin.group:
+        name: "{{ _shared_read_group }}"
+        state: present
+        system: true
+
+    - name: Add voidnet-api user to shared read group (claude-secrets)
+      ansible.builtin.user:
+        name: "{{ voidnet_api_user }}"
+        groups: "{{ _shared_read_group }}"
+        append: true
+      # Safe when voidnet_api_user == root: adding root to an extra group is a
+      # no-op at the authorization level but keeps the play idiom identical.
+
+    - name: Ensure state dir exists (owned by nobody, group-traversable by claude-secrets)
       ansible.builtin.file:
         path: "{{ _state_dir }}"
         state: directory
         owner: nobody
-        group: nogroup
+        group: "{{ _shared_read_group }}"
         mode: "0750"
 
     - name: Ensure install dir exists (root-owned, read-only to nobody)
@@ -120,15 +139,17 @@
       changed_when: false
       no_log: true
 
-    - name: Render decrypted registry on mcow (nobody-readable, 0440)
+    - name: Render decrypted registry on mcow (nobody + claude-secrets, 0440)
       ansible.builtin.copy:
         content: "{{ decrypted_registry.stdout }}"
         dest: "{{ _read_path }}"
         owner: nobody
-        group: nogroup
+        group: "{{ _shared_read_group }}"
         mode: "0440"
       no_log: true
-      # mtime advance -> exporter reloads within reload_interval seconds
+      # 0440 + group=claude-secrets grants read to voidnet-api (member of
+      # claude-secrets via the user task above) without exposing world-read.
+      # mtime advance -> exporter reloads within reload_interval seconds.
 
     - name: Drop decrypted fact from memory
       ansible.builtin.set_fact:

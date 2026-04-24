@@ -36,6 +36,17 @@ claude_usage_exporter:
   install_dir: /opt/claude-usage-exporter
   poll_interval: 300
   reload_interval: 30
+  # Shared group used to grant additional readers (e.g. voidnet-api) access
+  # to the decrypted registry file without broadening world perms.
+  # See VDN-3 Phase 6 (claude-key pool) — voidnet-api hot-reads the registry
+  # for per-user token assignment decisions.
+  shared_read_group: claude-secrets
+
+# voidnet-api runs as root today (see servers/mcow/voidnet-api.service). The
+# variable is exposed so that, if/when the service is hardened to a dedicated
+# unprivileged user, only this single var needs to change and the
+# `claude-secrets` group membership task stays correct.
+voidnet_api_user: root
 
 # ── v3.0 Phase 13 gap closure (Plan 13-06) — SOPS age recipients for re-encrypt
 # Used by homelab-admin.service runtime when sops -e re-writes
