@@ -1,5 +1,6 @@
 ---
-# Deploy voidnet-api + voidnet-bot to mcow (VDN-3 final-mile).
+# Deploy voidnet-api + voidnet-bot + voidnet-web (Next.js portal) to mcow
+# (VDN-3 Phase 8).
 #
 # Mirrors the legacy `cargo xtask deploy mcow` chain (cross build → rsync →
 # systemctl restart) but wraps it with:
@@ -7,9 +8,12 @@
 #   - post-deploy health probe on the tailnet admin listener
 #   - rollback-on-probe-failure that restores .prev + re-restarts
 #   - idempotent lineinfile of VOIDNET_TEST_EMAIL_SUPPRESS_SEND into /opt/voidnet/.env
+#   - Next.js portal build (bun) + rsync of .next/standalone, .next/static,
+#     public → /opt/voidnet-web + voidnet-web.service restart + HTTP probe
 #
-# This playbook scope is intentionally narrow: rust binaries only. The
-# Next.js portal + animaya git state are handled by the legacy xtask flow.
+# The api + portal are ALWAYS deployed together: a new API route without
+# the matching UI (or vice-versa) breaks prod. Single ansible invocation
+# guarantees atomicity + a shared rollback block.
 #
 # Usage (from hub/workspace/homelab/ansible):
 #   ansible-playbook -i inventory/homelab.yml playbooks/deploy-voidnet-api.yml
@@ -23,7 +27,7 @@
 #     because /opt/voidnet/.env is hand-curated (no SOPS source exists for the
 #     full set yet).
 
-- name: Deploy voidnet-api + voidnet-bot to mcow
+- name: Deploy voidnet-api + voidnet-bot + voidnet-web to mcow
   hosts: mcow
   become: true
   gather_facts: false
@@ -39,6 +43,15 @@
     voidnet_services:
       - voidnet-api
       - voidnet-bot
+    # Portal (Next.js standalone) deploy layout.
+    voidnet_portal_src_dir: "{{ voidnet_repo_dir }}/apps/portal"
+    voidnet_portal_install_dir: /opt/voidnet-web
+    voidnet_portal_install_user: voidnet
+    voidnet_portal_install_group: voidnet
+    voidnet_portal_service: voidnet-web
+    # Portal HTTP probe: hits the local node listener directly to decouple
+    # from the Caddy edge. 3848 matches voidnet-web.service PORT.
+    voidnet_portal_health_url: http://100.101.0.9:3848/
     # Single-line env managed here (see header). Value is sourced from SOPS
     # at task time; when absent the line is left untouched (state=absent
     # would be destructive if operator set the var manually).
@@ -114,6 +127,82 @@
       loop: "{{ voidnet_services }}"
 
     # -----------------------------------------------------------------
+    # Phase 3b — build Next.js portal on the controller (bun) and stage
+    # `.next/standalone` + `.next/static` + `public` into a side dir
+    # `/opt/voidnet-web.new/` on mcow. Phase 5 atomic-renames it into place.
+    # -----------------------------------------------------------------
+    - name: "controller: portal bun install (frozen lockfile)"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command:
+        cmd: bun install --frozen-lockfile
+        chdir: "{{ voidnet_portal_src_dir }}"
+      changed_when: true
+
+    - name: "controller: portal next build (standalone)"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command:
+        cmd: bun run build
+        chdir: "{{ voidnet_portal_src_dir }}"
+      changed_when: true
+
+    - name: "controller: assert standalone server.js was emitted"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.stat:
+        path: "{{ voidnet_portal_src_dir }}/.next/standalone/server.js"
+      register: standalone_stat
+      failed_when: not standalone_stat.stat.exists
+
+    - name: "mcow: ensure staging dir /opt/voidnet-web.new exists (clean)"
+      ansible.builtin.file:
+        path: "{{ voidnet_portal_install_dir }}.new"
+        state: absent
+
+    - name: "mcow: recreate empty staging dir"
+      ansible.builtin.file:
+        path: "{{ voidnet_portal_install_dir }}.new"
+        state: directory
+        owner: "{{ voidnet_portal_install_user }}"
+        group: "{{ voidnet_portal_install_group }}"
+        mode: "0755"
+
+    - name: "mcow: upload standalone tree (server.js + node_modules + package.json)"
+      ansible.posix.synchronize:
+        src: "{{ voidnet_portal_src_dir }}/.next/standalone/"
+        dest: "{{ voidnet_portal_install_dir }}.new/"
+        rsync_opts:
+          - "--chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r"
+        delete: true
+
+    - name: "mcow: ensure .next dir exists in staging"
+      ansible.builtin.file:
+        path: "{{ voidnet_portal_install_dir }}.new/.next"
+        state: directory
+        owner: "{{ voidnet_portal_install_user }}"
+        group: "{{ voidnet_portal_install_group }}"
+        mode: "0755"
+
+    - name: "mcow: upload .next/static (client bundle + assets)"
+      ansible.posix.synchronize:
+        src: "{{ voidnet_portal_src_dir }}/.next/static/"
+        dest: "{{ voidnet_portal_install_dir }}.new/.next/static/"
+        delete: true
+
+    - name: "mcow: upload public/ (static root)"
+      ansible.posix.synchronize:
+        src: "{{ voidnet_portal_src_dir }}/public/"
+        dest: "{{ voidnet_portal_install_dir }}.new/public/"
+        delete: true
+
+    - name: "mcow: chown staging dir to voidnet:voidnet"
+      ansible.builtin.command:
+        cmd: chown -R {{ voidnet_portal_install_user }}:{{ voidnet_portal_install_group }}
+             {{ voidnet_portal_install_dir }}.new
+      changed_when: true
+
+    # -----------------------------------------------------------------
     # Phase 4 — VOIDNET_TEST_EMAIL_SUPPRESS_SEND management.
     # Decrypt mcow.sops.yaml on controller, extract the value for the key
     # "VOIDNET_TEST_EMAIL_SUPPRESS_SEND" if present, and lineinfile it into
@@ -162,7 +251,32 @@
           loop: "{{ voidnet_services }}"
           changed_when: true
 
-        - name: "mcow: systemd daemon-reload + restart services"
+        # Portal swap: rename current → .prev, staged → current. Both
+        # renames are directory moves, fast and atomic on the same fs.
+        - name: "mcow: stat current portal install"
+          ansible.builtin.stat:
+            path: "{{ voidnet_portal_install_dir }}"
+          register: portal_current
+
+        - name: "mcow: drop existing .prev portal (rollback anchor replaced each deploy)"
+          ansible.builtin.file:
+            path: "{{ voidnet_portal_install_dir }}.prev"
+            state: absent
+
+        - name: "mcow: move current portal → .prev (rollback anchor)"
+          ansible.builtin.command:
+            cmd: mv "{{ voidnet_portal_install_dir }}"
+                 "{{ voidnet_portal_install_dir }}.prev"
+          when: portal_current.stat.exists
+          changed_when: true
+
+        - name: "mcow: move staged portal → install dir"
+          ansible.builtin.command:
+            cmd: mv "{{ voidnet_portal_install_dir }}.new"
+                 "{{ voidnet_portal_install_dir }}"
+          changed_when: true
+
+        - name: "mcow: systemd daemon-reload + restart api/bot services"
           ansible.builtin.systemd:
             name: "{{ item }}"
             state: restarted
@@ -177,6 +291,35 @@
           register: health_probe
           until: health_probe.status == 200
           retries: 15
+          delay: 2
+
+        - name: "mcow: restart voidnet-web (portal)"
+          ansible.builtin.systemd:
+            name: "{{ voidnet_portal_service }}"
+            state: restarted
+
+        - name: "mcow: wait for portal listener on :3848"
+          ansible.builtin.uri:
+            url: "{{ voidnet_portal_health_url }}"
+            return_content: false
+            # 200 on /, 307/308 redirect to /login is also acceptable.
+            status_code: [200, 301, 302, 303, 307, 308]
+          register: portal_probe
+          until: portal_probe.status in [200, 301, 302, 303, 307, 308]
+          retries: 20
+          delay: 2
+
+        - name: "mcow: verify claude-key route renders (not 404)"
+          ansible.builtin.uri:
+            url: "http://100.101.0.9:3848/services/claude-key"
+            return_content: false
+            follow_redirects: none
+            # Unauthed → expect redirect to /login (307) or 200 if ssr gate
+            # allows. A 404 means the bundle didn't ship this route.
+            status_code: [200, 301, 302, 303, 307, 308]
+          register: claude_key_probe
+          until: claude_key_probe.status in [200, 301, 302, 303, 307, 308]
+          retries: 10
           delay: 2
 
       rescue:
@@ -201,9 +344,32 @@
           loop: "{{ voidnet_services }}"
           ignore_errors: true
 
+        - name: "ROLLBACK: stat .prev portal"
+          ansible.builtin.stat:
+            path: "{{ voidnet_portal_install_dir }}.prev"
+          register: portal_prev_rb
+
+        - name: "ROLLBACK: swap portal back from .prev"
+          ansible.builtin.shell: |
+            set -e
+            rm -rf "{{ voidnet_portal_install_dir }}.broken" || true
+            if [ -d "{{ voidnet_portal_install_dir }}" ]; then
+              mv "{{ voidnet_portal_install_dir }}" "{{ voidnet_portal_install_dir }}.broken"
+            fi
+            mv "{{ voidnet_portal_install_dir }}.prev" "{{ voidnet_portal_install_dir }}"
+          when: portal_prev_rb.stat.exists
+          ignore_errors: true
+
+        - name: "ROLLBACK: restart voidnet-web from restored .prev"
+          ansible.builtin.systemd:
+            name: "{{ voidnet_portal_service }}"
+            state: restarted
+          ignore_errors: true
+
         - name: "ROLLBACK: fail the play (deploy did not pass health probe)"
           ansible.builtin.fail:
             msg: >-
-              Health probe at {{ voidnet_health_url }} did not return 200 within
-              the retry budget. Binaries rolled back to .prev on mcow.
-              Check `journalctl -u voidnet-api -n 100` for the root cause.
+              Health probe failed (api {{ voidnet_health_url }} or portal
+              {{ voidnet_portal_health_url }}). Binaries + portal rolled
+              back to .prev on mcow. Check `journalctl -u voidnet-api -n 100`
+              and `journalctl -u voidnet-web -n 100`.
