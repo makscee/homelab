@@ -15,6 +15,23 @@
 # the matching UI (or vice-versa) breaks prod. Single ansible invocation
 # guarantees atomicity + a shared rollback block.
 #
+# Defense-in-depth layering (HMB_VDN-1, 2026-04-24):
+#   1. First-line defense — GitHub Actions `build-smoke.yml` (voidnet repo)
+#      runs on every push to main / feat/** and on every PR to main. It
+#      cross-builds voidnet-api + voidnet-bot and executes the
+#      `router_smoke` test suite which constructs each factored axum
+#      Router and greps for `.route("/:name")` leftovers. Catches the
+#      axum 0.7→0.8 route-syntax class of bug BEFORE the playbook ever
+#      runs.
+#   2. Second-line defense — this playbook's `wait for admin /health`
+#      task. The app must boot and serve 200 OK within 15×2=30s of
+#      restart. Any startup panic (not caught by CI) fails the probe.
+#   3. Third-line defense — the rescue block below. Restores .prev
+#      binaries + portal and re-restarts if the health probe times out.
+#
+# Operators should not rely on (2)/(3) as the primary gate; they are
+# survival nets for bugs that slip past (1).
+#
 # Usage (from hub/workspace/homelab/ansible):
 #   ansible-playbook -i inventory/homelab.yml playbooks/deploy-voidnet-api.yml
 #
