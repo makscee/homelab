@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+echo "DEPRECATED: ui-kit is no longer vendor-synced. It is a yarn workspace package (@hub/ui-kit) at hub/workspace/ui-kit/ since HUB-2 (2026-04-24). Do not run this script. See knowledge/standards/design-system-migration-plan.md."
+exit 1
+
+# --- Original script preserved below for history ---
 # sync-ui-kit.sh — re-mirror hub ui-kit SoT into homelab/packages/ui-kit/
 #
 # Decision A (operator, 2026-04-21): ui-kit is vendored as a checked-in mirror.
