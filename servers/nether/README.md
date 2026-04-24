@@ -50,7 +50,28 @@ To rebuild the runtime config on a fresh nether host:
 
 **Important drift note:** the live caddy container (as captured 2026-04-14) had the Caddyfile inlined into its `command:` via an `echo > /etc/caddy/Caddyfile && caddy run` construct. The repo version reproduces an equivalent configuration via bind-mount, which is the deployment path we enforce going forward. Changes to the reverse proxy must land in this repo and be redeployed — do not `docker exec` the running caddy to edit `/etc/caddy/Caddyfile` in place.
 
-Hosts currently proxied: `n8n.makscee.ru`, `aoi.makscee.ru:3000`, `sync.makscee.ru`, `notes.makscee.ru`, `makscee.ru`, `voidnet.makscee.ru` (with `/jellyfin/*` and `/navidrome*` path handlers back to docker-tower, default route to mcow), `animaya.makscee.ru`, and an internal `https://nether:2053`.
+Hosts currently proxied: `n8n.makscee.ru`, `aoi.makscee.ru:3000`, `sync.makscee.ru`, `notes.makscee.ru`, `makscee.ru`, `voidnet.makscee.ru` (with `/jellyfin/*` and `/navidrome*` path handlers back to docker-tower, default route to mcow), `animaya.makscee.ru`, `admin.makscee.ru` (tailnet-gated, VDN-21), and an internal `https://nether:2053`.
+
+### 4.1 `admin.makscee.ru` — tailnet-gated voidnet admin (VDN-21)
+
+Dedicated vhost for voidnet's admin portal + admin API. **Reachable only from the Tailscale CGNAT range `100.64.0.0/10`.** Public requests (any non-tailnet source IP) get `403 forbidden` at Caddy — the request never reaches mcow.
+
+- **Who can reach it:** any host on our tailnet (this mac, cc-worker, cc-\*, docker-tower, mcow, nether itself). Operator home IPs are NOT allowlisted — ssh is the same trust boundary, and we already require tailnet for ssh.
+- **Route split:**
+  - `/api/admin/*` → `voidnet-api` admin listener at `100.101.0.9:8081`
+  - `/api/*`, `/health` → `voidnet-api` public listener at `100.101.0.9:8080`
+  - everything else → `voidnet-web` (Next.js portal) at `100.101.0.9:3848`
+- **Header injection:** Caddy sets `X-Tailscale-Ip` from `{http.request.remote.host}` after the source-IP gate accepts. Client-supplied values are overwritten (not appended). The public `voidnet.makscee.ru` vhost strips this header (see `request_header -X-Tailscale-Ip` there) so forgery on the public face is blocked.
+- **Probe it** (from any tailnet host):
+  ```sh
+  curl -fsSI https://admin.makscee.ru/admin/claude-key   # expect 200
+  ```
+  From a non-tailnet network (e.g. phone mobile data):
+  ```sh
+  curl -sI https://admin.makscee.ru/                     # expect 403
+  ```
+- **Lockout runbook:** if somehow tailnet is unreachable, `ssh root@nether`, edit `/opt/caddy/Caddyfile` to widen `@cgnat remote_ip ...` temporarily, `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`, then revert + mirror the change back to this repo.
+- **Spec:** `hub/docs/superpowers/specs/2026-04-24-vdn-21-admin-portal-gate-design.md`.
 
 ## 5. Ports exposed to the internet
 

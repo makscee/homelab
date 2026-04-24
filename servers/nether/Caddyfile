@@ -89,3 +89,45 @@ animaya.makscee.ru {
     }
   }
 }
+
+# admin.makscee.ru — tailnet-gated admin face for voidnet portal + admin API.
+# VDN-21. Source-IP gate: Tailscale CGNAT only (100.64.0.0/10) — same trust
+# boundary as ssh. Non-allowed sources get 403 (admin is API+UI; honest 403
+# beats a redirect to a page they also can't reach).
+# X-Tailscale-Ip is injected from the real client IP after the gate accepts;
+# Next.js middleware on mcow reads it to admit /admin/* routes.
+# Route split (Plan B — admin listener only mounts /admin/*):
+#   /api/admin/* → voidnet-api admin listener on 100.101.0.9:8081
+#   /api/*, /health → voidnet-api public listener on 100.101.0.9:8080
+#   everything else → voidnet-web (Next.js) on 100.101.0.9:3848
+# Spec: docs/superpowers/specs/2026-04-24-vdn-21-admin-portal-gate-design.md
+admin.makscee.ru {
+  @cgnat remote_ip 100.64.0.0/10
+
+  handle @cgnat {
+    handle /api/admin/* {
+      reverse_proxy 100.101.0.9:8081 {
+        header_up X-Tailscale-Ip {http.request.remote.host}
+      }
+    }
+    handle /api/* {
+      reverse_proxy 100.101.0.9:8080 {
+        header_up X-Tailscale-Ip {http.request.remote.host}
+      }
+    }
+    handle /health {
+      reverse_proxy 100.101.0.9:8080 {
+        header_up X-Tailscale-Ip {http.request.remote.host}
+      }
+    }
+    handle {
+      reverse_proxy 100.101.0.9:3848 {
+        header_up X-Tailscale-Ip {http.request.remote.host}
+      }
+    }
+  }
+
+  handle {
+    respond "forbidden" 403
+  }
+}
