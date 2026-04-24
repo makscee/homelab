@@ -459,7 +459,53 @@
           retries: 10
           delay: 2
 
+        # -----------------------------------------------------------------
+        # HMB_VDN-2 post-deploy gate: grep the fresh journal for
+        # `Cannot find module` — the bun isolated-install / Next standalone
+        # tracer class of failure (see header comment and bun-install
+        # stanza). A live systemd unit can happily respond 200 on the
+        # homepage while a lazily-imported route explodes at request time;
+        # this check runs BEFORE we call the deploy green.
+        # -----------------------------------------------------------------
+        - name: "mcow: settle window before journal grep (let any deferred imports fire)"
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: "mcow: grep fresh journal for `Cannot find module` (module-resolution gate)"
+          ansible.builtin.command:
+            cmd: journalctl -u voidnet-web --since "1 minute ago" --no-pager
+          register: modres_grep
+          changed_when: false
+          # Case-insensitive grep via Jinja. If any line matches, fail the
+          # task with the offending line(s) so the operator sees the module
+          # name that's missing without hunting through the full journal.
+          failed_when: >-
+            (modres_grep.stdout_lines
+              | select('search', '(?i)cannot find module')
+              | list
+              | length) > 0
+          vars:
+            _offending: >-
+              {{ modres_grep.stdout_lines
+                 | select('search', '(?i)cannot find module')
+                 | list }}
+
       rescue:
+        # -----------------------------------------------------------------
+        # ROLLBACK OPERATOR NOTE (HMB_VDN-2):
+        # If this block fires, the atomic swap has been reverted:
+        #   - voidnet-api / voidnet-bot binaries restored from .prev
+        #   - /opt/voidnet-web is the previous working tree (the broken
+        #     candidate was moved to /opt/voidnet-web.broken for autopsy)
+        #   - voidnet-web.service restarted from restored tree
+        # To diagnose what failed:
+        #   ssh root@mcow 'journalctl -u voidnet-web -n 200 --no-pager'
+        #   ssh root@mcow 'journalctl -u voidnet-api -n 200 --no-pager'
+        #   ssh root@mcow 'du -sh /opt/voidnet-web /opt/voidnet-web.broken'
+        # Common causes: missing module (isolated-install symlink bug —
+        # the gate above), stale bun.lock vs package.json, systemd unit
+        # env drift, CSRF/SSR panic on a new route.
+        # -----------------------------------------------------------------
         - name: "ROLLBACK: restore .prev binaries"
           ansible.builtin.copy:
             src: "{{ voidnet_install_dir }}/{{ item }}.prev"
