@@ -1,0 +1,204 @@
+---
+# Deploy voidnet-api + voidnet-bot to mcow (VDN-3 final-mile).
+#
+# Mirrors the legacy `cargo xtask deploy mcow` chain (cross build → rsync →
+# systemctl restart) but wraps it with:
+#   - pre-deploy .prev snapshot of the currently-installed binary
+#   - post-deploy health probe on the tailnet admin listener
+#   - rollback-on-probe-failure that restores .prev + re-restarts
+#   - idempotent lineinfile of VOIDNET_TEST_EMAIL_SUPPRESS_SEND into /opt/voidnet/.env
+#
+# This playbook scope is intentionally narrow: rust binaries only. The
+# Next.js portal + animaya git state are handled by the legacy xtask flow.
+#
+# Usage (from hub/workspace/homelab/ansible):
+#   ansible-playbook -i inventory/homelab.yml playbooks/deploy-voidnet-api.yml
+#
+# Preconditions:
+#   - controller has cross + cargo (mac or linux; `cross --version` must work)
+#   - ssh root@mcow works (Tailnet)
+#   - secrets/mcow.sops.yaml contains whatever extra env vars you expect to be
+#     in /opt/voidnet/.env — but this playbook does NOT re-render the full .env.
+#     Only the single VOIDNET_TEST_EMAIL_SUPPRESS_SEND line is managed here
+#     because /opt/voidnet/.env is hand-curated (no SOPS source exists for the
+#     full set yet).
+
+- name: Deploy voidnet-api + voidnet-bot to mcow
+  hosts: mcow
+  become: true
+  gather_facts: false
+  vars:
+    voidnet_repo_dir: "{{ lookup('env', 'VOIDNET_REPO_DIR')
+                        | default('/Users/admin/hub/workspace/voidnet', true) }}"
+    voidnet_install_dir: /opt/voidnet
+    voidnet_build_target: x86_64-unknown-linux-gnu
+    voidnet_health_url: http://100.101.0.9:8081/health
+    voidnet_services:
+      - voidnet-api
+      - voidnet-bot
+    # Single-line env managed here (see header). Value is sourced from SOPS
+    # at task time; when absent the line is left untouched (state=absent
+    # would be destructive if operator set the var manually).
+    voidnet_env_file: "{{ voidnet_install_dir }}/.env"
+    voidnet_test_suppress_sops_file:
+      "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+  tasks:
+    # -----------------------------------------------------------------
+    # Phase 1 — cross build on the controller (localhost). Mirrors
+    # deploy_mcow_plan() from crates/xtask/src/deploy.rs: cross build
+    # --release for three voidnet crates + xtask.
+    # -----------------------------------------------------------------
+    - name: "controller: cross build voidnet-api + voidnet-bot (release, {{ voidnet_build_target }})"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command:
+        cmd: >
+          cross build --release
+          --target {{ voidnet_build_target }}
+          -p voidnet-api -p voidnet-bot
+        chdir: "{{ voidnet_repo_dir }}"
+      register: cross_build
+      changed_when: true  # always run; cargo caches internally
+
+    - name: "controller: assert compiled binaries exist"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.stat:
+        path: "{{ voidnet_repo_dir }}/target/{{ voidnet_build_target }}/release/{{ item }}"
+      register: bin_stat
+      loop: "{{ voidnet_services }}"
+      failed_when: not bin_stat.stat.exists
+
+    # -----------------------------------------------------------------
+    # Phase 2 — snapshot currently-live binaries as .prev (rollback anchor).
+    # -----------------------------------------------------------------
+    - name: "mcow: snapshot existing binaries to .prev (rollback anchor)"
+      ansible.builtin.copy:
+        src: "{{ voidnet_install_dir }}/{{ item }}"
+        dest: "{{ voidnet_install_dir }}/{{ item }}.prev"
+        remote_src: true
+        mode: "0755"
+        owner: root
+        group: root
+      loop: "{{ voidnet_services }}"
+      # First-deploy tolerance: if the service file doesn't exist yet,
+      # there's nothing to snapshot; skip rather than fail.
+      failed_when:
+        - snap.failed is defined
+        - snap.failed
+        - "'does not exist' not in (snap.msg | default(''))"
+      register: snap
+      ignore_errors: true
+
+    # -----------------------------------------------------------------
+    # Phase 3 — copy new binaries with .new suffix, then atomic mv into place.
+    # The rollback block (Phase 5) keys off the .new → real name transition,
+    # so failure BEFORE the mv leaves the old binary untouched.
+    # -----------------------------------------------------------------
+    - name: "mcow: upload new binaries to .new suffix"
+      ansible.builtin.copy:
+        src: "{{ voidnet_repo_dir }}/target/{{ voidnet_build_target }}/release/{{ item }}"
+        dest: "{{ voidnet_install_dir }}/{{ item }}.new"
+        mode: "0755"
+        owner: root
+        group: root
+      loop: "{{ voidnet_services }}"
+
+    # -----------------------------------------------------------------
+    # Phase 4 — VOIDNET_TEST_EMAIL_SUPPRESS_SEND management.
+    # Decrypt mcow.sops.yaml on controller, extract the value for the key
+    # "VOIDNET_TEST_EMAIL_SUPPRESS_SEND" if present, and lineinfile it into
+    # /opt/voidnet/.env on mcow.
+    # -----------------------------------------------------------------
+    - name: "controller: decrypt mcow SOPS for VOIDNET_TEST_EMAIL_SUPPRESS_SEND"
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command:
+        cmd: >
+          sops --decrypt --extract
+          '["VOIDNET_TEST_EMAIL_SUPPRESS_SEND"]'
+          --output-type json
+          {{ voidnet_test_suppress_sops_file }}
+      register: sops_suppress
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: "mcow: set VOIDNET_TEST_EMAIL_SUPPRESS_SEND in /opt/voidnet/.env"
+      ansible.builtin.lineinfile:
+        path: "{{ voidnet_env_file }}"
+        regexp: '^VOIDNET_TEST_EMAIL_SUPPRESS_SEND='
+        line: "VOIDNET_TEST_EMAIL_SUPPRESS_SEND={{ sops_suppress.stdout | from_json }}"
+        owner: root
+        group: root
+        mode: "0600"
+        backup: true
+      when:
+        - sops_suppress.rc == 0
+        - sops_suppress.stdout | length > 0
+      no_log: true
+
+    # -----------------------------------------------------------------
+    # Phase 5 — atomic mv + systemd restart inside a block/rescue so any
+    # failure from here on triggers rollback to .prev.
+    # -----------------------------------------------------------------
+    - name: "mcow: atomic swap + restart + health probe (rollback on fail)"
+      block:
+        - name: "mcow: atomic mv .new → real binary"
+          ansible.builtin.command:
+            cmd: mv -f "{{ voidnet_install_dir }}/{{ item }}.new"
+                 "{{ voidnet_install_dir }}/{{ item }}"
+          loop: "{{ voidnet_services }}"
+          changed_when: true
+
+        - name: "mcow: systemd daemon-reload + restart services"
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: restarted
+            daemon_reload: true
+          loop: "{{ voidnet_services }}"
+
+        - name: "mcow: wait for admin /health to return 200"
+          ansible.builtin.uri:
+            url: "{{ voidnet_health_url }}"
+            return_content: false
+            status_code: 200
+          register: health_probe
+          until: health_probe.status == 200
+          retries: 15
+          delay: 2
+
+      rescue:
+        - name: "ROLLBACK: restore .prev binaries"
+          ansible.builtin.copy:
+            src: "{{ voidnet_install_dir }}/{{ item }}.prev"
+            dest: "{{ voidnet_install_dir }}/{{ item }}"
+            remote_src: true
+            mode: "0755"
+            owner: root
+            group: root
+          loop: "{{ voidnet_services }}"
+          # If .prev doesn't exist (first deploy), we can't roll back;
+          # surface the original failure instead.
+          ignore_errors: true
+
+        - name: "ROLLBACK: restart services from restored .prev binaries"
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: restarted
+            daemon_reload: true
+          loop: "{{ voidnet_services }}"
+          ignore_errors: true
+
+        - name: "ROLLBACK: fail the play (deploy did not pass health probe)"
+          ansible.builtin.fail:
+            msg: >-
+              Health probe at {{ voidnet_health_url }} did not return 200 within
+              the retry budget. Binaries rolled back to .prev on mcow.
+              Check `journalctl -u voidnet-api -n 100` for the root cause.
