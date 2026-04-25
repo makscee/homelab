@@ -485,6 +485,32 @@
           delay: 2
 
         # -----------------------------------------------------------------
+        # VDN-22 post-deploy gate: probe the public edge for every
+        # user-visible URL declared in voidnet_probe_urls (and optionally
+        # voidnet_admin_probe_urls). Catches Caddy/DNS/SSR-routing/redirect-
+        # target regressions that the localhost probes above cannot see.
+        # Per-row failure is suppressed (failed_when: false); the next
+        # task aggregates violations and decides whether to fail the play.
+        # -----------------------------------------------------------------
+        - name: "mcow: probe public-edge URL contracts (VDN-22 rule #2)"
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: GET
+            follow_redirects: none
+            status_code: "{{ item.status }}"
+            return_content: false
+            timeout: 10
+          register: probe_results
+          loop: "{{ voidnet_probe_urls + voidnet_admin_probe_urls }}"
+          loop_control:
+            label: "{{ item.url }} → {{ item.status }}{{ ('  Location: ' ~ item.location) if item.location is defined else '' }}"
+          retries: 3
+          delay: 2
+          until: probe_results is succeeded
+          failed_when: false
+          changed_when: false
+
+        # -----------------------------------------------------------------
         # HMB_VDN-2 post-deploy gate: grep the fresh journal for
         # `Cannot find module` — the bun isolated-install / Next standalone
         # tracer class of failure (see header comment and bun-install
