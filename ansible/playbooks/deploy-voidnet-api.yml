@@ -94,7 +94,7 @@
       - {url: "https://voidnet.makscee.ru/services/claude-key",  status: 307, location: "/login"}
       - {url: "https://voidnet.makscee.ru/admin/claude-key",     status: 307, location: "/403"}
       - {url: "https://voidnet.makscee.ru/403",                  status: 200}
-      - {url: "https://voidnet.makscee.ru/api/health",           status: 200}
+      - {url: "https://voidnet.makscee.ru/health",               status: 200}
     # Tailnet-only URLs. Empty until VDN-21 lands the tailnet listener
     # that preserves x-tailscale-ip for /admin/*. When non-empty, looped
     # together with the public list above.
