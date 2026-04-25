@@ -64,6 +64,7 @@ workspace/homelab/
 ├── apps/admin/      — Next.js admin app
 ├── docs/            — setup-github-oauth.md, network-topology.md, dependency-map.md
 ├── monitoring/      — (placeholder for Grafana/Prometheus assets)
+├── ops/             — operational artifacts (egress-gw scripts/units, runbooks)
 ├── packages/        — Bun workspace shared libs
 ├── scripts/         — ops helpers
 ├── secrets/         — SOPS+age encrypted YAML per host
