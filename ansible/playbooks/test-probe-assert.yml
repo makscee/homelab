@@ -1,0 +1,152 @@
+---
+# VDN-22 — fixture for the post-deploy URL-probe assert chain.
+#
+# Runs on localhost only. Synthesises `probe_results.results` directly via
+# set_fact, then runs the canonical `_violations` Jinja chain (must be kept
+# byte-identical to the chain in deploy-voidnet-api.yml's "assert probe
+# contracts" task), and asserts the chain produced the expected violations.
+#
+# Run from workspace/homelab/ansible/:
+#   ansible-playbook -i localhost, --connection=local playbooks/test-probe-assert.yml
+
+- name: "VDN-22 fixture: post-deploy probe assert chain"
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    # --- Case 1: all rows pass --------------------------------------------
+    - name: "case 1: synthesise all-pass probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/", status: 200}
+              status: 200
+              failed: false
+            - item: {url: "https://x/d", status: 307, location: "/login"}
+              status: 307
+              location: "/login"
+              failed: false
+
+    - name: "case 1: compute violations"
+      ansible.builtin.set_fact:
+        case1_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 1: assert no violations"
+      ansible.builtin.assert:
+        that:
+          - "case1_violations | length == 0"
+        fail_msg: "case 1 expected 0 violations, got {{ case1_violations }}"
+        success_msg: "case 1 OK (all-pass → 0 violations)"
+
+    # --- Case 2: one status mismatch --------------------------------------
+    - name: "case 2: synthesise status-mismatch probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/", status: 200}
+              status: 500
+              failed: true
+            - item: {url: "https://x/d", status: 307, location: "/login"}
+              status: 307
+              location: "/login"
+              failed: false
+
+    - name: "case 2: compute violations"
+      ansible.builtin.set_fact:
+        case2_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 2: assert one status violation"
+      ansible.builtin.assert:
+        that:
+          - "case2_violations | length == 1"
+          - "case2_violations[0].reason == 'status'"
+          - "case2_violations[0].url == 'https://x/'"
+          - "case2_violations[0].expected_status == 200"
+          - "case2_violations[0].actual_status == 500"
+        fail_msg: "case 2 unexpected: {{ case2_violations }}"
+        success_msg: "case 2 OK (status mismatch → 1 status violation)"
+
+    # --- Case 3: one location mismatch ------------------------------------
+    - name: "case 3: synthesise location-mismatch probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/d", status: 307, location: "/login"}
+              status: 307
+              location: "/dashboard"
+              failed: false
+
+    - name: "case 3: compute violations"
+      ansible.builtin.set_fact:
+        case3_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 3: assert one location violation"
+      ansible.builtin.assert:
+        that:
+          - "case3_violations | length == 1"
+          - "case3_violations[0].reason == 'location'"
+          - "case3_violations[0].expected_location == '/login'"
+          - "case3_violations[0].actual_location == '/dashboard'"
+        fail_msg: "case 3 unexpected: {{ case3_violations }}"
+        success_msg: "case 3 OK (location mismatch → 1 location violation)"
+
+    # --- Case 4: row without location → no location violation -------------
+    - name: "case 4: synthesise row-without-location probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/", status: 200}
+              status: 200
+              # response had no Location header; r.location absent
+              failed: false
+
+    - name: "case 4: compute violations"
+      ansible.builtin.set_fact:
+        case4_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 4: assert no violations (row had no location to assert)"
+      ansible.builtin.assert:
+        that:
+          - "case4_violations | length == 0"
+        fail_msg: "case 4 unexpected: {{ case4_violations }}"
+        success_msg: "case 4 OK (row without location → 0 violations)"
