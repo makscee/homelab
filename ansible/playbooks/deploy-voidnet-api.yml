@@ -489,8 +489,10 @@
         # user-visible URL declared in voidnet_probe_urls (and optionally
         # voidnet_admin_probe_urls). Catches Caddy/DNS/SSR-routing/redirect-
         # target regressions that the localhost probes above cannot see.
-        # Per-row failure is suppressed (failed_when: false); the next
-        # task aggregates violations and decides whether to fail the play.
+        # Per-row failure is suppressed (ignore_errors: true) so the next
+        # task can aggregate violations and decide whether to fail the play.
+        # `until: probe_results is succeeded` + retries: 3 still fires on
+        # transient failure because ignore_errors does not mask `failed`.
         # -----------------------------------------------------------------
         - name: "mcow: probe public-edge URL contracts (VDN-22 rule #2)"
           ansible.builtin.uri:
@@ -501,14 +503,14 @@
             return_content: false
             timeout: 10
           register: probe_results
-          loop: "{{ voidnet_probe_urls + voidnet_admin_probe_urls }}"
+          loop: "{{ (voidnet_probe_urls | default([])) + (voidnet_admin_probe_urls | default([])) }}"
           loop_control:
             label: "{{ item.url }} → {{ item.status }}{{ ('  Location: ' ~ item.location) if item.location is defined else '' }}"
           retries: 3
           delay: 2
           until: probe_results is succeeded
-          failed_when: false
           changed_when: false
+          ignore_errors: true
 
         - name: "mcow: assert public-edge URL contracts (VDN-22 rule #2)"
           vars:
@@ -628,10 +630,14 @@
             state: restarted
           ignore_errors: true
 
-        - name: "ROLLBACK: fail the play (deploy did not pass health probe)"
+        - name: "ROLLBACK: fail the play (deploy gate did not pass)"
           ansible.builtin.fail:
-            msg: >-
-              Health probe failed (api {{ voidnet_health_url }} or portal
-              {{ voidnet_portal_health_url }}). Binaries + portal rolled
-              back to .prev on mcow. Check `journalctl -u voidnet-api -n 100`
-              and `journalctl -u voidnet-web -n 100`.
+            msg: |-
+              Deploy gate failed. Binaries + portal rolled back to .prev on mcow.
+              Trigger is one of:
+                - health probe (api {{ voidnet_health_url }})
+                - portal probe ({{ voidnet_portal_health_url }})
+                - URL contract assert (see preceding `fail_msg` for the violations list — VDN-22 rule #2)
+                - module-resolution gate (`Cannot find module` in voidnet-web journal — HMB_VDN-2)
+              See preceding task output and journalctl on mcow for the originating error.
+              Check `journalctl -u voidnet-api -n 100` and `journalctl -u voidnet-web -n 100`.
