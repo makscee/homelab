@@ -79,6 +79,31 @@
     # a single source of truth for the bun binary on mcow. Bump only when
     # both playbooks bump together.
     voidnet_bun_version: "1.1.38"
+    # --- VDN-22 post-deploy URL contract probes (rule #2) ---
+    # Public URLs probed every deploy. Each row: url + expected status,
+    # plus optional `location:` for redirect rows (exact relative-path
+    # match against response 'location' header). See
+    # docs/superpowers/specs/2026-04-25-vdn-22-deploy-url-probe-design.md
+    # for schema rationale and how to extend the list.
+    voidnet_probe_urls:
+      - {url: "https://voidnet.makscee.ru/",                     status: 200}
+      - {url: "https://voidnet.makscee.ru/login",                status: 200}
+      - {url: "https://voidnet.makscee.ru/join",                 status: 200}
+      - {url: "https://voidnet.makscee.ru/dashboard",            status: 307, location: "/login"}
+      - {url: "https://voidnet.makscee.ru/services/vpn",         status: 307, location: "/login"}
+      - {url: "https://voidnet.makscee.ru/services/claude-key",  status: 307, location: "/login"}
+      - {url: "https://voidnet.makscee.ru/admin/claude-key",     status: 307, location: "/403"}
+      - {url: "https://voidnet.makscee.ru/403",                  status: 200}
+      - {url: "https://voidnet.makscee.ru/api/health",           status: 200}
+    # Tailnet-only URLs. Empty until VDN-21 lands the tailnet listener
+    # that preserves x-tailscale-ip for /admin/*. When non-empty, looped
+    # together with the public list above.
+    voidnet_admin_probe_urls: []
+    # Strict mode. true → violation triggers rescue (rollback to .prev).
+    # false → violation logs but play continues (escape hatch for known-
+    # flaky upstream incidents). Toggle per-run via:
+    #   ansible-playbook ... -e voidnet_probe_strict=false
+    voidnet_probe_strict: true
 
   handlers:
     - name: reload systemd
