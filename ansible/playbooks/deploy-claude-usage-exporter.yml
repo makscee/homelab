@@ -22,8 +22,6 @@
 - name: Deploy claude-usage-exporter to mcow
   hosts: mcow
   become: true
-  vars_files:
-    - "{{ playbook_dir }}/../group_vars/all.yml"
   vars:
     exporter_src: "{{ playbook_dir }}/../../servers/mcow/claude-usage-exporter"
     unit_src: "{{ playbook_dir }}/../../servers/mcow/systemd/claude-usage-exporter.service"
