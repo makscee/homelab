@@ -518,7 +518,7 @@
                 {%- set row = r.item -%}
                 {%- if r.status is not defined or r.status != row.status -%}
                   {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
-                {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+                {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
                   {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
                 {%- endif -%}
               {%- endfor -%}

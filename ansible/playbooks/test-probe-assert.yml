@@ -35,7 +35,7 @@
             {%- set row = r.item -%}
             {%- if r.status is not defined or r.status != row.status -%}
               {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
-            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
               {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
             {%- endif -%}
           {%- endfor -%}
@@ -69,7 +69,7 @@
             {%- set row = r.item -%}
             {%- if r.status is not defined or r.status != row.status -%}
               {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
-            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
               {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
             {%- endif -%}
           {%- endfor -%}
@@ -104,7 +104,7 @@
             {%- set row = r.item -%}
             {%- if r.status is not defined or r.status != row.status -%}
               {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
-            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
               {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
             {%- endif -%}
           {%- endfor -%}
@@ -138,7 +138,7 @@
             {%- set row = r.item -%}
             {%- if r.status is not defined or r.status != row.status -%}
               {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
-            {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
               {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
             {%- endif -%}
           {%- endfor -%}
@@ -150,3 +150,68 @@
           - "case4_violations | length == 0"
         fail_msg: "case 4 unexpected: {{ case4_violations }}"
         success_msg: "case 4 OK (row without location → 0 violations)"
+
+    # --- Case 5: absolute-URL location matches expected relative path -----
+    - name: "case 5: synthesise absolute-URL location probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/d", status: 307, location: "/login"}
+              status: 307
+              location: "https://x/login"
+              failed: false
+
+    - name: "case 5: compute violations"
+      ansible.builtin.set_fact:
+        case5_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 5: assert no violations (absolute URL location, path matches)"
+      ansible.builtin.assert:
+        that:
+          - "case5_violations | length == 0"
+        fail_msg: "case 5 unexpected: {{ case5_violations }}"
+        success_msg: "case 5 OK (absolute-URL location → path extracted → 0 violations)"
+
+    # --- Case 6: absolute-URL location, path mismatch ---------------------
+    - name: "case 6: synthesise absolute-URL mismatch probe_results"
+      ansible.builtin.set_fact:
+        probe_results:
+          results:
+            - item: {url: "https://x/d", status: 307, location: "/login"}
+              status: 307
+              location: "https://x/dashboard"
+              failed: false
+
+    - name: "case 6: compute violations"
+      ansible.builtin.set_fact:
+        case6_violations: >-
+          {%- set out = [] -%}
+          {%- for r in probe_results.results -%}
+            {%- set row = r.item -%}
+            {%- if r.status is not defined or r.status != row.status -%}
+              {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+            {%- elif row.location is defined and ((r.location | default('')) | urlsplit('path') or (r.location | default(''))) != row.location -%}
+              {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ out }}
+
+    - name: "case 6: assert one location violation (path mismatch)"
+      ansible.builtin.assert:
+        that:
+          - "case6_violations | length == 1"
+          - "case6_violations[0].reason == 'location'"
+          - "case6_violations[0].expected_location == '/login'"
+          - "case6_violations[0].actual_location == 'https://x/dashboard'"
+        fail_msg: "case 6 unexpected: {{ case6_violations }}"
+        success_msg: "case 6 OK (absolute-URL path mismatch → 1 location violation)"
