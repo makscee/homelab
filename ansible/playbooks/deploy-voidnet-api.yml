@@ -510,6 +510,34 @@
           failed_when: false
           changed_when: false
 
+        - name: "mcow: assert public-edge URL contracts (VDN-22 rule #2)"
+          vars:
+            _violations: >-
+              {%- set out = [] -%}
+              {%- for r in probe_results.results -%}
+                {%- set row = r.item -%}
+                {%- if r.status is not defined or r.status != row.status -%}
+                  {%- set _ = out.append({'url': row.url, 'expected_status': row.status, 'actual_status': r.status | default('ERR'), 'reason': 'status'}) -%}
+                {%- elif row.location is defined and (r.location | default('')) != row.location -%}
+                  {%- set _ = out.append({'url': row.url, 'expected_location': row.location, 'actual_location': r.location | default(''), 'reason': 'location'}) -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {{ out }}
+          ansible.builtin.assert:
+            that:
+              - "_violations | length == 0"
+            fail_msg: |-
+              Post-deploy URL contract violations ({{ _violations | length }}):
+              {% for v in _violations %}
+              - {{ v.url }}: {{ v.reason }} — {{ v }}
+              {% endfor %}
+            success_msg: "All {{ (voidnet_probe_urls + voidnet_admin_probe_urls) | length }} URL contracts pass."
+          # Strict-mode escape hatch. When voidnet_probe_strict is false,
+          # a non-empty _violations list is logged via fail_msg but does
+          # not fail the task — play continues, no rescue. Default true.
+          failed_when: >-
+            voidnet_probe_strict and ((_violations | default([])) | length > 0)
+
         # -----------------------------------------------------------------
         # HMB_VDN-2 post-deploy gate: grep the fresh journal for
         # `Cannot find module` — the bun isolated-install / Next standalone
