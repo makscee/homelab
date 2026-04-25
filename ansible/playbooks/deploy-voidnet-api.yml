@@ -75,10 +75,9 @@
     voidnet_env_file: "{{ voidnet_install_dir }}/.env"
     voidnet_test_suppress_sops_file:
       "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
-    # Bun version pin (HMB_VDN-2). Matches deploy-homelab-admin.yml to keep
-    # a single source of truth for the bun binary on mcow. Bump only when
-    # both playbooks bump together.
-    voidnet_bun_version: "1.1.38"
+    # Bun version pin sourced from group_vars/all.yml (`bun_version`).
+    # Single source of truth for the bun binary on mcow shared with
+    # deploy-homelab-admin.yml.
     # --- VDN-22 post-deploy URL contract probes (rule #2) ---
     # Public URLs probed every deploy. Each row: url + expected status,
     # plus optional `location:` for redirect rows (exact relative-path
@@ -232,24 +231,24 @@
       failed_when: false
       when: bun_stat.stat.exists
 
-    - name: "mcow: install bun {{ voidnet_bun_version }} (official install script)"
+    - name: "mcow: install bun {{ bun_version }} (official install script)"
       ansible.builtin.shell: |
         set -euo pipefail
         export BUN_INSTALL=/root/.bun
-        curl -fsSL https://bun.sh/install | bash -s "bun-v{{ voidnet_bun_version }}"
+        curl -fsSL https://bun.sh/install | bash -s "bun-v{{ bun_version }}"
         install -m 0755 /root/.bun/bin/bun /usr/local/bin/bun
       args:
         executable: /bin/bash
       when: >-
         not bun_stat.stat.exists
-        or (bun_installed_version.stdout | default('') | trim) != voidnet_bun_version
+        or (bun_installed_version.stdout | default('') | trim) != bun_version
 
     - name: "mcow: verify bun --version matches pin"
       ansible.builtin.command:
         cmd: /usr/local/bin/bun --version
       register: bun_version_final
       changed_when: false
-      failed_when: (bun_version_final.stdout | trim) != voidnet_bun_version
+      failed_when: (bun_version_final.stdout | trim) != bun_version
 
     # -----------------------------------------------------------------
     # Portal ship (HMB_VDN-2, 2026-04-24): bun's isolated-install layout
@@ -552,9 +551,24 @@
           ansible.builtin.pause:
             seconds: 5
 
-        - name: "mcow: grep fresh journal for `Cannot find module` (module-resolution gate)"
+        - name: "mcow: capture voidnet-web active-enter timestamp (LC_ALL=C for stable format)"
           ansible.builtin.command:
-            cmd: journalctl -u voidnet-web --since "1 minute ago" --no-pager
+            cmd: systemctl show -p ActiveEnterTimestamp --value voidnet-web
+          environment:
+            LC_ALL: C
+          register: web_active_ts
+          changed_when: false
+
+        - name: "mcow: assert active-enter timestamp non-empty"
+          ansible.builtin.assert:
+            that: web_active_ts.stdout | trim | length > 0
+            fail_msg: |
+              voidnet-web did not enter active state — ActiveEnterTimestamp empty.
+              Service likely failed to start. Check `journalctl -u voidnet-web` on mcow.
+
+        - name: "mcow: grep voidnet-web journal since restart for module-resolution failures"
+          ansible.builtin.command:
+            cmd: journalctl -u voidnet-web --since "{{ web_active_ts.stdout }}" --no-pager
           register: modres_grep
           changed_when: false
           # Case-insensitive grep via Jinja. If any line matches, fail the

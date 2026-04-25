@@ -42,7 +42,7 @@
     homelab_admin_commit_sha: "{{ lookup('pipe', 'git -C ' + repo_root + ' rev-parse --short HEAD') }}"
     # Explicit play-level copies to work around Ansible 2.20 strict task-arg finalization.
     # group_vars/all.yml is the source of truth; these are resolved aliases for play scope.
-    _bun_version: "{{ bun_version | default('1.1.38') }}"
+    _bun_version: "{{ bun_version }}"
     # Plan 13-07 gap closure: sops binary pinned release (bump only with checksum revalidation).
     # Source: https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.checksums.txt
     _sops_version: "3.9.4"
