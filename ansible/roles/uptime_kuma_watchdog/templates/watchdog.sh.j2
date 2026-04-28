@@ -9,6 +9,7 @@ URL="{{ watchdog_status_url }}"
 STATE_FILE="{{ watchdog_state_file }}"
 TG_TOKEN="{{ kuma_tg_bot_token }}"
 TG_CHAT="{{ kuma_tg_chat_id }}"
+TG_PROXY="{{ watchdog_tg_proxy }}"
 
 prev=$(cat "$STATE_FILE" 2>/dev/null || echo ok)
 
@@ -20,8 +21,9 @@ fi
 
 send() {
     local msg="$1"
-    curl -fsS --max-time 10 \
-        -d "chat_id=${TG_CHAT}" -d "text=${msg}" \
+    # tower has no direct egress to api.telegram.org — go via tinyproxy on nether
+    curl -fsS --max-time 10 -x "$TG_PROXY" \
+        --data-urlencode "chat_id=${TG_CHAT}" --data-urlencode "text=${msg}" \
         "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" >/dev/null || true
 }
 
