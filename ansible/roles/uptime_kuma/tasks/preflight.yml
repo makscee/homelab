@@ -1,0 +1,22 @@
+---
+- name: discover nether public ipv4
+  ansible.builtin.command: curl -fsS https://api.ipify.org
+  register: nether_ipv4
+  changed_when: false
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: resolve status.makscee.ru
+  ansible.builtin.command: "dig +short {{ kuma_public_host }} A"
+  register: status_dns
+  changed_when: false
+  delegate_to: localhost
+
+- name: assert DNS A-record matches nether public ipv4
+  ansible.builtin.assert:
+    that:
+      - nether_ipv4.stdout in status_dns.stdout
+    fail_msg: |
+      Cloudflare DNS A-record for {{ kuma_public_host }} does not resolve to
+      this host's public ipv4 ({{ nether_ipv4.stdout }}).
+      Resolved: {{ status_dns.stdout | default('(no record)') }}
+      Add the A-record in Cloudflare and re-run.
