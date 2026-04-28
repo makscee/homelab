@@ -14,5 +14,10 @@
 - import_tasks: backup.yml
   tags: [pre]
 
+# Ensure caddy reload (handler) fires BEFORE smoke probes hit the new site.
+- name: flush handlers before smoke
+  ansible.builtin.meta: flush_handlers
+  tags: [pre, publish, smoke]
+
 - import_tasks: smoke.yml
   tags: [smoke, publish]

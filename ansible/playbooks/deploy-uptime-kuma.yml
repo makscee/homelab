@@ -10,6 +10,7 @@
         that:
           - kuma_caddy_phase in ["private", "public"]
         fail_msg: "Set -e kuma_caddy_phase=private (first deploy) or public (cutover)."
+      tags: always
 
     - name: decrypt uptime-kuma SOPS bundle on controller
       delegate_to: localhost
@@ -19,6 +20,7 @@
       changed_when: false
       no_log: true
       check_mode: false
+      tags: always
 
     - name: bind kuma secret vars from decrypted bundle
       ansible.builtin.set_fact:
@@ -27,5 +29,6 @@
         kuma_tg_bot_token: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_bot_token }}"
         kuma_tg_chat_id: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_chat_id }}"
       no_log: true
+      tags: always
   roles:
     - uptime_kuma

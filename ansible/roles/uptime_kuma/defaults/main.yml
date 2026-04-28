@@ -23,8 +23,9 @@ kuma_caddy_phase: public
 # from a host path (see servers/nether/docker-compose.services.yml). The role
 # uses `blockinfile` to patch this Caddyfile, then reloads caddy via
 # `docker exec`. Operator overrides `kuma_caddyfile_path` per host if needed.
-kuma_caddyfile_path: /root/homelab/servers/nether/Caddyfile
+kuma_caddyfile_path: /opt/caddy/Caddyfile
 kuma_caddy_container_name: caddy
+kuma_caddy_network: acme-dns_default
 
 # Monitors (provisioned over socket.io API)
 kuma_monitors:

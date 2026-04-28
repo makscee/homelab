@@ -103,7 +103,6 @@ def main() -> int:
         ]
         pages = {p["slug"]: p for p in api.get_status_pages()}
         page_payload = dict(
-            slug=slug,
             title=title,
             description="voidnet uptime",
             publicGroupList=[
