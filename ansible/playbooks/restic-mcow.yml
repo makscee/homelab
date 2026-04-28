@@ -1,0 +1,167 @@
+---
+# HMB-8 — off-host restic backup mcow → nether
+#
+# Two plays:
+#   A. nether — install restic, prepare repo dir, drop authorized_keys entry
+#   B. mcow   — install restic, drop env + key, render systemd, init repo, enable timer
+#
+# Spec: docs/superpowers/specs/2026-04-28-restic-mcow-to-nether-design.md
+
+- name: "HMB-8 / Play A — provision nether (backup target)"
+  hosts: nether
+  become: true
+  gather_facts: true
+  tasks:
+    - name: install restic
+      ansible.builtin.apt:
+        name: restic
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: create restic repo directory
+      ansible.builtin.file:
+        path: "{{ restic_repo_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: ensure restic-mcow key is authorized for sftp-only on root account
+      ansible.posix.authorized_key:
+        user: root
+        key: "{{ restic_ssh_public_key }}"
+        key_options: 'restrict,command="internal-sftp"'
+        state: present
+        comment: "restic-mcow (HMB-8)"
+
+- name: "HMB-8 / Play B — provision mcow (backup client)"
+  hosts: mcow
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../../secrets/mcow.sops.yaml
+  tasks:
+    - name: install restic
+      ansible.builtin.apt:
+        name: restic
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: ensure /etc/restic exists
+      ansible.builtin.file:
+        path: /etc/restic
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: render /etc/restic/env
+      ansible.builtin.template:
+        src: templates/restic-env.j2
+        dest: /etc/restic/env
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: drop dedicated ssh private key
+      ansible.builtin.copy:
+        content: "{{ restic_ssh_private_key }}"
+        dest: /root/.ssh/restic_mcow_ed25519
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: render /root/.ssh/config nether stanza
+      ansible.builtin.template:
+        src: templates/restic-ssh-config.j2
+        dest: /root/.ssh/restic-mcow.conf
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: include restic-mcow.conf from /root/.ssh/config
+      ansible.builtin.lineinfile:
+        path: /root/.ssh/config
+        line: "Include /root/.ssh/restic-mcow.conf"
+        create: true
+        owner: root
+        group: root
+        mode: "0600"
+        state: present
+
+    - name: render systemd service
+      ansible.builtin.template:
+        src: templates/restic-daily.service.j2
+        dest: /etc/systemd/system/restic-daily.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: daemon-reload
+
+    - name: render systemd timer
+      ansible.builtin.template:
+        src: templates/restic-daily.timer.j2
+        dest: /etc/systemd/system/restic-daily.timer
+        owner: root
+        group: root
+        mode: "0644"
+      notify: daemon-reload
+
+    - name: ensure void-canary docker volume exists (day-1 non-empty backup)
+      ansible.builtin.command:
+        cmd: docker volume create void-canary
+      register: canary_create
+      changed_when: "'void-canary' in canary_create.stdout"
+      failed_when:
+        - canary_create.rc != 0
+        - "'already exists' not in canary_create.stderr"
+
+    - name: drop canary file with host+timestamp (only if missing)
+      ansible.builtin.shell:
+        cmd: |
+          set -e
+          mkdir -p /var/lib/docker/volumes/void-canary/_data
+          if [ ! -s /var/lib/docker/volumes/void-canary/_data/canary.txt ]; then
+            echo "{{ inventory_hostname }} {{ ansible_date_time.iso8601 }}" > \
+              /var/lib/docker/volumes/void-canary/_data/canary.txt
+          fi
+        creates: /var/lib/docker/volumes/void-canary/_data/canary.txt
+
+    - name: flush handlers (daemon-reload now if needed)
+      ansible.builtin.meta: flush_handlers
+
+    - name: warm SSH known_hosts for nether (StrictHostKeyChecking=accept-new on first run)
+      ansible.builtin.shell:
+        cmd: ssh -F /root/.ssh/config -o BatchMode=yes -o ConnectTimeout=10 nether true
+      register: warm_known_hosts
+      changed_when: false
+      failed_when: warm_known_hosts.rc != 0
+
+    - name: initialise restic repository (idempotent — ignore if exists)
+      ansible.builtin.shell:
+        cmd: /usr/bin/restic init
+      environment:
+        RESTIC_REPOSITORY: "{{ restic_repo_url }}"
+        RESTIC_PASSWORD: "{{ restic_password }}"
+      register: restic_init
+      changed_when: "'created restic repository' in restic_init.stdout"
+      failed_when:
+        - restic_init.rc != 0
+        - "'already initialized' not in restic_init.stderr"
+      no_log: true
+
+    - name: enable + start restic-daily.timer
+      ansible.builtin.systemd:
+        name: restic-daily.timer
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: daemon-reload
+      ansible.builtin.systemd:
+        daemon_reload: true
