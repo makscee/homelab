@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Hits the public kuma status page; alerts via TG once on transition to fail
+# and once on transition back to ok. Avoids spamming on sustained failure.
+
+set -u
+
+URL="{{ watchdog_status_url }}"
+STATE_FILE="{{ watchdog_state_file }}"
+TG_TOKEN="{{ kuma_tg_bot_token }}"
+TG_CHAT="{{ kuma_tg_chat_id }}"
+
+prev=$(cat "$STATE_FILE" 2>/dev/null || echo ok)
+
+if curl -fsS --max-time 10 "$URL" >/dev/null; then
+    cur=ok
+else
+    cur=fail
+fi
+
+send() {
+    local msg="$1"
+    curl -fsS --max-time 10 \
+        -d "chat_id=${TG_CHAT}" -d "text=${msg}" \
+        "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" >/dev/null || true
+}
+
+if [ "$cur" != "$prev" ]; then
+    if [ "$cur" = "fail" ]; then
+        send "[watchdog] status.makscee.ru/status/voidnet unreachable from tower"
+    else
+        send "[watchdog] status.makscee.ru/status/voidnet recovered"
+    fi
+    echo "$cur" > "$STATE_FILE"
+fi

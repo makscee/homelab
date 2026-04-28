@@ -1,0 +1,8 @@
+---
+- name: deploy uptime-kuma watchdog on tower
+  hosts: tower
+  become: true
+  vars_files:
+    - ../../secrets/nether/uptime-kuma.sops.yaml
+  roles:
+    - uptime_kuma_watchdog

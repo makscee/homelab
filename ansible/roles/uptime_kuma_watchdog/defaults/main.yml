@@ -1,0 +1,6 @@
+---
+watchdog_status_url: https://status.makscee.ru/api/status-page/voidnet
+watchdog_script_path: /usr/local/sbin/uptime-kuma-watchdog.sh
+watchdog_state_file: /var/lib/uptime-kuma-watchdog.state
+watchdog_cron_minute: "*/30"
+# tg_bot_token + tg_chat_id supplied via SOPS-decrypted vars in playbook
