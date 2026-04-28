@@ -1,0 +1,9 @@
+---
+watchdog_status_url: https://status.makscee.ru/api/status-page/voidnet
+watchdog_script_path: /usr/local/sbin/uptime-kuma-watchdog.sh
+watchdog_state_file: /var/lib/uptime-kuma-watchdog.state
+watchdog_cron_minute: "*/30"
+# tower has no direct egress to api.telegram.org (RU block + no exit-node use).
+# Route TG sendMessage via tinyproxy on nether (100.101.0.3:8888 split-tunnel).
+watchdog_tg_proxy: http://100.101.0.3:8888
+# tg_bot_token + tg_chat_id supplied via SOPS-decrypted vars in playbook

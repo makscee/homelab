@@ -1,0 +1,36 @@
+---
+- name: smoke — public status page returns 200
+  ansible.builtin.uri:
+    url: "https://{{ kuma_public_host }}/status/{{ kuma_status_slug }}"
+    status_code: 200
+    return_content: false
+  delegate_to: localhost
+  become: false
+
+- name: smoke — fetch status page badge JSON
+  ansible.builtin.uri:
+    url: "https://{{ kuma_public_host }}/api/status-page/{{ kuma_status_slug }}"
+    status_code: 200
+    return_content: true
+  register: badge
+  delegate_to: localhost
+  become: false
+
+- name: smoke — assert monitor count == 2
+  ansible.builtin.assert:
+    that:
+      - (badge.json.publicGroupList | map(attribute='monitorList') | flatten | length) == 2
+    fail_msg: |
+      Expected 2 monitors on status page; got
+      {{ (badge.json.publicGroupList | map(attribute='monitorList') | flatten | length) }}.
+      Re-run with --tags provision.
+
+- name: smoke — assert public /dashboard returns 403
+  ansible.builtin.uri:
+    url: "https://{{ kuma_public_host }}/dashboard"
+    status_code: 403
+    return_content: false
+  delegate_to: localhost
+  become: false
+  # Run only when in public phase.
+  when: kuma_caddy_phase == "public"

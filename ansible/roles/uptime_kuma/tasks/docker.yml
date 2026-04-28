@@ -1,0 +1,32 @@
+---
+- name: ensure compose + data dirs exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ kuma_compose_dir }}"
+    - "{{ kuma_data_dir }}"
+    - "{{ kuma_backup_dir }}"
+
+- name: render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ kuma_compose_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart kuma
+
+- name: bring kuma up
+  community.docker.docker_compose_v2:
+    project_src: "{{ kuma_compose_dir }}"
+    state: present
+
+- name: wait for kuma to answer locally
+  ansible.builtin.wait_for:
+    host: "{{ kuma_bind_host }}"
+    port: "{{ kuma_bind_port }}"
+    timeout: 60
