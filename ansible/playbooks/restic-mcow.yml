@@ -39,8 +39,11 @@
   hosts: mcow
   become: true
   gather_facts: true
-  vars_files:
-    - ../../secrets/mcow.sops.yaml
+  pre_tasks:
+    - name: load SOPS-decrypted mcow secrets
+      community.sops.load_vars:
+        file: ../../secrets/mcow.sops.yaml
+      no_log: true
   tasks:
     - name: install restic
       ansible.builtin.apt:
