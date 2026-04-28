@@ -13,6 +13,7 @@
       changed_when: false
       no_log: true
       check_mode: false
+      tags: always
 
     - name: bind kuma secret vars from decrypted bundle
       ansible.builtin.set_fact:
@@ -21,5 +22,6 @@
         kuma_tg_bot_token: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_bot_token }}"
         kuma_tg_chat_id: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_chat_id }}"
       no_log: true
+      tags: always
   roles:
     - uptime_kuma_watchdog
