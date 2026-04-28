@@ -4,10 +4,13 @@ Description=Daily restic backup of void-* volumes to nether
 After=network-online.target docker.service
 Wants=network-online.target
 Requires=docker.service
+StartLimitIntervalSec=3600
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/restic/env
+Environment=HOME=/root
 # Pause running void-* containers for SQLite consistency.
 ExecStartPre=/bin/sh -c 'docker ps --filter "name=void-" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker pause'
 # Backup. /bin/sh -c required so the void-* glob expands.
@@ -23,9 +26,6 @@ ExecStartPost=/usr/bin/restic stats --mode raw-data
 # Survive transient nether outages.
 Restart=on-failure
 RestartSec=300
-# Belt-and-suspenders: cap retries within a single timer firing.
-StartLimitIntervalSec=3600
-StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target
