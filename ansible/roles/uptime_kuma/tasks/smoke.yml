@@ -5,6 +5,7 @@
     status_code: 200
     return_content: false
   delegate_to: localhost
+  become: false
 
 - name: smoke — fetch status page badge JSON
   ansible.builtin.uri:
@@ -13,6 +14,7 @@
     return_content: true
   register: badge
   delegate_to: localhost
+  become: false
 
 - name: smoke — assert monitor count == 2
   ansible.builtin.assert:
@@ -29,5 +31,6 @@
     status_code: 403
     return_content: false
   delegate_to: localhost
+  become: false
   # Run only when in public phase.
   when: kuma_caddy_phase == "public"

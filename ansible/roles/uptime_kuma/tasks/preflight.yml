@@ -10,6 +10,7 @@
   register: status_dns
   changed_when: false
   delegate_to: localhost
+  become: false
 
 - name: assert DNS A-record matches nether public ipv4
   ansible.builtin.assert:
