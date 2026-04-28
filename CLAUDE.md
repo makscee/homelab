@@ -39,7 +39,7 @@ cc-* LXCs that need RU-unblocked egress (Telegram) route default through **egres
 
 **Not for cc-worker (204)** — intentionally keeps tailscale + nether exit for laptop SSH / mesh access.
 
-Add new cc-box: `scp` + `pct push` the `egress-script.sh` + `egress-apply.service` from `hub/knowledge/infrastructure/`, enable unit, `egress on`. Full runbook in `hub/knowledge/infrastructure/egress-gw.md`.
+Add new cc-box: `scp` + `pct push` the `egress-script.sh` + `egress-apply.service` from `workspace/homelab/ops/egress-gw/`, enable unit, `egress on`. Full runbook in `hub/knowledge/infrastructure/egress-gw.md`.
 
 ## Tech stack
 

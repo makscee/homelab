@@ -12,6 +12,9 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Claude Code agent worktrees (per-task scratch, never commit)
+.claude/worktrees/
+
 # Backups
 *.bak
 *.backup
