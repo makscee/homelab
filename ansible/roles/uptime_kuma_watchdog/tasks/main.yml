@@ -1,0 +1,24 @@
+---
+- name: render watchdog script
+  ansible.builtin.template:
+    src: watchdog.sh.j2
+    dest: "{{ watchdog_script_path }}"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: ensure state file exists
+  ansible.builtin.copy:
+    content: "ok\n"
+    dest: "{{ watchdog_state_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+- name: install watchdog cron
+  ansible.builtin.cron:
+    name: uptime-kuma-watchdog
+    user: root
+    minute: "{{ watchdog_cron_minute }}"
+    job: "{{ watchdog_script_path }}"

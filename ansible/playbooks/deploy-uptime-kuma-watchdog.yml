@@ -1,0 +1,27 @@
+---
+- name: deploy uptime-kuma watchdog on tower
+  hosts: tower
+  become: true
+  vars:
+    sops_file: "{{ playbook_dir }}/../../secrets/nether/uptime-kuma.sops.yaml"
+  pre_tasks:
+    - name: decrypt uptime-kuma SOPS bundle on controller
+      delegate_to: localhost
+      become: false
+      ansible.builtin.command: sops -d --output-type json {{ sops_file }}
+      register: kuma_secrets_raw
+      changed_when: false
+      no_log: true
+      check_mode: false
+      tags: always
+
+    - name: bind kuma secret vars from decrypted bundle
+      ansible.builtin.set_fact:
+        kuma_admin_user: "{{ (kuma_secrets_raw.stdout | from_json).kuma_admin_user }}"
+        kuma_admin_pass: "{{ (kuma_secrets_raw.stdout | from_json).kuma_admin_pass }}"
+        kuma_tg_bot_token: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_bot_token }}"
+        kuma_tg_chat_id: "{{ (kuma_secrets_raw.stdout | from_json).kuma_tg_chat_id }}"
+      no_log: true
+      tags: always
+  roles:
+    - uptime_kuma_watchdog

@@ -1,0 +1,11 @@
+---
+- name: install daily kuma backup cron
+  ansible.builtin.cron:
+    name: uptime-kuma-backup
+    user: root
+    minute: "17"
+    hour: "3"
+    job: >-
+      cd {{ kuma_compose_dir }} &&
+      tar -czf {{ kuma_backup_dir }}/kuma-$(date +\%F).tar.gz -C {{ kuma_data_dir }} . &&
+      ls -1t {{ kuma_backup_dir }}/kuma-*.tar.gz | tail -n +{{ kuma_backup_retain + 1 }} | xargs -r rm

@@ -1,0 +1,17 @@
+  # {{ ansible_managed }}
+  # Phase: public — status pages public; /dashboard* tailnet-only.
+  # Injected inside the *.makscee.ru wildcard block.
+  @kuma_host_pub host {{ kuma_public_host }}
+  @kuma_dashboard path /dashboard /dashboard/*
+  @kuma_tailnet_pub client_ip {{ kuma_tailnet_cidr }}
+  handle @kuma_host_pub {
+    handle @kuma_dashboard {
+      handle @kuma_tailnet_pub {
+        reverse_proxy uptime-kuma:3001
+      }
+      respond "Forbidden" 403
+    }
+    handle {
+      reverse_proxy uptime-kuma:3001
+    }
+  }
