@@ -1,0 +1,14 @@
+---
+- name: deploy uptime-kuma on nether
+  hosts: nether
+  become: true
+  vars_files:
+    - ../../secrets/nether/uptime-kuma.sops.yaml
+  pre_tasks:
+    - name: assert kuma_caddy_phase set explicitly
+      ansible.builtin.assert:
+        that:
+          - kuma_caddy_phase in ["private", "public"]
+        fail_msg: "Set -e kuma_caddy_phase=private (first deploy) or public (cutover)."
+  roles:
+    - uptime_kuma
