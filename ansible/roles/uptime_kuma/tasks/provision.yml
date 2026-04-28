@@ -1,0 +1,47 @@
+---
+- name: ensure python3 + pip on nether
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+    update_cache: true
+
+- name: ensure provisioning venv
+  ansible.builtin.command: python3 -m venv /opt/uptime-kuma/venv
+  args:
+    creates: /opt/uptime-kuma/venv/bin/python
+
+- name: install uptime-kuma-api in venv
+  ansible.builtin.pip:
+    name: uptime-kuma-api>=1.2
+    virtualenv: /opt/uptime-kuma/venv
+
+- name: copy provisioning script
+  ansible.builtin.copy:
+    src: provision_kuma.py
+    dest: /opt/uptime-kuma/provision_kuma.py
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: run provisioning script
+  ansible.builtin.command: /opt/uptime-kuma/venv/bin/python /opt/uptime-kuma/provision_kuma.py
+  environment:
+    KUMA_URL: "http://{{ kuma_bind_host }}:{{ kuma_bind_port }}"
+    KUMA_ADMIN_USER: "{{ kuma_admin_user }}"
+    KUMA_ADMIN_PASS: "{{ kuma_admin_pass }}"
+    KUMA_TG_BOT_TOKEN: "{{ kuma_tg_bot_token }}"
+    KUMA_TG_CHAT_ID: "{{ kuma_tg_chat_id }}"
+    KUMA_STATUS_SLUG: "{{ kuma_status_slug }}"
+    KUMA_STATUS_TITLE: "{{ kuma_status_title }}"
+    KUMA_MONITORS_JSON: "{{ kuma_monitors | to_json }}"
+  register: provision_result
+  changed_when: "'\"created\": []' not in provision_result.stdout or '\"updated\": []' not in provision_result.stdout"
+  no_log: true
+
+- name: print provisioning summary (sanitized)
+  ansible.builtin.debug:
+    msg: "{{ provision_result.stdout | from_json }}"
+  when: provision_result.stdout is defined
