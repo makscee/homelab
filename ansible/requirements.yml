@@ -9,3 +9,8 @@ collections:
     version: ">=9.0.0"   # provides blockinfile (Plan 09 Caddyfile patch — D-12-11)
   - name: ansible.posix
     version: ">=1.5.0"   # provides synchronize (Plan 09 rsync) + file ACL helpers
+
+  # HMB-8 — required to decrypt secrets/*.sops.yaml inside playbooks.
+  # Without it, Ansible loads SOPS files as raw YAML (envelope as literal string).
+  - name: community.sops
+    version: ">=2.0.0"
