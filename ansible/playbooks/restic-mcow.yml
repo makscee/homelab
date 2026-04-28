@@ -111,14 +111,17 @@
         mode: "0644"
       notify: daemon-reload
 
+    - name: check if void-canary docker volume exists
+      ansible.builtin.command:
+        cmd: docker volume inspect void-canary
+      register: canary_inspect
+      failed_when: false
+      changed_when: false
+
     - name: ensure void-canary docker volume exists (day-1 non-empty backup)
       ansible.builtin.command:
         cmd: docker volume create void-canary
-      register: canary_create
-      changed_when: "'void-canary' in canary_create.stdout"
-      failed_when:
-        - canary_create.rc != 0
-        - "'already exists' not in canary_create.stderr"
+      when: canary_inspect.rc != 0
 
     - name: drop canary file with host+timestamp (only if missing)
       ansible.builtin.shell:
@@ -151,7 +154,7 @@
       changed_when: "'created restic repository' in restic_init.stdout"
       failed_when:
         - restic_init.rc != 0
-        - "'already initialized' not in restic_init.stderr"
+        - "'config file already exists' not in restic_init.stderr"
       no_log: true
 
     - name: enable + start restic-daily.timer
