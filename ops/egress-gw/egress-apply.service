@@ -1,0 +1,15 @@
+[Unit]
+Description=Apply cc-box egress mode (from /etc/egress.mode) at boot
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/egress.mode
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Wait for eth0 + its on-link route (Proxmox LXC networking lands after network-online.target fires)
+ExecStartPre=/bin/sh -c 'i=0; until ip -4 route show | grep -q "^10.10.20.0/24"; do i=$((i+1)); [ "$i" -gt 50 ] && exit 1; sleep 0.2; done'
+ExecStart=/bin/sh -c 'mode=$(cat /etc/egress.mode); if [ "$mode" = "on" ]; then /usr/local/bin/egress on; else /usr/local/bin/egress off; fi'
+
+[Install]
+WantedBy=multi-user.target
