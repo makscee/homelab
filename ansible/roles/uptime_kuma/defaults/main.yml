@@ -1,0 +1,47 @@
+---
+# uptime_kuma role defaults
+
+# Container
+kuma_image: louislam/uptime-kuma:1
+kuma_data_dir: /opt/uptime-kuma/data
+kuma_compose_dir: /opt/uptime-kuma
+kuma_bind_host: 127.0.0.1
+kuma_bind_port: 3001
+
+# Public exposure
+kuma_public_host: status.makscee.ru
+kuma_status_slug: voidnet
+kuma_status_title: voidnet status
+
+# Tailnet (Tailscale CGNAT range)
+kuma_tailnet_cidr: 100.64.0.0/10
+
+# Public phase: `private` (tailnet-only) or `public` (public + /dashboard tailnet-gated)
+kuma_caddy_phase: public
+
+# Caddy integration — nether runs caddy in docker with the Caddyfile bind-mounted
+# from a host path (see servers/nether/docker-compose.services.yml). The role
+# uses `blockinfile` to patch this Caddyfile, then reloads caddy via
+# `docker exec`. Operator overrides `kuma_caddyfile_path` per host if needed.
+kuma_caddyfile_path: /root/homelab/servers/nether/Caddyfile
+kuma_caddy_container_name: caddy
+
+# Monitors (provisioned over socket.io API)
+kuma_monitors:
+  - name: voidnet-api-health
+    type: http
+    url: https://voidnet.makscee.ru/api/health
+    interval: 60
+    expect_status: 200
+  - name: voidnet-portal-landing
+    type: http
+    url: https://voidnet.makscee.ru/
+    interval: 60
+    expect_status: 200
+
+# Backups
+kuma_backup_dir: /opt/uptime-kuma/backups
+kuma_backup_retain: 7
+
+# Secrets — provided via SOPS-decrypted vars (see playbook)
+# kuma_admin_user, kuma_admin_pass, kuma_tg_bot_token, kuma_tg_chat_id

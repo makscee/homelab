@@ -1,0 +1,18 @@
+---
+- import_tasks: preflight.yml
+  tags: [preflight, pre]
+
+- import_tasks: docker.yml
+  tags: [pre]
+
+- import_tasks: caddy.yml
+  tags: [pre, publish]
+
+- import_tasks: provision.yml
+  tags: [pre, provision]
+
+- import_tasks: backup.yml
+  tags: [pre]
+
+- import_tasks: smoke.yml
+  tags: [smoke, publish]
