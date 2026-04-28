@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+# Phase: private — entire site is tailnet-only.
+{{ kuma_public_host }} {
+    encode zstd gzip
+
+    @tailnet client_ip {{ kuma_tailnet_cidr }}
+
+    handle @tailnet {
+        reverse_proxy {{ kuma_bind_host }}:{{ kuma_bind_port }}
+    }
+
+    handle {
+        respond "Forbidden" 403
+    }
+}

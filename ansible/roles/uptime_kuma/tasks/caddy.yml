@@ -1,0 +1,36 @@
+---
+# nether convention: caddy runs in docker, Caddyfile bind-mounted from host.
+# We patch the live Caddyfile via blockinfile and reload caddy via `docker exec`.
+# See role README "Caddy convention" for context.
+
+- name: assert caddy phase var is valid
+  ansible.builtin.assert:
+    that:
+      - kuma_caddy_phase in ["private", "public"]
+    fail_msg: "kuma_caddy_phase must be 'private' or 'public', got {{ kuma_caddy_phase }}"
+
+- name: render caddy site block to controller tmp
+  delegate_to: localhost
+  become: false
+  ansible.builtin.template:
+    src: "caddy-{{ kuma_caddy_phase }}.j2"
+    dest: "/tmp/caddy-uptime-kuma-{{ kuma_caddy_phase }}.conf"
+    mode: "0644"
+  check_mode: false
+  changed_when: false
+
+- name: read rendered block into variable
+  delegate_to: localhost
+  become: false
+  ansible.builtin.slurp:
+    src: "/tmp/caddy-uptime-kuma-{{ kuma_caddy_phase }}.conf"
+  register: kuma_caddy_block
+  check_mode: false
+
+- name: patch Caddyfile with uptime-kuma site block
+  ansible.builtin.blockinfile:
+    path: "{{ kuma_caddyfile_path }}"
+    marker: "# {mark} uptime-kuma"
+    block: "{{ kuma_caddy_block.content | b64decode }}"
+    create: false
+  notify: reload caddy

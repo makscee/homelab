@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Phase: public — status pages public, /dashboard* tailnet-only.
+{{ kuma_public_host }} {
+    encode zstd gzip
+
+    @tailnet client_ip {{ kuma_tailnet_cidr }}
+    @dashboard path /dashboard /dashboard/*
+
+    handle @dashboard {
+        handle @tailnet {
+            reverse_proxy {{ kuma_bind_host }}:{{ kuma_bind_port }}
+        }
+        respond "Forbidden" 403
+    }
+
+    handle {
+        reverse_proxy {{ kuma_bind_host }}:{{ kuma_bind_port }}
+    }
+}
