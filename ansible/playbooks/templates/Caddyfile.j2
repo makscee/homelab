@@ -93,9 +93,13 @@ auth.makscee.ru {
 	reverse_proxy void-auth:{{ void_auth_port }}
 }
 
-# keys.makscee.ru placeholder for HMB-9c. ACME retries until DNS + service land.
+# keys.makscee.ru — void-keys (HMB-9c). Internal service on the void network.
+# Mirrors auth.makscee.ru: Caddy auto-TLS via ACME, zstd/gzip compression,
+# reverse-proxy to the in-network container by name. No public DNS for the
+# upstream — keys.makscee.ru is the only exposure path.
 keys.makscee.ru {
-	respond 404
+	encode zstd gzip
+	reverse_proxy void-keys:{{ void_keys_port }}
 }
 
 {% if void_staging_enabled | default(false) | bool %}

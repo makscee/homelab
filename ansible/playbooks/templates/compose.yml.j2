@@ -20,6 +20,7 @@ volumes:
   caddy_data: {}
   caddy_config: {}
   void_auth_data: {}
+  void_keys_db_data: {}
 
 services:
   caddy:
@@ -96,7 +97,66 @@ services:
     networks:
       - void
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{ void_auth_port }}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:{{ void_auth_port }}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  void-keys-db:
+    # HMB-9c — postgres for void-keys (drizzle-orm/postgres-js). Internal to
+    # the `void` compose network; never published. Mirrors the staging
+    # void-mail-staging-db pattern. Credentials from secrets/void-keys.sops.yaml.
+    image: postgres:16-alpine
+    container_name: void-keys-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "{{ void_keys_db_user }}"
+      POSTGRES_PASSWORD: "{{ void_keys_db_pass }}"
+      POSTGRES_DB: "{{ void_keys_db_name }}"
+    volumes:
+      - void_keys_db_data:/var/lib/postgresql/data
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ void_keys_db_user }} -d {{ void_keys_db_name }}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  void-keys:
+    # HMB-9c — keys service. Pool API token store + sticky user→key binder for
+    # claudev. Image SHA-pinned via void_keys_image_tag. Internal-only on the
+    # void network; Caddy proxies keys.makscee.ru -> void-keys:{{ void_keys_port }}
+    # (see Caddyfile.j2). Pool-tokens YAML is mounted read-only at
+    # {{ void_keys_sops_tokens_file }} as PLAINTEXT — decrypted at deploy time
+    # by Ansible (community.sops.load_vars) and rendered to the host. The image
+    # lacks the sops binary, so runtime `sops -d` falls back to plaintext read.
+    image: {{ void_keys_image }}
+    container_name: void-keys
+    restart: unless-stopped
+    env_file:
+      - {{ void_stack_dir }}/void-keys/.env
+    expose:
+      - "{{ void_keys_port }}"
+    volumes:
+      # Plaintext pool-tokens YAML rendered by playbooks/void-platform-mcow.yml
+      # from secrets/void-keys-tokens.sops.yaml. Read-only mount, mode 0600 on
+      # host. Never commit the rendered file — it lives only on mcow.
+      - {{ void_stack_dir }}/void-keys/pool_tokens.yaml:{{ void_keys_sops_tokens_file }}:ro
+    extra_hosts:
+      # Reach claude-key-exporter on the mcow host (sidecar LXC ships later).
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      void-auth:
+        condition: service_healthy
+      void-keys-db:
+        condition: service_healthy
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:{{ void_keys_port }}/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
