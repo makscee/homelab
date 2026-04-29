@@ -34,11 +34,6 @@ services:
       - caddy_config:/config
     networks:
       - void
-    extra_hosts:
-      # Lets Caddy reach host-bound services (voidnet-api, animaya, etc.)
-      # via host.docker.internal. Compose v2 maps host-gateway to the
-      # docker bridge gateway (172.17.0.1 by default).
-      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 60s
