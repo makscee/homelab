@@ -19,6 +19,7 @@ networks:
 volumes:
   caddy_data: {}
   caddy_config: {}
+  caddy_logs: {}  # HMB-18 — admin ACL audit logs persist across container recreate
   void_auth_data: {}
   void_keys_db_data: {}
 
@@ -52,6 +53,7 @@ services:
       - {{ void_stack_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy  # HMB-18 — admin ACL audit log target
     networks:
       - void
     healthcheck:

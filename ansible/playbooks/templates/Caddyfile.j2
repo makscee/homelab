@@ -96,6 +96,17 @@ auth.makscee.ru {
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth:{{ void_auth_port }}
+
+	# HMB-18 — audit log for admin ACL. Captures all requests on this vhost
+	# including the 403 short-circuits, so probes against /v1/admin/* are
+	# observable. JSON format + rolling so the file doesn't grow unbounded.
+	log {
+		output file /var/log/caddy/auth-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 
 # keys.makscee.ru — void-keys (HMB-9c). Internal service on the void network.
@@ -110,6 +121,15 @@ keys.makscee.ru {
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-keys:{{ void_keys_port }}
+
+	# HMB-18 — audit log (see auth.makscee.ru block).
+	log {
+		output file /var/log/caddy/keys-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 
 {% if void_staging_enabled | default(false) | bool %}
@@ -125,5 +145,14 @@ auth-staging.makscee.ru {
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth-staging:3000
+
+	# HMB-18 — audit log (see auth.makscee.ru block).
+	log {
+		output file /var/log/caddy/auth-staging-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 {% endif %}
