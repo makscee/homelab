@@ -1,0 +1,27 @@
+---
+# HMB-9 — variables for void platform stack on mcow.
+#
+# Secrets are NOT loaded here (vars_files does NOT decrypt SOPS — it loads the
+# ENC[...] envelope as a literal string; see feedback memory ansible_sops_decrypt
+# and HMB-8 root-cause). The playbook (playbooks/void-platform-mcow.yml) loads
+# secrets at runtime via:
+#     community.sops.load_vars: { file: ../../secrets/void-mail.sops.yaml }
+
+# Caddy
+caddy_admin_email: "ops@makscee.ru"
+caddy_image: "caddy:2-alpine"
+
+# Compose stack root on the host.
+void_stack_dir: "/srv/void"
+
+# GHCR image tag for void-mail. Override per-deploy:
+#     ansible-playbook ... -e ghcr_image_tag=<sha-or-tag>
+ghcr_image_tag: "latest"
+
+# Image refs.
+void_mail_image: "ghcr.io/makscee/void-mail:{{ ghcr_image_tag }}"
+
+# Internal port void-mail listens on inside the container. Locked when the
+# void-mail service contract pins its bind port; until then, override per-deploy
+# if the image defaults differ. TODO: confirm in HMB-9 deploy gate.
+void_mail_port: 8080
