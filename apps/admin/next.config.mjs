@@ -8,6 +8,10 @@ const bunSqliteShim = path.resolve(__dirname, 'lib/bun-sqlite-shim.js');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Trace symlinked workspace packages (e.g. @hub/ui-kit) by rooting at the
+  // yarn workspace dir, not the app dir. Without this, standalone bundle
+  // misses workspace deps. (HMB-14)
+  outputFileTracingRoot: path.resolve(__dirname, '../../..'),
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: {
