@@ -11,6 +11,11 @@
 caddy_admin_email: "ops@makscee.ru"
 caddy_image: "caddy:2-alpine"
 
+# mcow public IPv4. Caddy ports bind here explicitly so they don't collide
+# with tailscaled's specific-IP :443 bind on 100.101.0.9 (Linux refuses
+# wildcard bind when a specific-IP bind already holds the port).
+mcow_public_ip: "85.209.135.21"
+
 # Compose stack root on the host.
 void_stack_dir: "/srv/void"
 

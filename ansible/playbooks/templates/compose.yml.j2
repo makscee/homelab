@@ -31,12 +31,15 @@ services:
     ports:
       - target: 80
         published: 80
+        host_ip: {{ mcow_public_ip }}
         protocol: tcp
       - target: 443
         published: 443
+        host_ip: {{ mcow_public_ip }}
         protocol: tcp
       - target: 443
         published: 443
+        host_ip: {{ mcow_public_ip }}
         protocol: udp  # HTTP/3
     extra_hosts:
       # Caddy proxies to host-bound services (voidnet-api :8080, animaya :8080,
