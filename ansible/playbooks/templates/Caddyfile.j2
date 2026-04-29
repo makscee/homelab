@@ -89,12 +89,13 @@ vibe.makscee.ru {
 	reverse_proxy host.docker.internal:8081
 }
 
-# Slice-1 placeholders for HMB-9b (auth) and HMB-9c (keys).
-# DNS may or may not be live; ACME for these will retry until DNS lands.
+# auth.makscee.ru — void-auth (HMB-9b). Internal service on the void network.
 auth.makscee.ru {
-	respond 404
+	encode zstd gzip
+	reverse_proxy void-auth:{{ void_auth_port }}
 }
 
+# keys.makscee.ru placeholder for HMB-9c. ACME retries until DNS + service land.
 keys.makscee.ru {
 	respond 404
 }

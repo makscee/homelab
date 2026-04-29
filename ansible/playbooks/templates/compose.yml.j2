@@ -19,6 +19,7 @@ networks:
 volumes:
   caddy_data: {}
   caddy_config: {}
+  void_auth_data: {}
 
 services:
   caddy:
@@ -74,3 +75,29 @@ services:
       retries: 3
       start_period: 20s
     # No `ports:` block — void-mail is internal-only in slice 1 (no public DNS).
+
+  void-auth:
+    # HMB-9b — auth service. Image SHA-pinned in group_vars/void_platform.yml
+    # (void_auth_image_tag) for deterministic deploy + rollback. Internal-only;
+    # Caddy proxies auth.makscee.ru -> void-auth:{{ void_auth_port }} via the
+    # void network (see Caddyfile.j2).
+    image: {{ void_auth_image }}
+    container_name: void-auth
+    restart: unless-stopped
+    env_file:
+      - {{ void_stack_dir }}/void-auth/.env
+    expose:
+      - "{{ void_auth_port }}"
+    volumes:
+      - void_auth_data:/data
+    depends_on:
+      void-mail:
+        condition: service_healthy
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{ void_auth_port }}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
