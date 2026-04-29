@@ -5,8 +5,9 @@
 [Unit]
 Description=Homelab Admin Dashboard (Next.js on Bun)
 Documentation=https://github.com/makscee/homelab/tree/main/apps/admin
-After=network-online.target
+After=network-online.target docker.service
 Wants=network-online.target
+Requires=docker.service
 
 [Service]
 Type=simple
@@ -16,7 +17,10 @@ WorkingDirectory=/opt/homelab-admin/app
 EnvironmentFile=/etc/homelab-admin/env
 Environment=NODE_ENV=production
 Environment=PORT=3847
-Environment=HOSTNAME=127.0.0.1
+# bind on docker bridge gateway — compose Caddy reaches host services via
+# host.docker.internal (172.17.0.1), not loopback (HMB-9). Host-only IP keeps
+# :3847 off the public NIC since UFW is inactive on mcow.
+Environment=HOSTNAME=172.17.0.1
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 # --bun forces Bun runtime for child processes (next CLI spawns node by default;
 # we need Bun globals so bun:sqlite native module resolves via the shim proxy).

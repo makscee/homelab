@@ -329,10 +329,13 @@
         enabled: true
         state: started
 
-    # ── Stage 11 — Local smoke check against loopback ───────────────────────
-    - name: Smoke — /api/health on 127.0.0.1:{{ _homelab_admin_port }}
+    # ── Stage 11 — Local smoke check against docker bridge gateway ──────────
+    # App now binds 172.17.0.1:3847 (HMB-9) so compose-Caddy can reach it via
+    # host.docker.internal. Smoke probe uses the same IP since UFW is off and
+    # we don't want to encourage 127.0.0.1 reachability assumptions.
+    - name: Smoke — /api/health on 172.17.0.1:{{ _homelab_admin_port }}
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ _homelab_admin_port }}/api/health"
+        url: "http://172.17.0.1:{{ _homelab_admin_port }}/api/health"
         return_content: true
         status_code: 200
       register: health_local

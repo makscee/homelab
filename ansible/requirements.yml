@@ -14,3 +14,8 @@ collections:
   # Without it, Ansible loads SOPS files as raw YAML (envelope as literal string).
   - name: community.sops
     version: ">=2.0.0"
+
+  # HMB-9 — void-platform stack uses community.docker.docker_compose_v2 +
+  # community.docker.docker_login (GHCR auth) on mcow.
+  - name: community.docker
+    version: ">=3.10.0"

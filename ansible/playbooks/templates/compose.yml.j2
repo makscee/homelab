@@ -1,0 +1,76 @@
+# {{ ansible_managed }}
+# HMB-9 — void platform stack on mcow.
+# Rendered to {{ void_stack_dir }}/compose.yml by playbooks/void-platform-mcow.yml.
+#
+# Edge TLS termination is handled by the Caddy container in this stack
+# (migrated off the host-deb caddy 2026-04-29). Caddy reaches host services
+# (voidnet-api on 8080, animaya on 8080, homelab-admin on 3847, vibe stack
+# on 8081/8083) via host.docker.internal — see Caddyfile.j2.
+#
+# void-mail is internal-only (no public vhost yet); it'll get one when
+# HMB-9b/9c land auth/keys.
+---
+name: void
+
+networks:
+  void:
+    driver: bridge
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}
+
+services:
+  caddy:
+    image: {{ caddy_image }}
+    restart: unless-stopped
+    # Long-form port spec: docker engine 29.x mis-parses short-form "80:80"
+    # as HostIP (HostConfig.PortBindings shows {invalid IP 80}, breaks
+    # NetworkSettings.Networks attachment). Long-form bypasses the buggy
+    # string parser. See HMB-9 Work Log session 4 (2026-04-29).
+    ports:
+      - target: 80
+        published: 80
+        host_ip: {{ mcow_public_ip }}
+        protocol: tcp
+      - target: 443
+        published: 443
+        host_ip: {{ mcow_public_ip }}
+        protocol: tcp
+      - target: 443
+        published: 443
+        host_ip: {{ mcow_public_ip }}
+        protocol: udp  # HTTP/3
+    extra_hosts:
+      # Caddy proxies to host-bound services (voidnet-api :8080, animaya :8080,
+      # homelab-admin :3847, vibe :8081/:8083). host.docker.internal resolves
+      # via host-gateway. See Caddyfile.j2.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - {{ void_stack_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  void-mail:
+    image: {{ void_mail_image }}
+    restart: unless-stopped
+    env_file:
+      - {{ void_stack_dir }}/void-mail/.env
+    networks:
+      - void
+    # void-mail listens on PORT (default 3000, set in group_vars/void_platform.yml).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{ void_mail_port }}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # No `ports:` block — void-mail is internal-only in slice 1 (no public DNS).

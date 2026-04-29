@@ -1,0 +1,37 @@
+---
+# HMB-9 — variables for void platform stack on mcow.
+#
+# Secrets are NOT loaded here (vars_files does NOT decrypt SOPS — it loads the
+# ENC[...] envelope as a literal string; see feedback memory ansible_sops_decrypt
+# and HMB-8 root-cause). The playbook (playbooks/void-platform-mcow.yml) loads
+# the lone secret (void_mail_smtp_pass) at runtime via:
+#     community.sops.load_vars: { file: ../../secrets/void-mail.sops.yaml }
+
+# Caddy
+caddy_admin_email: "ops@makscee.ru"
+caddy_image: "caddy:2-alpine"
+
+# mcow public IPv4. Caddy ports bind here explicitly so they don't collide
+# with tailscaled's specific-IP :443 bind on 100.101.0.9 (Linux refuses
+# wildcard bind when a specific-IP bind already holds the port).
+mcow_public_ip: "85.209.135.21"
+
+# Compose stack root on the host.
+void_stack_dir: "/srv/void"
+
+# GHCR image tag for void-mail. Override per-deploy:
+#     ansible-playbook ... -e ghcr_image_tag=<sha-or-tag>
+ghcr_image_tag: "latest"
+
+# Image refs.
+void_mail_image: "ghcr.io/makscee/void-mail:{{ ghcr_image_tag }}"
+
+# void-mail listens on PORT (default 3000 per repo .env.example). Internal-only.
+void_mail_port: 3000
+
+# SMTP relay (Resend) — non-secret defaults; the password lives in SOPS.
+void_mail_smtp_host: "smtp.resend.com"
+void_mail_smtp_port: 587
+void_mail_smtp_user: "resend"
+void_mail_smtp_from_name: "void-mail"
+void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"

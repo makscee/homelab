@@ -1,0 +1,126 @@
+---
+# HMB-9 — deploy void platform stack (Caddy + void-mail) to mcow.
+#
+# Spec: docs/superpowers/specs/2026-04-28-phase-1-auth-keys-mail.md § Deployment
+#
+# Slice 1: void-mail only (lowest blast-radius). HMB-9b adds void-auth, HMB-9c
+# adds void-keys. Caddy + compose plumbing is validated once in this slice.
+#
+# Secrets: loaded via community.sops.load_vars (NOT vars_files — vars_files
+# does not decrypt SOPS, see feedback memory ansible_sops_decrypt and HMB-8).
+#
+# Pre-deploy operator setup:
+#   - sops --encrypt --in-place secrets/void-mail.sops.yaml  (replace placeholders first)
+#   - sops --encrypt --in-place secrets/ghcr.sops.yaml       (ghcr_username + ghcr_pat)
+#
+# Deploy:
+#   cd ansible
+#   ansible-playbook -i inventory/homelab.yml playbooks/void-platform-mcow.yml \
+#     [-e ghcr_image_tag=<sha-or-tag>]
+
+- name: "HMB-9 — void platform stack on mcow"
+  hosts: void_platform
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: load SOPS-decrypted void-mail secrets
+      community.sops.load_vars:
+        file: ../../secrets/void-mail.sops.yaml
+      no_log: true
+
+    - name: load SOPS-decrypted GHCR credentials
+      community.sops.load_vars:
+        file: ../../secrets/ghcr.sops.yaml
+      no_log: true
+
+  tasks:
+    - name: stop + disable host deb caddy (one-shot cutover, opt-in via -e migrate_host_caddy=true)
+      ansible.builtin.systemd:
+        name: caddy
+        state: stopped
+        enabled: false
+      when: migrate_host_caddy | default(false) | bool
+      failed_when: false  # idempotent: unit may already be gone on re-runs
+
+    - name: check whether docker is already installed
+      ansible.builtin.command: docker --version
+      register: docker_version_check
+      changed_when: false
+      failed_when: false
+
+    - name: install docker engine + compose plugin (only if docker absent)
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when:
+        - ansible_os_family == 'Debian'
+        - docker_version_check.rc != 0
+
+    - name: ensure void stack directory exists
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: ensure void-mail subdirectory exists
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}/void-mail"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: render Caddyfile
+      ansible.builtin.template:
+        src: templates/Caddyfile.j2
+        dest: "{{ void_stack_dir }}/Caddyfile"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart-stack
+
+    - name: render compose.yml
+      ansible.builtin.template:
+        src: templates/compose.yml.j2
+        dest: "{{ void_stack_dir }}/compose.yml"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart-stack
+
+    - name: render void-mail .env from sops vars
+      ansible.builtin.template:
+        src: templates/void-mail.env.j2
+        dest: "{{ void_stack_dir }}/void-mail/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: restart-stack
+
+    - name: log into ghcr.io
+      community.docker.docker_login:
+        registry_url: ghcr.io
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_pat }}"
+        reauthorize: true
+      no_log: true
+
+    - name: bring up the void stack (pull + up -d)
+      community.docker.docker_compose_v2:
+        project_src: "{{ void_stack_dir }}"
+        state: present
+        pull: always
+
+  handlers:
+    - name: restart-stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ void_stack_dir }}"
+        state: restarted

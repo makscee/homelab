@@ -1,0 +1,100 @@
+# {{ ansible_managed }}
+# HMB-9 — void platform Caddyfile (compose Caddy on mcow).
+# Rendered to {{ void_stack_dir }}/Caddyfile by playbooks/void-platform-mcow.yml.
+#
+# All vhosts proxy to host-bound services via host.docker.internal
+# (mapped to host-gateway in compose.yml extra_hosts).
+#
+# vhost placeholders return 404 in slice 1; HMB-9b fills auth.makscee.ru,
+# HMB-9c fills keys.makscee.ru. void-mail is internal-only and has no vhost.
+
+{
+	email {{ caddy_admin_email }}
+}
+
+# voidnet portal + API (migrated from host caddy 2026-04-29).
+voidnet.makscee.ru {
+	encode zstd gzip
+	reverse_proxy host.docker.internal:8080 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+		flush_interval -1
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+}
+
+# animaya prod (migrated from host caddy 2026-04-29).
+animaya.makscee.ru {
+	encode zstd gzip
+	reverse_proxy host.docker.internal:8080 {
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+		flush_interval -1
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+}
+
+# homelab-admin (Next.js, port 3847; migrated 2026-04-29).
+homelab.makscee.ru {
+	encode gzip
+
+	reverse_proxy host.docker.internal:3847 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+		header_up Host {host}
+	}
+
+	# SEC-02 defense-in-depth headers (D-12-14).
+	# Next.js middleware (Plan 12-04) also emits these at the app runtime layer.
+	# Caddy emits them at the edge so the policy holds even for responses that
+	# bypass the Next.js runtime (static assets, edge errors, upstream 502s).
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/homelab-admin.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
+# vibe stack (relay + main, migrated 2026-04-29). RSA4096 cert preserved.
+vibe.makscee.ru {
+	tls {
+		key_type rsa4096
+	}
+	@relay path /v1/relay/*
+	reverse_proxy @relay host.docker.internal:8083 {
+		flush_interval -1
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+	reverse_proxy host.docker.internal:8081
+}
+
+# Slice-1 placeholders for HMB-9b (auth) and HMB-9c (keys).
+# DNS may or may not be live; ACME for these will retry until DNS lands.
+auth.makscee.ru {
+	respond 404
+}
+
+keys.makscee.ru {
+	respond 404
+}
