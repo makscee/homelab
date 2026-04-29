@@ -11,7 +11,7 @@
 #
 # Pre-deploy operator setup:
 #   - sops --encrypt --in-place secrets/void-mail.sops.yaml  (replace placeholders first)
-#   - export GHCR_USER=<github-handle>; export GHCR_TOKEN=<read:packages PAT>
+#   - sops --encrypt --in-place secrets/ghcr.sops.yaml       (ghcr_username + ghcr_pat)
 #
 # Deploy:
 #   cd ansible
@@ -29,14 +29,10 @@
         file: ../../secrets/void-mail.sops.yaml
       no_log: true
 
-    - name: assert GHCR credentials are present in environment
-      ansible.builtin.assert:
-        that:
-          - lookup('env', 'GHCR_USER') | length > 0
-          - lookup('env', 'GHCR_TOKEN') | length > 0
-        fail_msg: >-
-          GHCR_USER and GHCR_TOKEN must be exported on the controller before
-          running this playbook (read:packages scope on a GitHub PAT).
+    - name: load SOPS-decrypted GHCR credentials
+      community.sops.load_vars:
+        file: ../../secrets/ghcr.sops.yaml
+      no_log: true
 
   tasks:
     - name: install docker engine + compose plugin
@@ -96,8 +92,8 @@
     - name: log into ghcr.io
       community.docker.docker_login:
         registry_url: ghcr.io
-        username: "{{ lookup('env', 'GHCR_USER') }}"
-        password: "{{ lookup('env', 'GHCR_TOKEN') }}"
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_pat }}"
         reauthorize: true
       no_log: true
 
