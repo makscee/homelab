@@ -6,6 +6,15 @@
 # Slice 1: void-mail only (lowest blast-radius). HMB-9b adds void-auth, HMB-9c
 # adds void-keys. Caddy + compose plumbing is validated once in this slice.
 #
+# HMB-9c S2/S3 revise (2026-04-29): void-keys-db sidecar dropped — void-keys
+# reuses the existing `void-mail-staging-db` postgres container on mcow (the
+# single pg process). A dedicated `void_keys` user + `void_keys` database are
+# provisioned at deploy time by docker-exec'd psql DO blocks. Pool tokens are
+# decrypted at deploy time and rendered to pool_tokens.yaml (plaintext, mode
+# 0600). VKE-3d follow-up will fix the void-keys `sops -d` shell-out.
+# Pre-req: deploy void-platform-staging-mcow.yml first so the pg container is
+# up before this playbook tries to provision the void_keys DB on it.
+#
 # Secrets: loaded via community.sops.load_vars (NOT vars_files — vars_files
 # does not decrypt SOPS, see feedback memory ansible_sops_decrypt and HMB-8).
 #
@@ -37,9 +46,14 @@
         file: ../../secrets/void-auth.sops.yaml
       no_log: true
 
-    - name: load SOPS-decrypted void-keys secrets
+    - name: load SOPS-decrypted void-keys secrets (db user password)
       community.sops.load_vars:
         file: ../../secrets/void-keys.sops.yaml
+      no_log: true
+
+    - name: load SOPS-decrypted void-keys pool tokens (deploy-time render)
+      community.sops.load_vars:
+        file: ../../secrets/void-keys-tokens.sops.yaml
       no_log: true
 
     - name: load SOPS-decrypted GHCR credentials
@@ -154,15 +168,58 @@
       no_log: true
       notify: restart-stack
 
-    - name: ship void-keys SOPS pool-tokens bundle (encrypted at rest;
-            container decrypts via `sops -d` at boot)
+    - name: render void-keys pool_tokens.yaml (plaintext on host, mode 0600;
+            decrypted at deploy time via community.sops.load_vars)
       ansible.builtin.copy:
-        src: ../../secrets/void-keys-tokens.sops.yaml
-        dest: "{{ void_stack_dir }}/void-keys/secrets.enc.yaml"
+        # `pool_tokens` is a top-level map loaded by load_vars from
+        # secrets/void-keys-tokens.sops.yaml. Serialize as YAML for
+        # token-store.ts plaintext fallback consumption.
+        content: "{{ {'pool_tokens': pool_tokens} | to_nice_yaml(indent=2) }}"
+        dest: "{{ void_stack_dir }}/void-keys/pool_tokens.yaml"
         owner: root
         group: root
         mode: "0600"
+      no_log: true
       notify: restart-stack
+
+    - name: ensure void-mail-staging-db postgres container is running
+            (shared pg for prod void-keys; deploy void-platform-staging-mcow.yml first)
+      ansible.builtin.command:
+        cmd: docker inspect -f '{% raw %}{{.State.Running}}{% endraw %}' void-staging-void-mail-staging-db-1
+      register: void_keys_pg_running
+      changed_when: false
+      failed_when: void_keys_pg_running.rc != 0 or void_keys_pg_running.stdout.strip() != 'true'
+
+    - name: provision void_keys postgres user (idempotent DO block)
+      ansible.builtin.command:
+        cmd: >-
+          docker exec -i void-staging-void-mail-staging-db-1
+          psql -v ON_ERROR_STOP=1 -U void_mail -d postgres -v role={{ void_keys_db_user }}
+               -v pw={{ void_keys_db_pass }}
+               -c "DO $$ BEGIN
+                     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') THEN
+                       EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', :'role', :'pw');
+                     ELSE
+                       EXECUTE format('ALTER ROLE %I WITH PASSWORD %L', :'role', :'pw');
+                     END IF;
+                   END $$;"
+      changed_when: false
+      no_log: true
+
+    - name: provision void_keys database (idempotent)
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          exists=$(docker exec -i void-staging-void-mail-staging-db-1 \
+                    psql -tAU void_mail -d postgres \
+                    -c "SELECT 1 FROM pg_database WHERE datname = '{{ void_keys_db_name }}'")
+          if [ -z "$exists" ]; then
+            docker exec -i void-staging-void-mail-staging-db-1 \
+              psql -U void_mail -d postgres \
+              -c "CREATE DATABASE {{ void_keys_db_name }} OWNER {{ void_keys_db_user }}"
+          fi
+      register: void_keys_db_create
+      changed_when: "'CREATE DATABASE' in (void_keys_db_create.stdout | default(''))"
 
     - name: log into ghcr.io
       community.docker.docker_login:

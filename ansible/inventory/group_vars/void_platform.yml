@@ -76,21 +76,30 @@ void_keys_port: 3000
 # by container name; Caddy is not in the path.
 void_keys_auth_base_url: "http://void-auth:{{ void_auth_port }}"
 
-# Postgres for void-keys (drizzle-orm/postgres-js). HMB-9c provisions a
-# dedicated `void-keys-db` postgres:16-alpine sidecar in the same compose
-# project (mirrors the void-staging pattern). Connection params come from
-# SOPS (secrets/void-keys.sops.yaml) — see void_keys_db_user / db_pass /
-# db_name; the URL string is composed in the env.j2 template.
-void_keys_db_host: "void-keys-db"
+# Postgres for void-keys (drizzle-orm/postgres-js). HMB-9c S2/S3 revise
+# (2026-04-29): we DROPPED the dedicated `void-keys-db` sidecar and reuse the
+# existing `void-mail-staging-db` postgres container (the lone pg process on
+# mcow). A dedicated `void_keys` user + `void_keys` database are provisioned
+# on it at deploy time by playbooks/void-platform-mcow.yml (idempotent
+# community.postgresql.postgresql_db / postgresql_user tasks). The user
+# password lives in secrets/void-keys.sops.yaml as `void_keys_db_pass` and is
+# only read at deploy time.
+#
+# Host name `void-mail-staging-db` resolves on the shared `void_void` docker
+# network (the staging compose joins it as external; void-keys' compose
+# project also uses the same network).
+void_keys_db_host: "void-mail-staging-db"
 void_keys_db_port: 5432
 void_keys_db_name: "void_keys"
 void_keys_db_user: "void_keys"
 
-# Path inside the void-keys container where the SOPS-encrypted pool-tokens
-# YAML is mounted (consumed by src/services/token-store.ts at boot —
-# `sops -d $SOPS_TOKENS_FILE` parses `pool_tokens:` map). Mounted read-only
-# from the host at {{ void_stack_dir }}/void-keys/secrets.enc.yaml.
-void_keys_sops_tokens_file: "/secrets/secrets.enc.yaml"
+# Path inside the void-keys container where the plaintext pool-tokens YAML is
+# mounted (consumed by src/services/token-store.ts at boot — it tries
+# `sops -d $SOPS_TOKENS_FILE` first, fails on plaintext, then silent-falls-back
+# to plaintext read). Mounted read-only from the host at
+# {{ void_stack_dir }}/void-keys/pool_tokens.yaml (rendered at deploy time
+# from SOPS, mode 0600). VKE-3d will fix the SOPS-d shell-out as a follow-up.
+void_keys_sops_tokens_file: "/secrets/pool_tokens.yaml"
 
 # claude-key-exporter URL (VKE-2 sidecar). Default points at the host metrics
 # port — exporter LXC ships in a later HMB-* task. Until then void-keys

@@ -20,7 +20,6 @@ volumes:
   caddy_data: {}
   caddy_config: {}
   void_auth_data: {}
-  void_keys_db_data: {}
 
 services:
   caddy:
@@ -103,35 +102,24 @@ services:
       retries: 3
       start_period: 20s
 
-  void-keys-db:
-    # HMB-9c — postgres for void-keys (drizzle-orm/postgres-js). Internal to
-    # the `void` compose network; never published. Mirrors the staging
-    # void-mail-staging-db pattern. Credentials from secrets/void-keys.sops.yaml.
-    image: postgres:16-alpine
-    container_name: void-keys-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: "{{ void_keys_db_user }}"
-      POSTGRES_PASSWORD: "{{ void_keys_db_pass }}"
-      POSTGRES_DB: "{{ void_keys_db_name }}"
-    volumes:
-      - void_keys_db_data:/var/lib/postgresql/data
-    networks:
-      - void
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ void_keys_db_user }} -d {{ void_keys_db_name }}"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   void-keys:
     # HMB-9c — keys service. Pool API token store + sticky user→key binder for
     # claudev. Image SHA-pinned via void_keys_image_tag. Internal-only on the
     # void network; Caddy proxies keys.makscee.ru -> void-keys:{{ void_keys_port }}
-    # (see Caddyfile.j2). SOPS pool-tokens YAML is mounted read-only at
-    # {{ void_keys_sops_tokens_file }} — token-store.ts shells out to `sops -d`
-    # at boot and never persists raw tokens.
+    # (see Caddyfile.j2).
+    #
+    # Postgres: reuses the existing `void-mail-staging-db` postgres container
+    # (the lone pg process on mcow) on the shared `void_void` network. The
+    # `void_keys` database + dedicated `void_keys` user are provisioned at
+    # deploy time by playbooks/void-platform-mcow.yml via community.postgresql.
+    # See HMB-9c S2/S3 revise (2026-04-29).
+    #
+    # Pool tokens: decrypted at deploy time via community.sops.load_vars and
+    # rendered to {{ void_stack_dir }}/void-keys/pool_tokens.yaml (mode 0600,
+    # plaintext on host) then mounted read-only at {{ void_keys_sops_tokens_file }}.
+    # token-store.ts in void-keys still shells out to `sops -d` at boot, fails
+    # (unencrypted file), and silent-falls-back to plaintext-read. Cleanup
+    # deferred to follow-up VKE-3d (out of scope here).
     image: {{ void_keys_image }}
     container_name: void-keys
     restart: unless-stopped
@@ -140,16 +128,14 @@ services:
     expose:
       - "{{ void_keys_port }}"
     volumes:
-      # Pool-tokens SOPS bundle. Decrypted at boot inside the container by
-      # `sops -d` (binary baked into the image). Read-only mount.
-      - {{ void_stack_dir }}/void-keys/secrets.enc.yaml:{{ void_keys_sops_tokens_file }}:ro
+      # Pool-tokens YAML, plaintext on host (mode 0600), rendered from SOPS at
+      # deploy time. Read-only mount.
+      - {{ void_stack_dir }}/void-keys/pool_tokens.yaml:{{ void_keys_sops_tokens_file }}:ro
     extra_hosts:
       # Reach claude-key-exporter on the mcow host (sidecar LXC ships later).
       - "host.docker.internal:host-gateway"
     depends_on:
       void-auth:
-        condition: service_healthy
-      void-keys-db:
         condition: service_healthy
     networks:
       - void
