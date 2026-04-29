@@ -1,0 +1,31 @@
+# Managed by Ansible (HMB-8). Do not edit by hand.
+[Unit]
+Description=Daily restic backup of void-* volumes to nether
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=3600
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/restic/env
+Environment=HOME=/root
+# Pause running void-* containers for SQLite consistency.
+ExecStartPre=/bin/sh -c 'docker ps --filter "name=void-" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker pause'
+# Backup. /bin/sh -c required so the void-* glob expands.
+ExecStart=/bin/sh -c '/usr/bin/restic backup --tag daily {% for p in restic_exclude_patterns %}--exclude "{{ p }}" {% endfor %}{{ restic_backup_paths | join(" ") }}'
+# Unpause containers regardless of backup outcome (separate ExecStartPost).
+ExecStartPost=/bin/sh -c 'docker ps -a --filter "name=void-" --filter "status=paused" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker unpause'
+# Retention.
+ExecStartPost=/usr/bin/restic forget --keep-daily 7 --keep-weekly 4 --prune
+# Bounded-cost integrity check.
+ExecStartPost=/usr/bin/restic check --read-data-subset=5%
+# Repo size signal to journald.
+ExecStartPost=/usr/bin/restic stats --mode raw-data
+# Survive transient nether outages.
+Restart=on-failure
+RestartSec=300
+
+[Install]
+WantedBy=multi-user.target

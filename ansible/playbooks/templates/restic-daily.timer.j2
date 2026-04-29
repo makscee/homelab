@@ -1,0 +1,12 @@
+# Managed by Ansible (HMB-8). Do not edit by hand.
+[Unit]
+Description=Daily restic backup at 04:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=restic-daily.service
+
+[Install]
+WantedBy=timers.target

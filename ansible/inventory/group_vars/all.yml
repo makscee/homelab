@@ -55,3 +55,24 @@ voidnet_api_user: root
 homelab_admin_age_recipients:
   - age154sy5cc0masul6t7zyza76qw48dqcm700t43pvnwclcswl4leuvs5qrcjp  # operator workstation
   - age12hpz529aeuwq0nlqh5ccxe055ghqtzd36t7d548u36er57kx6p0qg4q5pv  # mcow runtime (Plan 13-06)
+
+# ── HMB-8: off-host restic backup mcow → nether ───────────────────────────
+# Public key of the dedicated `restic-mcow` keypair. Private half lives in
+# secrets/mcow.sops.yaml under restic_ssh_private_key. nether's root
+# authorized_keys gets this entry with restrict + command="internal-sftp".
+restic_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOX1ZJrU8PlbCe5Jo2GyaWj2pAaHsKbxVHZ5vcF6fnPA restic-mcow@2026-04-28"
+
+# Backup target paths on mcow. Glob expansion happens inside `sh -c`
+# in the systemd unit (systemd does not glob).
+restic_backup_paths:
+  - /var/lib/docker/volumes/void-*
+
+# Patterns excluded from backup (passed to restic --exclude).
+restic_exclude_patterns:
+  - "*.bak"
+
+# Repo location on nether (root-owned, mode 0700).
+restic_repo_path: /var/backups/restic/mcow
+
+# Repo URL the mcow client uses. user@host=root@nether; path matches above.
+restic_repo_url: "sftp:root@nether:/var/backups/restic/mcow"

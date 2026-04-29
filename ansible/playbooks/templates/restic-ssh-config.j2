@@ -1,0 +1,8 @@
+# Managed by Ansible (HMB-8). Pinned IdentityFile so restic's sftp:
+# backend uses the dedicated key, not whatever else is in /root/.ssh.
+Host nether
+    HostName {{ hostvars['nether'].tailscale_ip }}
+    User root
+    IdentityFile /root/.ssh/restic_mcow_ed25519
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
