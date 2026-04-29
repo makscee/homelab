@@ -42,6 +42,11 @@
         file: ../../secrets/void-keys.sops.yaml
       no_log: true
 
+    - name: load SOPS-decrypted void-keys pool tokens
+      community.sops.load_vars:
+        file: ../../secrets/void-keys-tokens.sops.yaml
+      no_log: true
+
     - name: load SOPS-decrypted GHCR credentials
       community.sops.load_vars:
         file: ../../secrets/ghcr.sops.yaml
@@ -154,14 +159,16 @@
       no_log: true
       notify: restart-stack
 
-    - name: ship void-keys SOPS pool-tokens bundle (encrypted at rest;
-            container decrypts via `sops -d` at boot)
+    - name: render void-keys pool-tokens YAML (decrypted at deploy time;
+            mounted plaintext into the container — image lacks sops binary,
+            so runtime `sops -d` fallback to plaintext read is the live path)
       ansible.builtin.copy:
-        src: ../../secrets/void-keys-tokens.sops.yaml
-        dest: "{{ void_stack_dir }}/void-keys/secrets.enc.yaml"
+        content: "{{ {'pool_tokens': pool_tokens} | to_nice_yaml(indent=2) }}"
+        dest: "{{ void_stack_dir }}/void-keys/pool_tokens.yaml"
         owner: root
         group: root
         mode: "0600"
+      no_log: true
       notify: restart-stack
 
     - name: log into ghcr.io

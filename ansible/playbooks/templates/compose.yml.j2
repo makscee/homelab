@@ -129,9 +129,10 @@ services:
     # HMB-9c — keys service. Pool API token store + sticky user→key binder for
     # claudev. Image SHA-pinned via void_keys_image_tag. Internal-only on the
     # void network; Caddy proxies keys.makscee.ru -> void-keys:{{ void_keys_port }}
-    # (see Caddyfile.j2). SOPS pool-tokens YAML is mounted read-only at
-    # {{ void_keys_sops_tokens_file }} — token-store.ts shells out to `sops -d`
-    # at boot and never persists raw tokens.
+    # (see Caddyfile.j2). Pool-tokens YAML is mounted read-only at
+    # {{ void_keys_sops_tokens_file }} as PLAINTEXT — decrypted at deploy time
+    # by Ansible (community.sops.load_vars) and rendered to the host. The image
+    # lacks the sops binary, so runtime `sops -d` falls back to plaintext read.
     image: {{ void_keys_image }}
     container_name: void-keys
     restart: unless-stopped
@@ -140,9 +141,10 @@ services:
     expose:
       - "{{ void_keys_port }}"
     volumes:
-      # Pool-tokens SOPS bundle. Decrypted at boot inside the container by
-      # `sops -d` (binary baked into the image). Read-only mount.
-      - {{ void_stack_dir }}/void-keys/secrets.enc.yaml:{{ void_keys_sops_tokens_file }}:ro
+      # Plaintext pool-tokens YAML rendered by playbooks/void-platform-mcow.yml
+      # from secrets/void-keys-tokens.sops.yaml. Read-only mount, mode 0600 on
+      # host. Never commit the rendered file — it lives only on mcow.
+      - {{ void_stack_dir }}/void-keys/pool_tokens.yaml:{{ void_keys_sops_tokens_file }}:ro
     extra_hosts:
       # Reach claude-key-exporter on the mcow host (sidecar LXC ships later).
       - "host.docker.internal:host-gateway"

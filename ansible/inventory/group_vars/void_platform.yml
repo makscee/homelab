@@ -86,11 +86,14 @@ void_keys_db_port: 5432
 void_keys_db_name: "void_keys"
 void_keys_db_user: "void_keys"
 
-# Path inside the void-keys container where the SOPS-encrypted pool-tokens
-# YAML is mounted (consumed by src/services/token-store.ts at boot —
-# `sops -d $SOPS_TOKENS_FILE` parses `pool_tokens:` map). Mounted read-only
-# from the host at {{ void_stack_dir }}/void-keys/secrets.enc.yaml.
-void_keys_sops_tokens_file: "/secrets/secrets.enc.yaml"
+# Path inside the void-keys container where the pool-tokens YAML is mounted.
+# Decrypted at deploy time on the host by community.sops.load_vars and
+# rendered as plaintext to {{ void_stack_dir }}/void-keys/pool_tokens.yaml,
+# then mounted read-only here. token-store.ts shells out `sops -d` first;
+# that fails (image lacks the sops binary) and falls back to plaintext read
+# of the same path, parsing the `pool_tokens:` map. Avoids shipping the
+# encrypted bundle into a container that can't decrypt it.
+void_keys_sops_tokens_file: "/secrets/pool_tokens.yaml"
 
 # claude-key-exporter URL (VKE-2 sidecar). Default points at the host metrics
 # port — exporter LXC ships in a later HMB-* task. Until then void-keys
