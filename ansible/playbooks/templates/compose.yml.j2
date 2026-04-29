@@ -24,10 +24,25 @@ services:
   caddy:
     image: {{ caddy_image }}
     restart: unless-stopped
+    # Long-form port spec: docker engine 29.x mis-parses short-form "80:80"
+    # as HostIP (HostConfig.PortBindings shows {invalid IP 80}, breaks
+    # NetworkSettings.Networks attachment). Long-form bypasses the buggy
+    # string parser. See HMB-9 Work Log session 4 (2026-04-29).
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"  # HTTP/3
+      - target: 80
+        published: 80
+        protocol: tcp
+      - target: 443
+        published: 443
+        protocol: tcp
+      - target: 443
+        published: 443
+        protocol: udp  # HTTP/3
+    extra_hosts:
+      # Caddy proxies to host-bound services (voidnet-api :8080, animaya :8080,
+      # homelab-admin :3847, vibe :8081/:8083). host.docker.internal resolves
+      # via host-gateway. See Caddyfile.j2.
+      - "host.docker.internal:host-gateway"
     volumes:
       - {{ void_stack_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
