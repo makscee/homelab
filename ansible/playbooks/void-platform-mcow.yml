@@ -35,6 +35,14 @@
       no_log: true
 
   tasks:
+    - name: stop + disable host deb caddy (one-shot cutover, opt-in via -e migrate_host_caddy=true)
+      ansible.builtin.systemd:
+        name: caddy
+        state: stopped
+        enabled: false
+      when: migrate_host_caddy | default(false) | bool
+      failed_when: false  # idempotent: unit may already be gone on re-runs
+
     - name: check whether docker is already installed
       ansible.builtin.command: docker --version
       register: docker_version_check
@@ -68,6 +76,15 @@
         owner: root
         group: root
         mode: "0755"
+
+    - name: render Caddyfile
+      ansible.builtin.template:
+        src: templates/Caddyfile.j2
+        dest: "{{ void_stack_dir }}/Caddyfile"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart-stack
 
     - name: render compose.yml
       ansible.builtin.template:
