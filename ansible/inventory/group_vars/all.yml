@@ -9,7 +9,8 @@ cadvisor_version: "v0.55.1"   # matches running container; v0.56.1 pin from Plan
 
 # ── v3.0 Phase 12 — homelab-admin dashboard on mcow ─────────────────────
 # Port 3847 chosen because Docker (Grafana stack) already owns 3000 on mcow.
-# App binds 127.0.0.1:3847 — Caddy reverse-proxies from homelab.makscee.ru (Tailnet-only via Tailscale ACL).
+# App binds 172.17.0.1:3847 (docker bridge gateway, host-only) — compose-Caddy
+# reverse-proxies via host.docker.internal:3847 from homelab.makscee.ru (HMB-9).
 homelab_admin_port: 3847
 homelab_admin_domain: "homelab.makscee.ru"
 homelab_admin_install_dir: "/opt/homelab-admin/app"
