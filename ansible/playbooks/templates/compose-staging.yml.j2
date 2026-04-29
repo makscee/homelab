@@ -1,0 +1,101 @@
+# {{ ansible_managed }}
+# HMB-9d — STAGING void platform stack on mcow.
+# Rendered to {{ void_staging_compose_dir }}/compose.yml by
+# playbooks/void-platform-staging-mcow.yml.
+#
+# Compose project name: void-staging (deployed via `docker compose -p void-staging`).
+# Joins the prod `void` network as `external: true` so the prod Caddy container
+# can reach `void-auth-staging:3000` by name. Prod stack is NOT touched.
+#
+# void-mail-staging runs MOCK_MODE=1 (mock mailer + /v1/mail/_mock/last endpoint).
+# It still needs Postgres for the mail_sends audit recorder (dbRecorder is wired
+# unconditionally in src/index.ts), so we ship a side-car postgres container.
+#
+# void-auth-staging uses SQLite (per workspace/void-auth/CLAUDE.md), so it just
+# needs a writable volume.
+---
+name: void-staging
+
+networks:
+  # Shared with prod compose project `void` (external). Caddy lives there and
+  # needs DNS resolution to staging containers; staging containers also expose
+  # void-mail-staging on the `void` network so Caddy can reach it (debug only).
+  # Docker compose names networks `<project>_<net>`; prod compose project is
+  # `void` with network `void`, so the actual docker network name is `void_void`.
+  void:
+    name: void_void
+    external: true
+
+volumes:
+  void_staging_mail_data: {}
+  void_staging_auth_data: {}
+  void_staging_mail_db_data: {}
+
+services:
+  # Postgres for void-mail-staging audit (mail_sends). Internal-only; no host
+  # port binding. Isolated volume so it shares zero state with any prod DB.
+  void-mail-staging-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: void_mail
+      POSTGRES_USER: void_mail
+      POSTGRES_PASSWORD: void_mail_staging
+    volumes:
+      - void_staging_mail_db_data:/var/lib/postgresql/data
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U void_mail -d void_mail"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  void-mail-staging:
+    image: {{ void_mail_image }}
+    restart: unless-stopped
+    env_file:
+      - {{ void_staging_compose_dir }}/void-mail-staging/.env
+    depends_on:
+      void-mail-staging-db:
+        condition: service_healthy
+    # Mock-port bound to mcow tailnet IPv4 only — operator-mac (on tailnet) can
+    # curl /v1/mail/_mock/last; public internet cannot. Internal port 3000 is
+    # also reachable by other void-staging services via the compose network.
+    ports:
+      - target: 3000
+        published: {{ void_staging_mock_port }}
+        host_ip: {{ mcow_tailnet_ip }}
+        protocol: tcp
+    volumes:
+      - void_staging_mail_data:/data
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  void-auth-staging:
+    image: {{ void_auth_image }}
+    restart: unless-stopped
+    env_file:
+      - {{ void_staging_compose_dir }}/void-auth-staging/.env
+    depends_on:
+      void-mail-staging:
+        condition: service_healthy
+    volumes:
+      - void_staging_auth_data:/data
+    networks:
+      - void
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # No `ports:` — auth-staging is reached via Caddy on the shared `void`
+    # network (auth-staging.makscee.ru → void-auth-staging:3000).

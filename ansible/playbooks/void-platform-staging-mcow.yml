@@ -1,0 +1,143 @@
+---
+# HMB-9d — deploy STAGING void platform stack to mcow.
+#
+# Spec of record: this task file in tasks/active/HMB-9d-staging-void-platform.md.
+#
+# Layout: separate playbook (Option A in S1). Keeps the prod playbook
+# (void-platform-mcow.yml) untouched; staging is purely additive — new compose
+# project (`void-staging`), new volumes, new Caddy vhost
+# (auth-staging.makscee.ru), new SQLite/Postgres state.
+#
+# Network strategy: staging compose joins prod's `void` network as
+# external: true, so the prod Caddy container can reach
+# void-auth-staging:3000 by container DNS. Caddyfile is re-rendered with the
+# auth-staging vhost gated by `void_staging_enabled=true` and reloaded
+# gracefully via `caddy reload` (no compose restart, no prod container
+# bounce).
+#
+# Secrets: loaded via community.sops.load_vars (NOT vars_files — vars_files
+# does NOT decrypt SOPS, see feedback memory ansible_sops_decrypt and HMB-8).
+#
+# Pre-deploy operator setup:
+#   - DNS: A record `auth-staging.makscee.ru` → 85.209.135.21 (mcow public IP)
+#   - secrets/void-staging.sops.yaml: fill values + `sops --encrypt --in-place`
+#   - secrets/ghcr.sops.yaml: must already exist (shared with prod)
+#   - prod stack must be up (this playbook depends on the `void` external
+#     network created by the prod compose project)
+#
+# Deploy:
+#   cd ansible
+#   ansible-playbook -i inventory/homelab.yml \
+#     playbooks/void-platform-staging-mcow.yml \
+#     [-e ghcr_image_tag=<sha-or-tag>]
+
+- name: "HMB-9d — STAGING void platform stack on mcow"
+  hosts: void_platform
+  become: true
+  gather_facts: true
+  vars:
+    # Toggles the auth-staging.makscee.ru block in templates/Caddyfile.j2.
+    void_staging_enabled: true
+
+  pre_tasks:
+    - name: load SOPS-decrypted void-staging secrets
+      community.sops.load_vars:
+        file: ../../secrets/void-staging.sops.yaml
+      no_log: true
+
+    - name: load SOPS-decrypted GHCR credentials
+      community.sops.load_vars:
+        file: ../../secrets/ghcr.sops.yaml
+      no_log: true
+
+    - name: assert prod void stack network exists
+      # Prod compose project is `void` with network `void`; docker names it
+      # `void_void` (project_network). Staging compose attaches by that name.
+      ansible.builtin.command: docker network inspect void_void
+      register: void_network_check
+      changed_when: false
+      failed_when: void_network_check.rc != 0
+
+  tasks:
+    - name: ensure staging stack directory tree exists
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ void_staging_compose_dir }}"
+        - "{{ void_staging_compose_dir }}/void-mail-staging"
+        - "{{ void_staging_compose_dir }}/void-auth-staging"
+
+    - name: render staging compose.yml
+      ansible.builtin.template:
+        src: templates/compose-staging.yml.j2
+        dest: "{{ void_staging_compose_dir }}/compose.yml"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart-staging-stack
+
+    - name: render void-mail-staging .env
+      ansible.builtin.template:
+        src: templates/void-mail-staging.env.j2
+        dest: "{{ void_staging_compose_dir }}/void-mail-staging/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: restart-staging-stack
+
+    - name: render void-auth-staging .env
+      ansible.builtin.template:
+        src: templates/void-auth-staging.env.j2
+        dest: "{{ void_staging_compose_dir }}/void-auth-staging/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: restart-staging-stack
+
+    # The auth-staging.makscee.ru block lives inside the prod Caddyfile.j2
+    # template, gated by `void_staging_enabled`. Re-rendering inserts the
+    # vhost without disturbing the rest of the file, then `caddy reload`
+    # picks up the change without a container restart.
+    - name: re-render prod Caddyfile with auth-staging vhost block enabled
+      ansible.builtin.template:
+        src: templates/Caddyfile.j2
+        dest: "{{ void_stack_dir }}/Caddyfile"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: reload-caddy
+
+    - name: log into ghcr.io
+      community.docker.docker_login:
+        registry_url: ghcr.io
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_pat }}"
+        reauthorize: true
+      no_log: true
+
+    - name: bring up the staging void stack (project=void-staging, pull always)
+      community.docker.docker_compose_v2:
+        project_src: "{{ void_staging_compose_dir }}"
+        project_name: void-staging
+        state: present
+        pull: always
+
+  handlers:
+    - name: restart-staging-stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ void_staging_compose_dir }}"
+        project_name: void-staging
+        state: restarted
+
+    # Graceful reload of the prod Caddy container — no restart, no prod
+    # downtime. Container name is the conventional compose v2 form
+    # `<project>-<service>-<index>` for project `void`.
+    - name: reload-caddy
+      ansible.builtin.command: docker exec void-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+      changed_when: true
