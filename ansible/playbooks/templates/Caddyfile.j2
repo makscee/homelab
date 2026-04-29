@@ -88,10 +88,9 @@ vibe.makscee.ru {
 }
 
 # auth.makscee.ru — void-auth (HMB-9b). Internal service on the void network.
-# Reaches void-auth:3000 by container DNS over the shared void_void network.
 auth.makscee.ru {
 	encode zstd gzip
-	reverse_proxy void-auth:3000
+	reverse_proxy void-auth:{{ void_auth_port }}
 }
 
 # keys.makscee.ru placeholder for HMB-9c. ACME retries until DNS + service land.

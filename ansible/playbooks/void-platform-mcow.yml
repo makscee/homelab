@@ -11,6 +11,7 @@
 #
 # Pre-deploy operator setup:
 #   - sops --encrypt --in-place secrets/void-mail.sops.yaml  (replace placeholders first)
+#   - sops --encrypt --in-place secrets/void-auth.sops.yaml  (HMB-9b — replace placeholder first)
 #   - sops --encrypt --in-place secrets/ghcr.sops.yaml       (ghcr_username + ghcr_pat)
 #
 # Deploy:
@@ -27,6 +28,11 @@
     - name: load SOPS-decrypted void-mail secrets
       community.sops.load_vars:
         file: ../../secrets/void-mail.sops.yaml
+      no_log: true
+
+    - name: load SOPS-decrypted void-auth secrets
+      community.sops.load_vars:
+        file: ../../secrets/void-auth.sops.yaml
       no_log: true
 
     - name: load SOPS-decrypted GHCR credentials
@@ -77,6 +83,14 @@
         group: root
         mode: "0755"
 
+    - name: ensure void-auth subdirectory exists
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}/void-auth"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: render Caddyfile
       ansible.builtin.template:
         src: templates/Caddyfile.j2
@@ -99,6 +113,16 @@
       ansible.builtin.template:
         src: templates/void-mail.env.j2
         dest: "{{ void_stack_dir }}/void-mail/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: restart-stack
+
+    - name: render void-auth .env from sops vars
+      ansible.builtin.template:
+        src: templates/void-auth.env.j2
+        dest: "{{ void_stack_dir }}/void-auth/.env"
         owner: root
         group: root
         mode: "0600"

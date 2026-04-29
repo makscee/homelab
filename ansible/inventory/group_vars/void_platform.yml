@@ -36,12 +36,36 @@ void_mail_smtp_user: "resend"
 void_mail_smtp_from_name: "void-mail"
 void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"
 
+# ---- void-auth (HMB-9b) ----
+# Image pinned by SHA for deterministic deploy + easy rollback. void-auth has
+# its own tag var (separate from ghcr_image_tag) so each void-* service can be
+# rolled independently. Override per-deploy:
+#     ansible-playbook ... -e void_auth_image_tag=<sha-or-tag>
+void_auth_image_tag: "sha-bcd91ad"
+void_auth_image: "ghcr.io/makscee/void-auth:{{ void_auth_image_tag }}"
+
+# void-auth listens on PORT (default 3000). Internal-only on the void network;
+# Caddy reverse-proxies auth.makscee.ru -> void-auth:3000.
+void_auth_port: 3000
+
+# Public URL — used by the device-authorization flow (RFC 8628) to build
+# verification_uri / verification_uri_complete returned to CLI clients.
+void_auth_public_url: "https://auth.makscee.ru"
+
+# void-mail base URL as seen from inside the compose bridge.
+void_auth_mail_base_url: "http://void-mail:{{ void_mail_port }}"
+
+# SQLite DB path inside the container; backed by named volume void-auth-data.
+void_auth_database_url: "/data/void-auth.db"
+
+# Dev/staging seed admin email. Empty = no seed (prod default).
+void_auth_seed_admin_email: ""
+
 # ── HMB-9d — STAGING void platform stack on mcow ─────────────────────────
 # Deployed by playbooks/void-platform-staging-mcow.yml. Separate compose
 # project (`void-staging`), separate volumes, separate Caddy vhost
 # (auth-staging.makscee.ru). Joins prod's `void` network as external so the
 # prod Caddy container can reach staging services by name.
-void_auth_image: "ghcr.io/makscee/void-auth:{{ ghcr_image_tag }}"
 void_staging_compose_dir: "/srv/void-staging"
 void_staging_mock_port: 3001
 # mcow tailnet IPv4 (matches inventory/homelab.yml hosts.mcow.tailscale_ip).
