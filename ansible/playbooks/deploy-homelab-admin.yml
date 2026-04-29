@@ -201,81 +201,12 @@
     - name: Plumb secrets from SOPS to /etc/homelab-admin/env
       ansible.builtin.include_tasks: tasks/homelab-admin-secrets.yml
 
-    # ── Stage 5 — Rsync source ──────────────────────────────────────────────
-    - name: Sync apps/admin source to {{ _homelab_admin_install_dir }}
-      ansible.posix.synchronize:
-        src: "{{ app_src }}"
-        dest: "{{ _homelab_admin_install_dir }}/"
-        delete: true
-        rsync_opts:
-          - "--exclude=node_modules"
-          - "--exclude=.next"
-          - "--exclude=.next.prev"
-          - "--exclude=.env.local"
-          - "--exclude=.env.*.local"
-          # Plan 13-07: secrets/ is rendered separately by homelab-admin-secrets.yml
-          # and must survive rsync --delete.
-          - "--exclude=secrets"
-      register: rsync_result
-
-    - name: Chown install dir to homelab-admin
-      ansible.builtin.file:
-        path: "{{ _homelab_admin_install_dir }}"
-        owner: "{{ _homelab_admin_service_user }}"
-        group: "{{ _homelab_admin_service_group }}"
-        recurse: true
-
-    # ── Stage 6 — bun install --frozen-lockfile ─────────────────────────────
-    - name: Install deps with frozen lockfile
-      become_user: "{{ _homelab_admin_service_user }}"
-      ansible.builtin.command:
-        cmd: /usr/local/bin/bun install --frozen-lockfile
-        chdir: "{{ _homelab_admin_install_dir }}"
-      register: bun_install
-      changed_when: "'installed' in bun_install.stdout or 'packages' in bun_install.stdout"
-
-    # ── Stage 7 — Build with rollback ───────────────────────────────────────
-    - name: Snapshot previous build
-      ansible.builtin.shell: |
-        set -euo pipefail
-        if [ -d "{{ _homelab_admin_install_dir }}/.next" ] && [ ! -d "{{ _homelab_admin_install_dir }}/.next.prev" ]; then
-          mv "{{ _homelab_admin_install_dir }}/.next" "{{ _homelab_admin_install_dir }}/.next.prev"
-        elif [ -d "{{ _homelab_admin_install_dir }}/.next" ] && [ -d "{{ _homelab_admin_install_dir }}/.next.prev" ]; then
-          rm -rf "{{ _homelab_admin_install_dir }}/.next.prev"
-          mv "{{ _homelab_admin_install_dir }}/.next" "{{ _homelab_admin_install_dir }}/.next.prev"
-        fi
-      args:
-        executable: /bin/bash
-      changed_when: false
-
-    - name: Build Next.js
-      block:
-        - name: bun run build
-          become_user: "{{ _homelab_admin_service_user }}"
-          ansible.builtin.shell: |
-            set -euo pipefail
-            set -a
-            . /etc/homelab-admin/env
-            set +a
-            /usr/local/bin/bun run build
-          args:
-            chdir: "{{ _homelab_admin_install_dir }}"
-            executable: /bin/bash
-          register: build_result
-          changed_when: "'compiled' in build_result.stdout.lower() or 'compiled' in build_result.stderr.lower()"
-      rescue:
-        - name: Rollback to previous .next
-          ansible.builtin.shell: |
-            set -euo pipefail
-            rm -rf "{{ _homelab_admin_install_dir }}/.next"
-            if [ -d "{{ _homelab_admin_install_dir }}/.next.prev" ]; then
-              mv "{{ _homelab_admin_install_dir }}/.next.prev" "{{ _homelab_admin_install_dir }}/.next"
-            fi
-          args:
-            executable: /bin/bash
-        - name: Abort deploy after rollback
-          ansible.builtin.fail:
-            msg: "bun run build failed — rolled back to .next.prev. Fix build locally (`cd apps/admin && bun run build`) before re-running."
+    # ── Stages 5–7 (legacy: rsync source, bun install on target, build on
+    # target) replaced by the nextjs_app_deploy role: build on controller +
+    # ship a pre-built standalone bundle + atomic symlink swap + rollback. The
+    # role's build/stage/ship/swap/healthcheck phases run AFTER systemd unit
+    # install (Stage 8) so the unit file is in place before swap restarts the
+    # service. (HMB-14 Task 4)
 
     # ── Stage 7b — Audit data directory ─────────────────────────────────────
     - name: Provision /var/lib/homelab-admin for audit SQLite DB
@@ -319,34 +250,39 @@
         - Reload systemd
         - Restart homelab-admin
 
-    # Flush handlers so daemon-reload + restart happen BEFORE smoke check
-    - name: Apply systemd changes before smoke
+    # Flush handlers so the unit file is in place BEFORE the role's swap
+    # phase restarts the service.
+    - name: Apply systemd unit changes before role swap
       ansible.builtin.meta: flush_handlers
 
-    - name: Ensure homelab-admin is enabled and started
+    - name: Ensure homelab-admin is enabled
       ansible.builtin.systemd:
         name: homelab-admin.service
         enabled: true
-        state: started
 
-    # ── Stage 11 — Local smoke check against docker bridge gateway ──────────
-    # App now binds 172.17.0.1:3847 (HMB-9) so compose-Caddy can reach it via
-    # host.docker.internal. Smoke probe uses the same IP since UFW is off and
-    # we don't want to encourage 127.0.0.1 reachability assumptions.
-    - name: Smoke — /api/health on 172.17.0.1:{{ _homelab_admin_port }}
-      ansible.builtin.uri:
-        url: "http://172.17.0.1:{{ _homelab_admin_port }}/api/health"
-        return_content: true
-        status_code: 200
-      register: health_local
-      retries: 10
-      delay: 1
-      until: health_local.status == 200 and (health_local.json.ok | default(false))
-
-    - name: Fail if health body.ok != true
-      ansible.builtin.fail:
-        msg: "Health check returned 200 but body.ok != true: {{ health_local.json | default({}) }}"
-      when: not ansible_check_mode and not (health_local.json.ok | default(false))
+    # ── Stage 9 — Build on controller + ship + swap + healthcheck ───────────
+    # The nextjs_app_deploy role replaces legacy Stages 5/6/7 (rsync source,
+    # bun install on target, build on target). It builds the Next.js
+    # standalone bundle on the controller, rsyncs it to a content-addressed
+    # release dir on mcow, atomically swaps the `current` symlink, restarts
+    # the systemd unit, and runs an internal-IP healthcheck with
+    # rescue-style rollback. (HMB-14 Task 4)
+    - name: Build, ship, swap, healthcheck via nextjs_app_deploy role
+      ansible.builtin.include_role:
+        name: nextjs_app_deploy
+      vars:
+        # 4 levels up from workspace/homelab/ansible/playbooks/ = hub root.
+        nextjs_app_yarn_root: "{{ playbook_dir }}/../../../../workspace"
+        nextjs_app_admin_dir: "{{ nextjs_app_yarn_root }}/homelab/apps/admin"
+        nextjs_app_target_install_dir: /opt/homelab-admin
+        nextjs_app_target_user: "{{ _homelab_admin_service_user }}"
+        nextjs_app_target_group: "{{ _homelab_admin_service_group }}"
+        nextjs_app_systemd_unit: homelab-admin.service
+        nextjs_app_healthcheck_url: "http://172.17.0.1:{{ _homelab_admin_port }}/api/health"
+        # Next.js standalone output is nested under the workspace-relative
+        # path of the app because next.config.mjs sets outputFileTracingRoot
+        # to the yarn workspace root (HMB-14 Task 1).
+        nextjs_app_standalone_subpath: homelab/apps/admin
 
     # ── Stage 12 — Caddy block (additive via blockinfile; authors SEC-02 layer) ─
     - name: Render Caddy site-block template locally

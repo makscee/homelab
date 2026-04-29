@@ -13,7 +13,7 @@ Requires=docker.service
 Type=simple
 User=homelab-admin
 Group=homelab-admin
-WorkingDirectory=/opt/homelab-admin/current/server
+WorkingDirectory=/opt/homelab-admin/current/server/homelab/apps/admin
 EnvironmentFile=/etc/homelab-admin/env
 Environment=NODE_ENV=production
 Environment=PORT=3847
@@ -24,7 +24,7 @@ Environment=HOSTNAME=172.17.0.1
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 # --bun forces Bun runtime for child processes (next CLI spawns node by default;
 # we need Bun globals so bun:sqlite native module resolves via the shim proxy).
-ExecStart=/usr/local/bin/bun --bun run /opt/homelab-admin/current/server/server.js
+ExecStart=/usr/local/bin/bun --bun run /opt/homelab-admin/current/server/homelab/apps/admin/server.js
 Restart=on-failure
 RestartSec=5s
 # Resource limits — tune after 24h soak (Plan 10 + Phase 17 metrics)
