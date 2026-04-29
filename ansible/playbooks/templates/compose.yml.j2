@@ -33,12 +33,9 @@ services:
       - {{ void_stack_dir }}/void-mail/.env
     networks:
       - void
-    # TODO HMB-9: confirm void-mail's actual /health port once the service
-    # contract is pinned. void_mail_port currently defaults to 8080 in
-    # group_vars/void_platform.yml. Override via -e ghcr_image_tag=... +
-    # group_vars edit if the image binds elsewhere.
+    # void-mail listens on PORT (default 3000, set in group_vars/void_platform.yml).
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${VOID_MAIL_PORT:-{{ void_mail_port }}}/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{ void_mail_port }}/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
