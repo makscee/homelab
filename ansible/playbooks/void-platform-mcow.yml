@@ -78,15 +78,6 @@
         mode: "0644"
       notify: restart-stack
 
-    - name: render Caddyfile
-      ansible.builtin.template:
-        src: templates/Caddyfile.j2
-        dest: "{{ void_stack_dir }}/Caddyfile"
-        owner: root
-        group: root
-        mode: "0644"
-      notify: reload-caddy
-
     - name: render void-mail .env from sops vars
       ansible.builtin.template:
         src: templates/void-mail.env.j2
@@ -116,9 +107,3 @@
       community.docker.docker_compose_v2:
         project_src: "{{ void_stack_dir }}"
         state: restarted
-
-    - name: reload-caddy
-      community.docker.docker_compose_v2_exec:
-        project_src: "{{ void_stack_dir }}"
-        service: caddy
-        command: caddy reload --config /etc/caddy/Caddyfile

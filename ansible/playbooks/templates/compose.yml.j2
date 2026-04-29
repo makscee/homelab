@@ -1,6 +1,11 @@
 # {{ ansible_managed }}
 # HMB-9 — void platform stack on mcow.
 # Rendered to {{ void_stack_dir }}/compose.yml by playbooks/void-platform-mcow.yml.
+#
+# Edge TLS termination is handled by the host-native caddy on mcow
+# (/etc/caddy/Caddyfile). Slice 1 keeps void-mail internal-only — no public
+# vhost is needed yet. HMB-9b/9c will add auth.makscee.ru / keys.makscee.ru
+# stanzas to the host caddy and may publish ports here on loopback.
 ---
 name: void
 
@@ -8,24 +13,7 @@ networks:
   void:
     driver: bridge
 
-volumes:
-  caddy_data:
-  caddy_config:
-
 services:
-  caddy:
-    image: {{ caddy_image }}
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-      - {{ void_stack_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
-    networks:
-      - void
-
   void-mail:
     image: {{ void_mail_image }}
     restart: unless-stopped
