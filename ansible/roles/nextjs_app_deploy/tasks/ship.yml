@@ -1,0 +1,27 @@
+---
+- name: Ensure releases dir exists on target
+  file:
+    path: "{{ nextjs_app_target_install_dir }}/releases"
+    state: directory
+    owner: "{{ nextjs_app_target_user }}"
+    group: "{{ nextjs_app_target_group }}"
+    mode: "0755"
+
+- name: Rsync release to target
+  ansible.posix.synchronize:
+    src: "{{ hostvars['localhost']['_stage_dir'] | default(nextjs_app_yarn_root + '/../build/' + nextjs_app_release_id + '/server') }}/"
+    dest: "{{ nextjs_app_target_install_dir }}/releases/{{ nextjs_app_release_id }}/"
+    archive: true
+    delete: true
+  when: not ansible_check_mode
+
+# rsync's --chown is GNU-only; controllers on macOS ship BSD rsync. Chown
+# the release dir explicitly post-transfer so it works regardless of which
+# rsync flavour is on the controller.
+- name: Chown release dir to service user
+  file:
+    path: "{{ nextjs_app_target_install_dir }}/releases/{{ nextjs_app_release_id }}"
+    owner: "{{ nextjs_app_target_user }}"
+    group: "{{ nextjs_app_target_group }}"
+    recurse: true
+  when: not ansible_check_mode

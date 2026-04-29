@@ -1,0 +1,33 @@
+---
+- name: Atomic-swap current symlink
+  file:
+    src: "{{ nextjs_app_target_install_dir }}/releases/{{ nextjs_app_release_id }}"
+    dest: "{{ nextjs_app_target_install_dir }}/current"
+    state: link
+    owner: "{{ nextjs_app_target_user }}"
+    group: "{{ nextjs_app_target_group }}"
+    force: true
+
+- name: Cleanup HMB-9-era hotfixes (idempotent)
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ nextjs_app_target_install_dir }}/package.json"
+    - "{{ nextjs_app_target_install_dir }}/app"
+
+- name: Prune old releases (keep last N + current)
+  shell: |
+    cd {{ nextjs_app_target_install_dir }}/releases
+    ls -1t | tail -n +{{ nextjs_app_release_retention | int + 1 }} | grep -v "^{{ nextjs_app_release_id }}$" | xargs -r rm -rf
+  changed_when: true
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: Restart {{ nextjs_app_systemd_unit }}
+  systemd:
+    name: "{{ nextjs_app_systemd_unit }}"
+    state: restarted
+    enabled: true
