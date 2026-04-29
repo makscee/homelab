@@ -37,6 +37,12 @@ Override the image tag for a pinned deploy:
 ansible-playbook -i inventory/homelab.yml playbooks/void-platform-mcow.yml -e ghcr_image_tag=sha-abc123
 ```
 
+First-time mcow cutover (stops + disables host deb caddy so the compose Caddy can claim :80/:443). One-shot — append once on the cutover run:
+
+```
+ansible-playbook -i inventory/homelab.yml playbooks/void-platform-mcow.yml -e migrate_host_caddy=true
+```
+
 ### Dry-run
 
 - `--syntax-check` — parse-only validation.
