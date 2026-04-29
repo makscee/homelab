@@ -72,9 +72,11 @@ void_keys_image: "ghcr.io/makscee/void-keys:{{ void_keys_image_tag }}"
 void_keys_port: 3000
 
 # AUTH_BASE_URL — void-auth endpoint void-keys' verifyToken middleware POSTs
-# to (`${AUTH_BASE_URL}/verify`). Reachable inside the compose `void` network
-# by container name; Caddy is not in the path.
-void_keys_auth_base_url: "http://void-auth:{{ void_auth_port }}"
+# to (`${AUTH_BASE_URL}/verify`). Must include the `/v1/auth` path prefix so
+# the resulting URL matches void-auth's registered route `/v1/auth/verify`.
+# Reachable inside the compose `void` network by container name; Caddy is not
+# in the path. (VAU-4b: discovered missing `/v1/auth` caused 404 on chain.)
+void_keys_auth_base_url: "http://void-auth:{{ void_auth_port }}/v1/auth"
 
 # Postgres for void-keys (drizzle-orm/postgres-js). HMB-9c provisions a
 # dedicated `void-keys-db` postgres:16-alpine sidecar in the same compose
