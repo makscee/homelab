@@ -51,7 +51,9 @@
       no_log: true
 
     - name: assert prod void stack network exists
-      ansible.builtin.command: docker network inspect void
+      # Prod compose project is `void` with network `void`; docker names it
+      # `void_void` (project_network). Staging compose attaches by that name.
+      ansible.builtin.command: docker network inspect void_void
       register: void_network_check
       changed_when: false
       failed_when: void_network_check.rc != 0

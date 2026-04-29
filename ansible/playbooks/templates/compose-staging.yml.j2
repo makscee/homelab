@@ -20,8 +20,10 @@ networks:
   # Shared with prod compose project `void` (external). Caddy lives there and
   # needs DNS resolution to staging containers; staging containers also expose
   # void-mail-staging on the `void` network so Caddy can reach it (debug only).
+  # Docker compose names networks `<project>_<net>`; prod compose project is
+  # `void` with network `void`, so the actual docker network name is `void_void`.
   void:
-    name: void
+    name: void_void
     external: true
 
 volumes:
