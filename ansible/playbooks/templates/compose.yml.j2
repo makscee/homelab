@@ -70,7 +70,7 @@ services:
       - void
     # void-mail listens on PORT (default 3000, set in group_vars/void_platform.yml).
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:{{ void_mail_port }}/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:{{ void_mail_port }}/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
