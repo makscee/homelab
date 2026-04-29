@@ -35,7 +35,13 @@
       no_log: true
 
   tasks:
-    - name: install docker engine + compose plugin
+    - name: check whether docker is already installed
+      ansible.builtin.command: docker --version
+      register: docker_version_check
+      changed_when: false
+      failed_when: false
+
+    - name: install docker engine + compose plugin (only if docker absent)
       ansible.builtin.apt:
         name:
           - docker.io
@@ -43,7 +49,9 @@
         state: present
         update_cache: true
         cache_valid_time: 3600
-      when: ansible_os_family == 'Debian'
+      when:
+        - ansible_os_family == 'Debian'
+        - docker_version_check.rc != 0
 
     - name: ensure void stack directory exists
       ansible.builtin.file:
