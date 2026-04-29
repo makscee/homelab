@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+# HMB-9 — void platform Caddyfile skeleton.
+# Rendered to {{ void_stack_dir }}/Caddyfile by playbooks/void-platform-mcow.yml.
+#
+# vhost placeholders return 404 in slice 1; HMB-9b fills auth.makscee.ru,
+# HMB-9c fills keys.makscee.ru. void-mail is internal-only and has no vhost.
+{
+	email {{ caddy_admin_email }}
+}
+
+auth.makscee.ru {
+	respond 404
+}
+
+keys.makscee.ru {
+	respond 404
+}
