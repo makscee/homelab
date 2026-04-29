@@ -25,3 +25,15 @@
     group: "{{ nextjs_app_target_group }}"
     recurse: true
   when: not ansible_check_mode
+
+# Free controller disk: stage dir lives at <hub>/build/<release-id>/ outside
+# the repo and accumulates without bound otherwise. Safe to drop once rsync
+# is confirmed.
+- name: Cleanup controller stage dir
+  file:
+    path: "{{ nextjs_app_yarn_root }}/../build/{{ nextjs_app_release_id }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: not ansible_check_mode
