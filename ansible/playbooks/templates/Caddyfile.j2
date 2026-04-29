@@ -90,6 +90,11 @@ vibe.makscee.ru {
 # auth.makscee.ru — void-auth (HMB-9b). Internal service on the void network.
 auth.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth:{{ void_auth_port }}
 }
 
@@ -99,6 +104,11 @@ auth.makscee.ru {
 # upstream — keys.makscee.ru is the only exposure path.
 keys.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-keys:{{ void_keys_port }}
 }
 
@@ -109,6 +119,11 @@ keys.makscee.ru {
 # network so Caddy reaches it by container DNS name.
 auth-staging.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth-staging:3000
 }
 {% endif %}
