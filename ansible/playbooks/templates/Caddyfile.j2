@@ -12,19 +12,17 @@
 	email {{ caddy_admin_email }}
 }
 
-# voidnet portal + API (migrated from host caddy 2026-04-29).
+# voidnet portal retired 2026-04-29 (HMB-11). voidnet-api/web/bot units
+# masked on mcow; postgres DB stays on disk for migration to void-* stack.
+# Returns 410 Gone for any request — no upstream proxying.
 voidnet.makscee.ru {
-	encode zstd gzip
-	reverse_proxy host.docker.internal:8080 {
-		header_up Host {host}
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-		flush_interval -1
-		transport http {
-			read_timeout 0
-			write_timeout 0
-		}
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
 	}
+	respond "voidnet portal retired — services migrating to void-* stack" 410
 }
 
 # animaya prod (migrated from host caddy 2026-04-29).
