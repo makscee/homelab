@@ -1,0 +1,45 @@
+---
+- name: bun install (yarn workspace root)
+  command:
+    cmd: bun install
+    chdir: "{{ nextjs_app_yarn_root }}"
+  changed_when: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: not ansible_check_mode
+
+- name: bun run build (Next.js production)
+  command:
+    cmd: bun run build
+    chdir: "{{ nextjs_app_admin_dir }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
+  when: not ansible_check_mode
+
+- name: Compute standalone server.js path
+  set_fact:
+    _standalone_server_js: >-
+      {{ nextjs_app_admin_dir }}/.next/standalone/{{ (nextjs_app_standalone_subpath ~ '/server.js') if nextjs_app_standalone_subpath else 'server.js' }}
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Stat standalone server.js
+  stat:
+    path: "{{ _standalone_server_js }}"
+  register: _server_js_stat
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Fail if standalone build missing
+  fail:
+    msg: "Standalone build missing or empty at {{ _standalone_server_js }}. Build did not produce expected output."
+  when:
+    - not ansible_check_mode
+    - not _server_js_stat.stat.exists or _server_js_stat.stat.size == 0
+  delegate_to: localhost
+  run_once: true
+  become: false

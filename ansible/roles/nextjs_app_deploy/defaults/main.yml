@@ -1,0 +1,22 @@
+---
+# Required (caller MUST supply)
+# nextjs_app_yarn_root:            absolute path to yarn workspace root on controller
+# nextjs_app_admin_dir:            absolute path to the Next.js app dir on controller (under yarn root)
+# nextjs_app_target_install_dir:   path on target (e.g. /opt/homelab-admin)
+# nextjs_app_target_user:          unix user owning the install
+# nextjs_app_target_group:         unix group owning the install
+# nextjs_app_systemd_unit:         systemd unit name on target (e.g. homelab-admin.service)
+# nextjs_app_healthcheck_url:      internal URL to curl post-swap (e.g. http://172.17.0.1:3847/api/health)
+
+# Optional
+nextjs_app_release_retention: 3
+nextjs_app_healthcheck_retries: 6
+nextjs_app_healthcheck_delay: 5
+nextjs_app_build_toolchain_vars: "{{ playbook_dir }}/../vars/build-toolchain.yml"
+
+# Path of server.js relative to .next/standalone/. Next.js with
+# outputFileTracingRoot pointing at a yarn workspace root nests the standalone
+# output under the workspace-relative path of the app. For homelab admin
+# (yarn root = /Users/admin/hub/workspace, app = workspace/homelab/apps/admin),
+# this is "homelab/apps/admin". Override per-app.
+nextjs_app_standalone_subpath: ""

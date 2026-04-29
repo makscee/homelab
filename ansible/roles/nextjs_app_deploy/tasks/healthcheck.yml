@@ -1,0 +1,42 @@
+---
+- name: Healthcheck + rollback envelope
+  block:
+    - name: Smoke {{ nextjs_app_healthcheck_url }}
+      uri:
+        url: "{{ nextjs_app_healthcheck_url }}"
+        status_code: 200
+        timeout: 5
+      register: _health
+      retries: "{{ nextjs_app_healthcheck_retries }}"
+      delay: "{{ nextjs_app_healthcheck_delay }}"
+      until: _health.status == 200
+  rescue:
+    - name: Find previous release
+      shell: |
+        ls -1t {{ nextjs_app_target_install_dir }}/releases | grep -v "^{{ nextjs_app_release_id }}$" | head -n1
+      register: _prev_release
+      changed_when: false
+
+    - name: Fail if no previous release
+      fail:
+        msg: "Smoke failed and no previous release to roll back to. Investigate manually on target."
+      when: _prev_release.stdout == ""
+
+    - name: Repoint current symlink to previous release
+      file:
+        src: "{{ nextjs_app_target_install_dir }}/releases/{{ _prev_release.stdout }}"
+        dest: "{{ nextjs_app_target_install_dir }}/current"
+        state: link
+        owner: "{{ nextjs_app_target_user }}"
+        group: "{{ nextjs_app_target_group }}"
+        force: true
+
+    - name: Restart unit on rollback
+      systemd:
+        name: "{{ nextjs_app_systemd_unit }}"
+        state: restarted
+
+    - name: Fail loudly after rollback
+      fail:
+        msg: >-
+          Smoke failed; rolled back to {{ _prev_release.stdout }}. Investigate logs on target host.

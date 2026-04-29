@@ -1,0 +1,6 @@
+# Pinned build toolchain for control-host builds of homelab apps.
+# Bumping = edit + commit + redeploy. Drift triggers preflight assert.
+# (HMB-14)
+---
+bun_version: "1.3.5"
+node_version: "v23.11.0"

@@ -1,0 +1,125 @@
+---
+- name: git rev-parse --short HEAD
+  command: git rev-parse --short HEAD
+  args:
+    chdir: "{{ nextjs_app_admin_dir }}"
+  register: _git_sha
+  changed_when: false
+  check_mode: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: git status --porcelain
+  command: git status --porcelain
+  args:
+    chdir: "{{ nextjs_app_admin_dir }}"
+  register: _git_dirty
+  changed_when: false
+  check_mode: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Compute release_id
+  set_fact:
+    nextjs_app_release_id: "{{ _git_sha.stdout }}{{ ('-dirty-' + lookup('pipe','date -u +%Y%m%dT%H%M%S')) if _git_dirty.stdout else '' }}"
+    cacheable: true
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Compute controller stage dir
+  set_fact:
+    _stage_dir: "{{ nextjs_app_yarn_root }}/../build/{{ nextjs_app_release_id }}/server"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Ensure stage dir empty
+  file:
+    path: "{{ _stage_dir }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Create stage dir
+  file:
+    path: "{{ _stage_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+# Sync the standalone bundle into the stage dir. We mirror the standalone tree
+# (which may be nested under <workspace-relative-path>/) so the systemd unit
+# can point at <stage>/<subpath>/server.js consistently with how Next.js
+# emits with outputFileTracingRoot=yarn-root.
+- name: Sync standalone bundle into stage
+  command: rsync -a --delete "{{ nextjs_app_admin_dir }}/.next/standalone/" "{{ _stage_dir }}/"
+  changed_when: true
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+# .next/static needs to be co-located with the nested server.js so that
+# Next.js can serve /_next/static/* at runtime from the standalone tree.
+- name: Compute static dest in stage
+  set_fact:
+    _stage_static_dest: >-
+      {{ (_stage_dir ~ '/' ~ nextjs_app_standalone_subpath ~ '/.next/static/') if nextjs_app_standalone_subpath else (_stage_dir ~ '/.next/static/') }}
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Ensure static dest dir exists
+  file:
+    path: "{{ _stage_static_dest }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Sync .next/static into stage
+  command: rsync -a "{{ nextjs_app_admin_dir }}/.next/static/" "{{ _stage_static_dest }}"
+  changed_when: true
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Check public dir exists
+  stat:
+    path: "{{ nextjs_app_admin_dir }}/public"
+  register: _public_stat
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Compute public dest in stage
+  set_fact:
+    _stage_public_dest: >-
+      {{ (_stage_dir ~ '/' ~ nextjs_app_standalone_subpath ~ '/public/') if nextjs_app_standalone_subpath else (_stage_dir ~ '/public/') }}
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Ensure public dest dir exists
+  file:
+    path: "{{ _stage_public_dest }}"
+    state: directory
+    mode: "0755"
+  when: _public_stat.stat.exists and _public_stat.stat.isdir
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Sync public into stage (if exists)
+  command: rsync -a "{{ nextjs_app_admin_dir }}/public/" "{{ _stage_public_dest }}"
+  changed_when: true
+  when: _public_stat.stat.exists and _public_stat.stat.isdir
+  delegate_to: localhost
+  run_once: true
+  become: false

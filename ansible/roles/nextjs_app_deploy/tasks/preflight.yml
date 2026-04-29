@@ -1,0 +1,37 @@
+---
+- name: Load pinned toolchain vars
+  include_vars: "{{ nextjs_app_build_toolchain_vars }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: bun --version (controller)
+  command: bun --version
+  register: _bun_v
+  changed_when: false
+  check_mode: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: node --version (controller)
+  command: node --version
+  register: _node_v
+  changed_when: false
+  check_mode: false
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Assert pinned toolchain
+  assert:
+    that:
+      - _bun_v.stdout == bun_version
+      - _node_v.stdout == node_version
+    fail_msg: >-
+      Toolchain drift on control host. Expected bun={{ bun_version }} node={{ node_version }},
+      got bun={{ _bun_v.stdout }} node={{ _node_v.stdout }}. Bump pins in
+      ansible/vars/build-toolchain.yml or align local versions.
+  delegate_to: localhost
+  run_once: true
+  become: false
