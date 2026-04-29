@@ -10,9 +10,11 @@
 # does not decrypt SOPS, see feedback memory ansible_sops_decrypt and HMB-8).
 #
 # Pre-deploy operator setup:
-#   - sops --encrypt --in-place secrets/void-mail.sops.yaml  (replace placeholders first)
-#   - sops --encrypt --in-place secrets/void-auth.sops.yaml  (HMB-9b — replace placeholder first)
-#   - sops --encrypt --in-place secrets/ghcr.sops.yaml       (ghcr_username + ghcr_pat)
+#   - sops --encrypt --in-place secrets/void-mail.sops.yaml         (replace placeholders first)
+#   - sops --encrypt --in-place secrets/void-auth.sops.yaml         (HMB-9b — replace placeholder first)
+#   - sops --encrypt --in-place secrets/void-keys.sops.yaml         (HMB-9c — db password)
+#   - sops --encrypt --in-place secrets/void-keys-tokens.sops.yaml  (HMB-9c — Anthropic pool tokens)
+#   - sops --encrypt --in-place secrets/ghcr.sops.yaml              (ghcr_username + ghcr_pat)
 #
 # Deploy:
 #   cd ansible
@@ -33,6 +35,11 @@
     - name: load SOPS-decrypted void-auth secrets
       community.sops.load_vars:
         file: ../../secrets/void-auth.sops.yaml
+      no_log: true
+
+    - name: load SOPS-decrypted void-keys secrets
+      community.sops.load_vars:
+        file: ../../secrets/void-keys.sops.yaml
       no_log: true
 
     - name: load SOPS-decrypted GHCR credentials
@@ -91,6 +98,14 @@
         group: root
         mode: "0755"
 
+    - name: ensure void-keys subdirectory exists
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}/void-keys"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: render Caddyfile
       ansible.builtin.template:
         src: templates/Caddyfile.j2
@@ -127,6 +142,26 @@
         group: root
         mode: "0600"
       no_log: true
+      notify: restart-stack
+
+    - name: render void-keys .env from sops vars
+      ansible.builtin.template:
+        src: templates/void-keys.env.j2
+        dest: "{{ void_stack_dir }}/void-keys/.env"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+      notify: restart-stack
+
+    - name: ship void-keys SOPS pool-tokens bundle (encrypted at rest;
+            container decrypts via `sops -d` at boot)
+      ansible.builtin.copy:
+        src: ../../secrets/void-keys-tokens.sops.yaml
+        dest: "{{ void_stack_dir }}/void-keys/secrets.enc.yaml"
+        owner: root
+        group: root
+        mode: "0600"
       notify: restart-stack
 
     - name: log into ghcr.io

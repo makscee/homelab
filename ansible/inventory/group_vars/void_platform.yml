@@ -61,6 +61,42 @@ void_auth_database_url: "/data/void-auth.db"
 # Dev/staging seed admin email. Empty = no seed (prod default).
 void_auth_seed_admin_email: ""
 
+# ---- void-keys (HMB-9c) ----
+# Image pinned by SHA for deterministic deploy + easy rollback. Override
+# per-deploy: ansible-playbook ... -e void_keys_image_tag=<sha-or-tag>
+void_keys_image_tag: "latest"
+void_keys_image: "ghcr.io/makscee/void-keys:{{ void_keys_image_tag }}"
+
+# void-keys listens on PORT (default 3000 from src/config.ts). Internal-only on
+# the void network; Caddy reverse-proxies keys.makscee.ru -> void-keys:3000.
+void_keys_port: 3000
+
+# AUTH_BASE_URL — void-auth endpoint void-keys' verifyToken middleware POSTs
+# to (`${AUTH_BASE_URL}/verify`). Reachable inside the compose `void` network
+# by container name; Caddy is not in the path.
+void_keys_auth_base_url: "http://void-auth:{{ void_auth_port }}"
+
+# Postgres for void-keys (drizzle-orm/postgres-js). HMB-9c provisions a
+# dedicated `void-keys-db` postgres:16-alpine sidecar in the same compose
+# project (mirrors the void-staging pattern). Connection params come from
+# SOPS (secrets/void-keys.sops.yaml) — see void_keys_db_user / db_pass /
+# db_name; the URL string is composed in the env.j2 template.
+void_keys_db_host: "void-keys-db"
+void_keys_db_port: 5432
+void_keys_db_name: "void_keys"
+void_keys_db_user: "void_keys"
+
+# Path inside the void-keys container where the SOPS-encrypted pool-tokens
+# YAML is mounted (consumed by src/services/token-store.ts at boot —
+# `sops -d $SOPS_TOKENS_FILE` parses `pool_tokens:` map). Mounted read-only
+# from the host at {{ void_stack_dir }}/void-keys/secrets.enc.yaml.
+void_keys_sops_tokens_file: "/secrets/secrets.enc.yaml"
+
+# claude-key-exporter URL (VKE-2 sidecar). Default points at the host metrics
+# port — exporter LXC ships in a later HMB-* task. Until then void-keys
+# scrape loop logs warnings but the service stays up.
+void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
+
 # ── HMB-9d — STAGING void platform stack on mcow ─────────────────────────
 # Deployed by playbooks/void-platform-staging-mcow.yml. Separate compose
 # project (`void-staging`), separate volumes, separate Caddy vhost
