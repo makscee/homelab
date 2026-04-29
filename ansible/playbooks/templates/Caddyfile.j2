@@ -92,7 +92,7 @@ auth.makscee.ru {
 	encode zstd gzip
 	@admin {
 		path /v1/admin/*
-		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth:{{ void_auth_port }}
@@ -106,7 +106,7 @@ keys.makscee.ru {
 	encode zstd gzip
 	@admin {
 		path /v1/admin/*
-		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-keys:{{ void_keys_port }}
@@ -121,7 +121,7 @@ auth-staging.makscee.ru {
 	encode zstd gzip
 	@admin {
 		path /v1/admin/*
-		not remote_ip {% for ip in void_admin_ip_allowlist %}{{ ip }}{% if not loop.last %} {% endif %}{% endfor %}
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
 	}
 	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth-staging:3000
