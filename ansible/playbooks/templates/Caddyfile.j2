@@ -96,3 +96,14 @@ auth.makscee.ru {
 keys.makscee.ru {
 	respond 404
 }
+
+{% if void_staging_enabled | default(false) | bool %}
+# HMB-9d — staging void-platform vhost. Rendered only when the staging playbook
+# runs (void_staging_enabled=true). Proxies to void-auth-staging running in the
+# `void-staging` compose project; that container joins the `void` external
+# network so Caddy reaches it by container DNS name.
+auth-staging.makscee.ru {
+	encode zstd gzip
+	reverse_proxy void-auth-staging:3000
+}
+{% endif %}

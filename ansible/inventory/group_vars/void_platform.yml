@@ -35,3 +35,15 @@ void_mail_smtp_port: 587
 void_mail_smtp_user: "resend"
 void_mail_smtp_from_name: "void-mail"
 void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"
+
+# ── HMB-9d — STAGING void platform stack on mcow ─────────────────────────
+# Deployed by playbooks/void-platform-staging-mcow.yml. Separate compose
+# project (`void-staging`), separate volumes, separate Caddy vhost
+# (auth-staging.makscee.ru). Joins prod's `void` network as external so the
+# prod Caddy container can reach staging services by name.
+void_auth_image: "ghcr.io/makscee/void-auth:{{ ghcr_image_tag }}"
+void_staging_compose_dir: "/srv/void-staging"
+void_staging_mock_port: 3001
+# mcow tailnet IPv4 (matches inventory/homelab.yml hosts.mcow.tailscale_ip).
+# Used for binding the void-mail-staging mock port to tailnet only.
+mcow_tailnet_ip: "100.101.0.9"
