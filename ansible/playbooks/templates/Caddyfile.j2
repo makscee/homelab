@@ -90,7 +90,23 @@ vibe.makscee.ru {
 # auth.makscee.ru — void-auth (HMB-9b). Internal service on the void network.
 auth.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth:{{ void_auth_port }}
+
+	# HMB-18 — audit log for admin ACL. Captures all requests on this vhost
+	# including the 403 short-circuits, so probes against /v1/admin/* are
+	# observable. JSON format + rolling so the file doesn't grow unbounded.
+	log {
+		output file /var/log/caddy/auth-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 
 # keys.makscee.ru — void-keys (HMB-9c). Internal service on the void network.
@@ -99,7 +115,21 @@ auth.makscee.ru {
 # upstream — keys.makscee.ru is the only exposure path.
 keys.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-keys:{{ void_keys_port }}
+
+	# HMB-18 — audit log (see auth.makscee.ru block).
+	log {
+		output file /var/log/caddy/keys-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 
 {% if void_staging_enabled | default(false) | bool %}
@@ -109,6 +139,20 @@ keys.makscee.ru {
 # network so Caddy reaches it by container DNS name.
 auth-staging.makscee.ru {
 	encode zstd gzip
+	@admin {
+		path /v1/admin/*
+		not remote_ip {{ void_admin_ip_allowlist | join(' ') }}
+	}
+	respond @admin "admin endpoint restricted" 403
 	reverse_proxy void-auth-staging:3000
+
+	# HMB-18 — audit log (see auth.makscee.ru block).
+	log {
+		output file /var/log/caddy/auth-staging-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
 }
 {% endif %}

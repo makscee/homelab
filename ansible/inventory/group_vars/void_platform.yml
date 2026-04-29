@@ -112,3 +112,24 @@ void_staging_mock_port: 3001
 # mcow tailnet IPv4 (matches inventory/homelab.yml hosts.mcow.tailscale_ip).
 # Used for binding the void-mail-staging mock port to tailnet only.
 mcow_tailnet_ip: "100.101.0.9"
+
+# ── HMB-18 — admin endpoint IP allowlist ─────────────────────────────────
+# Caddy gates `/v1/admin/*` on auth.makscee.ru and keys.makscee.ru to this
+# list of source IPs/CIDRs. Anything else → 403. Plaintext (IPs not secret).
+#
+# Operator workflow: `ssh root@mcow` (via tailnet), then run admin curl on
+# mcow. Hairpins through Docker NAT → Caddy sees source = mcow's egress IP
+# (verified = mcow_public_ip 85.209.135.21). Public-internet access to
+# admin paths is blocked.
+#
+# Rotation: edit this list + re-run `ansible-playbook ... void-platform-mcow.yml`.
+# If hairpin source IP ever differs from mcow_public_ip (multi-IP routing),
+# add `127.0.0.1/32` and add a loopback bind to the Caddy compose port.
+#
+# CAVEAT: must contain at least one entry. Empty list renders to
+# `not remote_ip ` (no operand) which fails Caddy parse and crash-loops
+# the container. To temporarily allow all, set to `["0.0.0.0/0", "::/0"]`
+# (NOT recommended — defeats the gate). To temporarily block all, leave
+# the entry but pick an IP no one will hit, e.g. `0.0.0.0/32`.
+void_admin_ip_allowlist:
+  - "85.209.135.21/32"
