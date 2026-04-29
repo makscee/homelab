@@ -40,3 +40,8 @@ all:
       hosts:
         docker-tower:
         mcow:
+
+    # HMB-9 — void platform stack (Caddy + void-mail; void-auth+void-keys join in 9b/9c).
+    void_platform:
+      hosts:
+        mcow:
