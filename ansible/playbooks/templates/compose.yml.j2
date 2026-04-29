@@ -1,0 +1,46 @@
+# {{ ansible_managed }}
+# HMB-9 — void platform stack on mcow.
+# Rendered to {{ void_stack_dir }}/compose.yml by playbooks/void-platform-mcow.yml.
+---
+name: void
+
+networks:
+  void:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+services:
+  caddy:
+    image: {{ caddy_image }}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - {{ void_stack_dir }}/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      - void
+
+  void-mail:
+    image: {{ void_mail_image }}
+    restart: unless-stopped
+    env_file:
+      - {{ void_stack_dir }}/void-mail/.env
+    networks:
+      - void
+    # TODO HMB-9: confirm void-mail's actual /health port once the service
+    # contract is pinned. void_mail_port currently defaults to 8080 in
+    # group_vars/void_platform.yml. Override via -e ghcr_image_tag=... +
+    # group_vars edit if the image binds elsewhere.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${VOID_MAIL_PORT:-{{ void_mail_port }}}/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # No `ports:` block — void-mail is internal-only in slice 1 (no public DNS).
