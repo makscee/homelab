@@ -107,7 +107,7 @@ void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
 # remote_ip 100.64.0.0/10). No public exposure. Depends on void-auth.
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_admin_image_tag=<sha-or-tag>
-void_admin_image_tag: "sha-1fccab4"
+void_admin_image_tag: "sha-eb0a343"
 void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
 
 # void-admin listens on PORT (default 3000). Internal-only on the void network.
