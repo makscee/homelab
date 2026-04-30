@@ -132,18 +132,14 @@ keys.makscee.ru {
 	}
 }
 
-# admin.makscee.ru — void-admin panel (VAD-1). Tailnet-only: all requests must
-# originate from the Tailscale CGNAT range (100.64.0.0/10). Any other source
-# gets a 403. No public DNS needed for the upstream — container is internal.
-admin.makscee.ru {
+# admin.makscee.ru:8443 — void-admin panel (VAD-1). Tailnet-only: Caddy listens
+# on :8443 bound to mcow tailnet IP only (compose port spec restricts host_ip).
+# tailscaled owns :443 on the tailnet IP already (Tailscale Serve), so we use
+# :8443 here. ACME HTTP-01 still works because :80 is bound on public IP.
+# Operator overrides DNS locally: `100.101.0.9 admin.makscee.ru` in /etc/hosts.
+admin.makscee.ru:8443 {
 	encode zstd gzip
-	@tailnet remote_ip 100.64.0.0/10
-	handle @tailnet {
-		reverse_proxy void-admin:{{ void_admin_port }}
-	}
-	handle {
-		respond "admin panel: tailnet access only" 403
-	}
+	reverse_proxy void-admin:{{ void_admin_port }}
 
 	log {
 		output file /var/log/caddy/admin-makscee.log {
