@@ -41,7 +41,7 @@ void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"
 # its own tag var (separate from ghcr_image_tag) so each void-* service can be
 # rolled independently. Override per-deploy:
 #     ansible-playbook ... -e void_auth_image_tag=<sha-or-tag>
-void_auth_image_tag: "sha-a69b9e3"
+void_auth_image_tag: "sha-6f4a1f6"
 void_auth_image: "ghcr.io/makscee/void-auth:{{ void_auth_image_tag }}"
 
 # void-auth listens on PORT (default 3000). Internal-only on the void network;
@@ -64,7 +64,7 @@ void_auth_seed_admin_email: ""
 # ---- void-keys (HMB-9c) ----
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_keys_image_tag=<sha-or-tag>
-void_keys_image_tag: "latest"
+void_keys_image_tag: "sha-a544dd4"
 void_keys_image: "ghcr.io/makscee/void-keys:{{ void_keys_image_tag }}"
 
 # void-keys listens on PORT (default 3000 from src/config.ts). Internal-only on
@@ -107,7 +107,7 @@ void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
 # remote_ip 100.64.0.0/10). No public exposure. Depends on void-auth.
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_admin_image_tag=<sha-or-tag>
-void_admin_image_tag: "sha-PLACEHOLDER"
+void_admin_image_tag: "sha-0f90c88"
 void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
 
 # void-admin listens on PORT (default 3000). Internal-only on the void network.
