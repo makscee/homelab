@@ -102,6 +102,17 @@ void_keys_sops_tokens_file: "/secrets/pool_tokens.yaml"
 # scrape loop logs warnings but the service stays up.
 void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
 
+# ── VAD-1 — void-admin panel ─────────────────────────────────────────────
+# Admin Next.js panel. Tailnet-only via Caddy ACL (admin.makscee.ru requires
+# remote_ip 100.64.0.0/10). No public exposure. Depends on void-auth.
+# Image pinned by SHA for deterministic deploy + easy rollback. Override
+# per-deploy: ansible-playbook ... -e void_admin_image_tag=<sha-or-tag>
+void_admin_image_tag: "sha-PLACEHOLDER"
+void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
+
+# void-admin listens on PORT (default 3000). Internal-only on the void network.
+void_admin_port: 3000
+
 # ── HMB-9d — STAGING void platform stack on mcow ─────────────────────────
 # Deployed by playbooks/void-platform-staging-mcow.yml. Separate compose
 # project (`void-staging`), separate volumes, separate Caddy vhost

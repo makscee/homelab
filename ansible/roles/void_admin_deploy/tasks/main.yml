@@ -1,0 +1,51 @@
+---
+# VAD-1 — void-admin deploy role.
+# Pulls the void-admin image, renders compose + Caddyfile, and probes health.
+# Intended to run after void_auth is healthy (depends_on in compose.yml.j2).
+#
+# Usage: include_role or import_role in void-platform-mcow.yml. Requires
+# ghcr credentials already loaded (community.docker.docker_login done by
+# the calling playbook) and void_admin_image_tag set (group_vars or -e override).
+
+- name: ensure void-admin subdirectory exists
+  ansible.builtin.file:
+    path: "{{ void_stack_dir }}/void-admin"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: pull void-admin image
+  community.docker.docker_image:
+    name: "{{ void_admin_image }}"
+    source: pull
+    state: present
+  notify: restart-stack
+
+- name: render compose.yml with void-admin service
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/compose.yml.j2"
+    dest: "{{ void_stack_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart-stack
+
+- name: render Caddyfile with admin.makscee.ru vhost
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/Caddyfile.j2"
+    dest: "{{ void_stack_dir }}/Caddyfile"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart-stack
+
+- name: void-admin healthz probe
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ void_admin_port }}/"
+    status_code: [200, 404]
+  register: _void_admin_probe
+  until: _void_admin_probe.status in [200, 404]
+  retries: 12
+  delay: 5
+  # 404 is acceptable — Next.js is up even if the root route isn't / yet

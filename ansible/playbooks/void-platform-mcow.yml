@@ -111,6 +111,14 @@
         group: root
         mode: "0755"
 
+    - name: ensure void-admin subdirectory exists
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}/void-admin"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: render Caddyfile
       ansible.builtin.template:
         src: templates/Caddyfile.j2
