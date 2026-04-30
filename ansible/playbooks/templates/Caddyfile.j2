@@ -132,6 +132,24 @@ keys.makscee.ru {
 	}
 }
 
+# admin.makscee.ru:8443 — void-admin panel (VAD-1). Tailnet-only: Caddy listens
+# on :8443 bound to mcow tailnet IP only (compose port spec restricts host_ip).
+# tailscaled owns :443 on the tailnet IP already (Tailscale Serve), so we use
+# :8443 here. ACME HTTP-01 still works because :80 is bound on public IP.
+# Operator overrides DNS locally: `100.101.0.9 admin.makscee.ru` in /etc/hosts.
+admin.makscee.ru:8443 {
+	encode zstd gzip
+	reverse_proxy void-admin:{{ void_admin_port }}
+
+	log {
+		output file /var/log/caddy/admin-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
 {% if void_staging_enabled | default(false) | bool %}
 # HMB-9d — staging void-platform vhost. Rendered only when the staging playbook
 # runs (void_staging_enabled=true). Proxies to void-auth-staging running in the

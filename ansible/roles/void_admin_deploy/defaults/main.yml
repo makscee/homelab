@@ -1,0 +1,9 @@
+---
+# VAD-1 — void-admin deploy role defaults.
+# Overridden by group_vars/void_platform.yml (which takes precedence over role
+# defaults). These are last-resort fallbacks only.
+
+void_admin_image_tag: "sha-PLACEHOLDER"
+void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
+void_admin_port: 3000
+void_stack_dir: "/srv/void"
