@@ -1,0 +1,148 @@
+---
+# Provision the Proxmox VE write-scoped *provisioner* token + role on tower.
+# Mints a SEPARATE identity from the read-only dashboard-operator (D-03 audit
+# guarantee on that one is preserved — see provision-proxmox-dashboard-token.yml).
+#
+# Consumed by VFL-2 proxmox-smoke.sh (and later void-fleet service) to create /
+# destroy LXCs over the Proxmox HTTP API instead of root@pam SSH.
+#
+# Run:
+#   cd ansible
+#   ansible-playbook -i inventory/homelab.yml playbooks/provision-proxmox-provisioner-token.yml
+#
+# Idempotent: re-run yields all-ok and DOES NOT rotate the token.
+# To rotate, manually `pveum user token remove provisioner@pve provisioner`
+# on tower first, then re-run this playbook.
+#
+# Security:
+#   - `no_log: true` on every task that touches the token secret
+#   - token_list guard ensures `token add` runs only when missing
+#   - role privs are the minimal set needed to create + manage LXCs +
+#     audit; NO User.Modify, NO Realm.Allocate, NO Sys.Modify
+#
+# Prereqs on controller:
+#   - sops + age installed, age key at ~/.config/sops/age/keys.txt
+#   - `secrets/mcow.sops.yaml` present and decryptable by current age key
+#   - SSH access to root@tower (Tailnet)
+
+- name: Provision Proxmox write-scoped provisioner token on tower
+  hosts: tower
+  gather_facts: false
+  become: true
+  vars:
+    pve_role: Provisioner
+    pve_user: provisioner@pve
+    pve_token_id: provisioner
+    # Minimal write set for LXC lifecycle + audit. Datastore.AllocateSpace
+    # required to allocate rootfs; VM.Audit + Datastore.Audit so the same
+    # token can poll /status. PowerMgmt to start/stop. NO User/Realm/Sys mods.
+    # SDN.Use is required on PVE 9.x — every LXC create with a `bridge=` arg
+    # is permission-checked against /sdn/zones/<zone>/<bridge> for SDN.Use.
+    # Without it, POST /nodes/<n>/lxc returns 403 even with full VM.* privs.
+    # Discovered during VFL-2 T4 smoke (2026-05-01).
+    pve_privs: "VM.Allocate,VM.Config.Disk,VM.Config.CPU,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.PowerMgmt,VM.Audit,Datastore.AllocateSpace,Datastore.Audit,SDN.Use"
+    _sops_file: "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
+
+  tasks:
+    - name: Create Provisioner PVE role (idempotent — pveum role add fails if exists)
+      ansible.builtin.command: "pveum role add {{ pve_role }} -privs {{ pve_privs }}"
+      register: role_add
+      failed_when: role_add.rc != 0 and 'already exists' not in role_add.stderr
+      changed_when: role_add.rc == 0
+
+    - name: Reconcile Provisioner role privs (idempotent — modify is a SET)
+      ansible.builtin.command: "pveum role modify {{ pve_role }} -privs {{ pve_privs }}"
+      changed_when: false
+
+    - name: Create provisioner PVE user
+      ansible.builtin.command: "pveum user add {{ pve_user }} --comment 'void-fleet provisioner — write-scoped Proxmox API'"
+      register: user_add
+      failed_when: user_add.rc != 0 and 'already exists' not in user_add.stderr
+      changed_when: user_add.rc == 0
+
+    - name: Grant Provisioner role at root path (pveum acl modify is a SET)
+      ansible.builtin.command: "pveum acl modify / -user {{ pve_user }} -role {{ pve_role }}"
+      changed_when: false
+
+    - name: List existing tokens for provisioner (idempotence guard)
+      ansible.builtin.command: "pveum user token list {{ pve_user }} --output-format json"
+      register: token_list
+      changed_when: false
+
+    - name: Create API token (privsep=0 → token inherits user's perms)
+      ansible.builtin.command: >
+        pveum user token add {{ pve_user }} {{ pve_token_id }}
+        --privsep 0 --output-format json
+      register: token_create
+      when: pve_token_id not in (token_list.stdout | from_json | map(attribute='tokenid') | list)
+      no_log: true
+
+    - name: Capture token secret (only available at creation time)
+      ansible.builtin.set_fact:
+        proxmox_provisioner_token_secret: "{{ (token_create.stdout | from_json).value }}"
+      when: token_create is changed
+      no_log: true
+
+    - name: Fetch tower PVE root CA
+      ansible.builtin.slurp:
+        src: /etc/pve/pve-root-ca.pem
+      register: pve_ca
+
+    - name: Check if proxmox_provisioner block exists in SOPS
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        sops -d {{ _sops_file | quote }} \
+          | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; sys.exit(0 if 'proxmox_provisioner' in d else 1)"
+      args:
+        executable: /bin/bash
+      register: pp_check
+      failed_when: false
+      changed_when: false
+
+    - name: Initialize proxmox_provisioner block in SOPS (only when missing)
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        sops set {{ _sops_file | quote }} \
+          '["proxmox_provisioner"]' '{"token_secret":"","tower_ca_pem":""}'
+      args:
+        executable: /bin/bash
+      when: pp_check.rc != 0
+
+    - name: Persist tower CA into SOPS proxmox_provisioner (controller-side, idempotent)
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        CA_CONTENT=$(printf '%s' {{ (pve_ca.content | b64decode) | quote }} | jq -Rs .)
+        sops set {{ _sops_file | quote }} \
+          '["proxmox_provisioner"]["tower_ca_pem"]' "$CA_CONTENT"
+      args:
+        executable: /bin/bash
+      changed_when: false
+      no_log: true
+
+    - name: Persist provisioner token secret into SOPS (only on creation)
+      delegate_to: localhost
+      become: false
+      ansible.builtin.shell: |
+        set -euo pipefail
+        sops set {{ _sops_file | quote }} \
+          '["proxmox_provisioner"]["token_secret"]' '"{{ proxmox_provisioner_token_secret }}"'
+      args:
+        executable: /bin/bash
+      when: proxmox_provisioner_token_secret is defined
+      changed_when: true
+      no_log: true
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Role: {{ pve_role }} (privs: {{ pve_privs }})"
+          - "User: {{ pve_user }}"
+          - "Token id: {{ pve_user }}!{{ pve_token_id }} (privsep=0)"
+          - "Token created this run: {{ token_create is changed }}"
+          - "SOPS updated: {{ _sops_file }}"
