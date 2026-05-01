@@ -41,7 +41,7 @@ void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"
 # its own tag var (separate from ghcr_image_tag) so each void-* service can be
 # rolled independently. Override per-deploy:
 #     ansible-playbook ... -e void_auth_image_tag=<sha-or-tag>
-void_auth_image_tag: "sha-ce8cc8b"
+void_auth_image_tag: "sha-bd457f6"
 void_auth_image: "ghcr.io/makscee/void-auth:{{ void_auth_image_tag }}"
 
 # void-auth listens on PORT (default 3000). Internal-only on the void network;
