@@ -40,7 +40,7 @@ fail=0
 # Required write privs
 for priv in VM.Allocate VM.Config.Disk VM.Config.CPU VM.Config.Memory \
             VM.Config.Network VM.Config.Options VM.PowerMgmt \
-            VM.Audit Datastore.AllocateSpace Datastore.Audit; do
+            VM.Audit Datastore.AllocateSpace Datastore.Audit SDN.Use; do
   grep -q "${priv}" <<<"${SCOPE}" || { echo "[FAIL] required priv missing: ${priv}"; fail=1; }
 done
 

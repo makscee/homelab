@@ -36,7 +36,11 @@
     # Minimal write set for LXC lifecycle + audit. Datastore.AllocateSpace
     # required to allocate rootfs; VM.Audit + Datastore.Audit so the same
     # token can poll /status. PowerMgmt to start/stop. NO User/Realm/Sys mods.
-    pve_privs: "VM.Allocate,VM.Config.Disk,VM.Config.CPU,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.PowerMgmt,VM.Audit,Datastore.AllocateSpace,Datastore.Audit"
+    # SDN.Use is required on PVE 9.x — every LXC create with a `bridge=` arg
+    # is permission-checked against /sdn/zones/<zone>/<bridge> for SDN.Use.
+    # Without it, POST /nodes/<n>/lxc returns 403 even with full VM.* privs.
+    # Discovered during VFL-2 T4 smoke (2026-05-01).
+    pve_privs: "VM.Allocate,VM.Config.Disk,VM.Config.CPU,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.PowerMgmt,VM.Audit,Datastore.AllocateSpace,Datastore.Audit,SDN.Use"
     _sops_file: "{{ playbook_dir }}/../../secrets/mcow.sops.yaml"
 
   tasks:
