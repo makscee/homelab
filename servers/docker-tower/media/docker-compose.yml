@@ -4,45 +4,24 @@
 # Canonical deploy path: /opt/homelab/servers/docker-tower/media/docker-compose.yml
 # Repo is source of truth — do NOT edit on host.
 #
-# Data paths (all external to this repo and /opt/homestack):
-#   /media/wdc          — movies/TV (3.7T disk)
-#   /media/sea          — music + downloads (3.7T disk)
-#   /media              — union mount of both (all *arr + jellyfin + filebrowser)
+# Data paths:
+#   /media/sea          — primary media disk (3.7T): downloads/, sonarr/, radarr/, music/, Gallery/
+#   /media/wdc          — personal archive disk (3.7T, nearly full). NOT used by media stack.
 #   /opt/docker-configs/shared/<svc>  — per-service persistent config
-#   /mnt/transcode      — tmpfs for jellyfin transcoding
+#
+# Jellyfin runs on LXC 101 (native deb, NVIDIA GPU) — NOT in this compose.
+# It mounts /media/sea read-only and reads from sonarr/, radarr/, Gallery/.
 #
 # Secrets deploy (run on docker-tower before `docker compose up`):
 #   sops --decrypt --output-type dotenv /opt/homelab/secrets/docker-tower.sops.yaml > /run/secrets/docker-tower.env
 #   chmod 600 /run/secrets/docker-tower.env
-#   # Extract navidrome-specific vars:
 #   grep '^ND_' /run/secrets/docker-tower.env > /run/secrets/navidrome.env
 #   chmod 600 /run/secrets/navidrome.env
 
 services:
 
-  jellyfin:
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
-    restart: unless-stopped
-    devices:
-      - /dev/dri:/dev/dri  # HW transcode (Intel iGPU)
-    ports:
-      - "8096:8096"
-    volumes:
-      - /media:/media:ro
-      - /opt/docker-configs/shared/jellyfin:/config
-      - /mnt/transcode:/cache
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Moscow
-      - JELLYFIN_FFmpeg__analyzeDuration=5000000
-      - JELLYFIN_FFmpeg__probeSize=5000000
-    networks:
-      - media
-
   navidrome:
-    image: deluan/navidrome:latest
+    image: deluan/navidrome:0.60.3
     container_name: navidrome
     restart: unless-stopped
     ports:
@@ -65,7 +44,7 @@ services:
       - media
 
   filebrowser:
-    image: filebrowser/filebrowser:latest
+    image: filebrowser/filebrowser:v2.53.1
     container_name: filebrowser
     restart: unless-stopped
     ports:
@@ -80,7 +59,7 @@ services:
       - media
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.1.4
     container_name: qbittorrent
     restart: unless-stopped
     ports:
@@ -99,7 +78,7 @@ services:
       - media
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr:2.3.0
     container_name: prowlarr
     network_mode: host  # needed for indexer port flexibility
     restart: unless-stopped
@@ -109,9 +88,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Moscow
+      - HTTP_PROXY=http://100.101.0.3:8888
+      - HTTPS_PROXY=http://100.101.0.3:8888
+      - NO_PROXY=localhost,127.0.0.1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr:4.0.16
     container_name: sonarr
     restart: unless-stopped
     ports:
@@ -123,11 +105,16 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Moscow
+      - HTTP_PROXY=http://100.101.0.3:8888
+      - HTTPS_PROXY=http://100.101.0.3:8888
+      - NO_PROXY=localhost,127.0.0.1,prowlarr,qbittorrent,radarr,navidrome,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+    extra_hosts:
+      - "prowlarr:host-gateway"
     networks:
       - media
 
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr:6.0.4
     container_name: radarr
     restart: unless-stopped
     ports:
@@ -139,11 +126,16 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Moscow
+      - HTTP_PROXY=http://100.101.0.3:8888
+      - HTTPS_PROXY=http://100.101.0.3:8888
+      - NO_PROXY=localhost,127.0.0.1,prowlarr,qbittorrent,sonarr,navidrome,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+    extra_hosts:
+      - "prowlarr:host-gateway"
     networks:
       - media
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:latest
+    image: lscr.io/linuxserver/lidarr:3.1.0
     container_name: lidarr
     restart: unless-stopped
     ports:
@@ -155,11 +147,16 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Moscow
+      - HTTP_PROXY=http://100.101.0.3:8888
+      - HTTPS_PROXY=http://100.101.0.3:8888
+      - NO_PROXY=localhost,127.0.0.1,prowlarr,qbittorrent,sonarr,radarr,navidrome,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12
+    extra_hosts:
+      - "prowlarr:host-gateway"
     networks:
       - media
 
   slskd:
-    image: slskd/slskd:latest
+    image: slskd/slskd:0.24.5
     container_name: slskd
     restart: unless-stopped
     ports:
@@ -179,7 +176,7 @@ services:
       - media
 
   flaresolverr:
-    image: flaresolverr/flaresolverr:latest
+    image: flaresolverr/flaresolverr:v3.4.6
     container_name: flaresolverr
     restart: unless-stopped
     ports:
@@ -187,26 +184,6 @@ services:
     environment:
       - LOG_LEVEL=info
       - TZ=Europe/Moscow
-    networks:
-      - media
-
-  dockerproxy:
-    image: tecnativa/docker-socket-proxy:latest
-    container_name: dockerproxy
-    restart: unless-stopped
-    privileged: true
-    # No external port binding — host dockerd already listens on 127.0.0.1:2375.
-    # Internal consumers on `media` network reach it at dockerproxy:2375.
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - CONTAINERS=1
-      - IMAGES=1
-      - INFO=1
-      - POST=1
-      - BUILD=0
-      - SECRETS=0
-      - PRIVILEGED=0
     networks:
       - media
 
