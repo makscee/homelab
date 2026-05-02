@@ -64,7 +64,7 @@ void_auth_seed_admin_email: ""
 # ---- void-keys (HMB-9c) ----
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_keys_image_tag=<sha-or-tag>
-void_keys_image_tag: "sha-bf4747e"
+void_keys_image_tag: "6caf2dbf10b8328102b68cc2a144f09b84ac4752"
 void_keys_image: "ghcr.io/makscee/void-keys:{{ void_keys_image_tag }}"
 
 # void-keys listens on PORT (default 3000 from src/config.ts). Internal-only on
@@ -100,6 +100,10 @@ void_keys_sops_tokens_file: "/secrets/pool_tokens.yaml"
 # claude-key-exporter URL (VKE-2 sidecar). Default points at the host metrics
 # port — exporter LXC ships in a later HMB-* task. Until then void-keys
 # scrape loop logs warnings but the service stays up.
+# AES-256-GCM encryption key path inside void-keys container (VKE-5).
+# 32-byte binary file mounted read-only from {{ void_stack_dir }}/void-keys/encryption.key.
+void_keys_encryption_key_file: "/secrets/encryption.key"
+
 void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
 
 # ── VAD-1 — void-admin panel ─────────────────────────────────────────────
@@ -107,7 +111,7 @@ void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
 # remote_ip 100.64.0.0/10). No public exposure. Depends on void-auth.
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_admin_image_tag=<sha-or-tag>
-void_admin_image_tag: "sha-89c4069"
+void_admin_image_tag: "sha-871f981"
 void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
 
 # void-admin listens on PORT (default 3000). Internal-only on the void network.

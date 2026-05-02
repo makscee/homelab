@@ -182,6 +182,9 @@ services:
       # from secrets/void-keys-tokens.sops.yaml. Read-only mount, mode 0600 on
       # host. Never commit the rendered file — it lives only on mcow.
       - {{ void_stack_dir }}/void-keys/pool_tokens.yaml:{{ void_keys_sops_tokens_file }}:ro
+      # AES-256-GCM encryption key for token-at-rest (VKE-5). 32-byte binary,
+      # generated once on mcow. Never commit — lives only on the host.
+      - {{ void_stack_dir }}/void-keys/encryption.key:{{ void_keys_encryption_key_file }}:ro
     extra_hosts:
       # Reach claude-key-exporter on the mcow host (sidecar LXC ships later).
       - "host.docker.internal:host-gateway"
