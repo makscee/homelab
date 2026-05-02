@@ -143,11 +143,15 @@ services:
     restart: unless-stopped
     environment:
       - VOID_AUTH_URL=http://void-auth:{{ void_auth_port }}
+      - VOID_KEYS_URL=http://void-keys:{{ void_keys_port }}
+      - VOID_KEYS_INTERNAL_KEY={{ void_keys_internal_service_key }}
       - NODE_ENV=production
     expose:
       - "{{ void_admin_port }}"
     depends_on:
       void-auth:
+        condition: service_healthy
+      void-keys:
         condition: service_healthy
     networks:
       - void
