@@ -150,6 +150,21 @@ admin.makscee.ru:8443 {
 	}
 }
 
+# fleet.makscee.ru:8444 — void-fleet API (VFL-7). Tailnet-only: Caddy listens
+# on :8444 bound to mcow tailnet IP only (compose port spec restricts host_ip).
+fleet.makscee.ru:8444 {
+	encode zstd gzip
+	reverse_proxy void-fleet:{{ void_fleet_port }}
+
+	log {
+		output file /var/log/caddy/fleet-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
 {% if void_staging_enabled | default(false) | bool %}
 # HMB-9d — staging void-platform vhost. Rendered only when the staging playbook
 # runs (void_staging_enabled=true). Proxies to void-auth-staging running in the
