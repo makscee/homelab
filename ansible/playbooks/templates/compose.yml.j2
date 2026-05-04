@@ -15,6 +15,9 @@ name: void
 networks:
   void:
     driver: bridge
+  monitoring:
+    name: monitoring
+    external: true
 
 volumes:
   caddy_data: {}
@@ -56,6 +59,11 @@ services:
         published: 8444
         host_ip: {{ mcow_tailnet_ip }}
         protocol: tcp
+      # HMB-20 — bind :8445 on tailnet IP for grafana.makscee.ru.
+      - target: 8445
+        published: 8445
+        host_ip: {{ mcow_tailnet_ip }}
+        protocol: tcp
     extra_hosts:
       # Caddy proxies to host-bound services (voidnet-api :8080, animaya :8080,
       # homelab-admin :3847, vibe :8081/:8083). host.docker.internal resolves
@@ -68,6 +76,7 @@ services:
       - caddy_logs:/var/log/caddy  # HMB-18 — admin ACL audit log target
     networks:
       - void
+      - monitoring
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 60s

@@ -165,6 +165,20 @@ fleet.makscee.ru:8444 {
 	}
 }
 
+# grafana.makscee.ru:8445 — Grafana (HMB-20).
+grafana.makscee.ru:8445 {
+	encode zstd gzip
+	reverse_proxy grafana:3000
+
+	log {
+		output file /var/log/caddy/grafana-makscee.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
 {% if void_staging_enabled | default(false) | bool %}
 # HMB-9d — staging void-platform vhost. Rendered only when the staging playbook
 # runs (void_staging_enabled=true). Proxies to void-auth-staging running in the

@@ -58,6 +58,12 @@
       no_log: true
 
   tasks:
+    - name: ensure monitoring docker network exists (HMB-20)
+      community.docker.docker_network:
+        name: monitoring
+        driver: bridge
+        state: present
+
     - name: stop + disable host deb caddy (one-shot cutover, opt-in via -e migrate_host_caddy=true)
       ansible.builtin.systemd:
         name: caddy
