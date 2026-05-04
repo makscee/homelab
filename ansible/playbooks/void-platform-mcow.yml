@@ -195,6 +195,8 @@
       ansible.builtin.copy:
         content: "{{ vault_fleet_operator_ssh_privkey }}"
         dest: "{{ void_stack_dir }}/void-fleet/operator-ssh-key"
+        owner: "100"
+        group: "101"
         mode: "0600"
       no_log: true
 
@@ -202,6 +204,8 @@
       ansible.builtin.copy:
         content: "{{ vault_fleet_proxmox_ca_pem }}"
         dest: "{{ void_stack_dir }}/void-fleet/tower-ca.pem"
+        owner: "100"
+        group: "101"
         mode: "0644"
       no_log: true
 
