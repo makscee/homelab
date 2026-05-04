@@ -229,7 +229,7 @@
       community.docker.docker_container_exec:
         container: void-keys-db
         command: >
-          psql -U postgres -c "
+          psql -U void_keys -c "
             DO $$
             BEGIN
               IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ void_fleet_db_user }}') THEN
@@ -241,14 +241,14 @@
     - name: Check void_fleet database exists
       community.docker.docker_container_exec:
         container: void-keys-db
-        command: psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '{{ void_fleet_db_name }}'"
+        command: psql -U void_keys -tc "SELECT 1 FROM pg_database WHERE datname = '{{ void_fleet_db_name }}'"
       register: fleet_db_check
       changed_when: false
 
     - name: Create void_fleet database
       community.docker.docker_container_exec:
         container: void-keys-db
-        command: psql -U postgres -c "CREATE DATABASE {{ void_fleet_db_name }} OWNER {{ void_fleet_db_user }}"
+        command: psql -U void_keys -c "CREATE DATABASE {{ void_fleet_db_name }} OWNER {{ void_fleet_db_user }}"
       when: "'1' not in fleet_db_check.stdout"
 
     - name: Run void-fleet Drizzle migrations
