@@ -55,6 +55,7 @@
     - name: Load void-fleet secrets
       community.sops.load_vars:
         file: "{{ playbook_dir }}/../../secrets/void-fleet.sops.yaml"
+      no_log: true
 
   tasks:
     - name: stop + disable host deb caddy (one-shot cutover, opt-in via -e migrate_host_caddy=true)
