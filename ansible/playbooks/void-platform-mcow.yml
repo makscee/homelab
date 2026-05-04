@@ -54,7 +54,7 @@
 
     - name: Load void-fleet secrets
       community.sops.load_vars:
-        file: "{{ playbook_dir }}/../../secrets/void-fleet.sops.yaml"
+        file: ../../secrets/void-fleet.sops.yaml
       no_log: true
 
   tasks:
@@ -134,6 +134,8 @@
       ansible.builtin.file:
         path: "{{ void_stack_dir }}/void-fleet"
         state: directory
+        owner: root
+        group: root
         mode: "0750"
 
     - name: render Caddyfile
@@ -190,6 +192,7 @@
         dest: "{{ void_stack_dir }}/void-fleet/.env"
         mode: "0600"
       no_log: true
+      notify: restart-stack
 
     - name: Render void-fleet operator SSH key
       ansible.builtin.copy:
