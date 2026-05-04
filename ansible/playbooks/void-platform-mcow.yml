@@ -193,8 +193,7 @@
 
     - name: Render void-fleet operator SSH key
       ansible.builtin.copy:
-        content: "{{ vault_fleet_operator_ssh_privkey }}
-"
+        content: "{{ vault_fleet_operator_ssh_privkey }}\n"
         dest: "{{ void_stack_dir }}/void-fleet/operator-ssh-key"
         owner: "100"
         group: "101"
