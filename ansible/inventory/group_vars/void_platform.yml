@@ -117,6 +117,23 @@ void_admin_image: "ghcr.io/makscee/void-admin:{{ void_admin_image_tag }}"
 # void-admin listens on PORT (default 3000). Internal-only on the void network.
 void_admin_port: 3000
 
+# ── VFL-7 — void-fleet step-machine + VM provisioning ────────────────────
+# Image tag for void-fleet. Override per-deploy:
+#     ansible-playbook ... -e void_fleet_image_tag=<sha-or-tag>
+void_fleet_image_tag: "latest"
+void_fleet_image: "ghcr.io/makscee/void-fleet:{{ void_fleet_image_tag }}"
+
+# void-fleet listens on PORT (default 3000). Internal-only on the void network.
+void_fleet_port: 3000
+
+# Postgres for void-fleet (same pattern as void-keys). Connection params come
+# from SOPS (secrets/void-fleet.sops.yaml). The URL string is composed in the
+# env.j2 template.
+void_fleet_db_host: void-keys-db
+void_fleet_db_port: 5432
+void_fleet_db_name: void_fleet
+void_fleet_db_user: void_fleet
+
 # ── HMB-9d — STAGING void platform stack on mcow ─────────────────────────
 # Deployed by playbooks/void-platform-staging-mcow.yml. Separate compose
 # project (`void-staging`), separate volumes, separate Caddy vhost
