@@ -188,6 +188,9 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    volumes:
+      - {{ void_stack_dir }}/void-fleet/operator-ssh-key:/run/secrets/operator-ssh-key:ro
+      - {{ void_stack_dir }}/void-fleet/tower-ca.pem:/etc/void-fleet/tower-ca.pem:ro
 
   void-keys:
     # HMB-9c — keys service. Pool API token store + sticky user→key binder for

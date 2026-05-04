@@ -185,6 +185,20 @@
         mode: "0600"
       no_log: true
 
+    - name: Render void-fleet operator SSH key
+      ansible.builtin.copy:
+        content: "{{ vault_fleet_operator_ssh_privkey }}"
+        dest: "{{ void_stack_dir }}/void-fleet/operator-ssh-key"
+        mode: "0600"
+      no_log: true
+
+    - name: Render void-fleet tower CA PEM
+      ansible.builtin.copy:
+        content: "{{ vault_fleet_proxmox_ca_pem }}"
+        dest: "{{ void_stack_dir }}/void-fleet/tower-ca.pem"
+        mode: "0644"
+      no_log: true
+
     - name: render void-keys pool-tokens YAML (decrypted at deploy time;
             mounted plaintext into the container — image lacks sops binary,
             so runtime `sops -d` fallback to plaintext read is the live path)
