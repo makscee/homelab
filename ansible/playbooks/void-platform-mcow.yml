@@ -52,6 +52,10 @@
         file: ../../secrets/ghcr.sops.yaml
       no_log: true
 
+    - name: Load void-fleet secrets
+      community.sops.load_vars:
+        file: "{{ playbook_dir }}/../../secrets/void-fleet.sops.yaml"
+
   tasks:
     - name: stop + disable host deb caddy (one-shot cutover, opt-in via -e migrate_host_caddy=true)
       ansible.builtin.systemd:
@@ -119,6 +123,12 @@
         group: root
         mode: "0755"
 
+    - name: Create void-fleet directory
+      ansible.builtin.file:
+        path: "{{ void_stack_dir }}/void-fleet"
+        state: directory
+        mode: "0750"
+
     - name: render Caddyfile
       ansible.builtin.template:
         src: templates/Caddyfile.j2
@@ -167,6 +177,13 @@
       no_log: true
       notify: restart-stack
 
+    - name: Render void-fleet .env
+      ansible.builtin.template:
+        src: templates/void-fleet.env.j2
+        dest: "{{ void_stack_dir }}/void-fleet/.env"
+        mode: "0600"
+      no_log: true
+
     - name: render void-keys pool-tokens YAML (decrypted at deploy time;
             mounted plaintext into the container — image lacks sops binary,
             so runtime `sops -d` fallback to plaintext read is the live path)
@@ -192,6 +209,39 @@
         project_src: "{{ void_stack_dir }}"
         state: present
         pull: always
+
+    - name: Create void_fleet Postgres role
+      community.docker.docker_container_exec:
+        container: void-keys-db
+        command: >
+          psql -U postgres -c "
+            DO $$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ void_fleet_db_user }}') THEN
+                CREATE ROLE {{ void_fleet_db_user }} WITH LOGIN PASSWORD '{{ vault_fleet_db_pass }}';
+              END IF;
+            END $$;"
+      no_log: true
+
+    - name: Check void_fleet database exists
+      community.docker.docker_container_exec:
+        container: void-keys-db
+        command: psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '{{ void_fleet_db_name }}'"
+      register: fleet_db_check
+      changed_when: false
+
+    - name: Create void_fleet database
+      community.docker.docker_container_exec:
+        container: void-keys-db
+        command: psql -U postgres -c "CREATE DATABASE {{ void_fleet_db_name }} OWNER {{ void_fleet_db_user }}"
+      when: "'1' not in fleet_db_check.stdout"
+
+    - name: Run void-fleet Drizzle migrations
+      community.docker.docker_container_exec:
+        container: void-fleet
+        command: bunx drizzle-kit migrate
+      register: fleet_migrate
+      changed_when: "'No migrations to run' not in fleet_migrate.stdout"
 
   handlers:
     - name: restart-stack
