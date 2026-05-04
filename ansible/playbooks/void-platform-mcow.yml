@@ -251,12 +251,22 @@
         command: psql -U void_keys -c "CREATE DATABASE {{ void_fleet_db_name }} OWNER {{ void_fleet_db_user }}"
       when: "'1' not in fleet_db_check.stdout"
 
-    - name: Run void-fleet Drizzle migrations
+    - name: Grant void_fleet ownership on all tables
       community.docker.docker_container_exec:
-        container: void-fleet
-        command: bunx drizzle-kit migrate
-      register: fleet_migrate
-      changed_when: "'No migrations to run' not in fleet_migrate.stdout"
+        container: void-keys-db
+        command: >
+          psql -U void_keys -d {{ void_fleet_db_name }} -c "
+            DO $$ DECLARE r RECORD;
+            BEGIN
+              FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+              LOOP EXECUTE 'ALTER TABLE public.' || quote_ident(r.tablename) || ' OWNER TO {{ void_fleet_db_user }}';
+              END LOOP;
+            END $$;
+            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ void_fleet_db_user }};
+            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {{ void_fleet_db_user }};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO {{ void_fleet_db_user }};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO {{ void_fleet_db_user }};"
+      changed_when: false
 
   handlers:
     - name: restart-stack
