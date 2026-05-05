@@ -20,7 +20,7 @@ scrape_configs:
   # Alertmanager scrape (moved to mcow 2026-04-15; satisfies AlertmanagerDown rule)
   - job_name: 'alertmanager'
     static_configs:
-      - targets: ['100.101.0.9:9093']
+      - targets: ['localhost:9093']
 
   # Node exporters on all 6 Tailnet hosts
   - job_name: 'node'
@@ -40,7 +40,14 @@ scrape_configs:
   - job_name: 'claude-usage'
     scrape_interval: 60s
     static_configs:
-      - targets: ['100.101.0.9:9101']
+      - targets: ['localhost:9101']
+
+  # void-keys metrics exporter on mcow (HMB-21)
+  - job_name: 'void-keys'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:3000']
 
   # homelab-admin self-monitoring (D-22-17, plan 22-06)
   # Scrapes /api/health over HTTPS. Endpoint returns JSON (not Prometheus text
