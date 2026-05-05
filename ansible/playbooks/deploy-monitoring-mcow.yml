@@ -1,0 +1,84 @@
+---
+# HMB-21 — deploy mcow monitoring stack (Prometheus + Grafana + Alertmanager).
+# Idempotent: syncs servers/mcow assets from controller (this repo checkout),
+# ensures cockpit.socket disabled (port 9090 conflict with prometheus host-
+# network bind), runs `docker compose up -d`, hot-reloads Prometheus config
+# when the repo tree changed.
+#
+# Run:
+#   cd ansible && ansible-playbook playbooks/deploy-monitoring-mcow.yml
+#
+# Prereqs on controller:
+#   - SSH access to root@100.101.0.9 (Tailnet)
+#   - rsync installed locally (used by ansible.posix.synchronize)
+
+- name: Deploy monitoring stack to mcow
+  hosts: mcow
+  gather_facts: false
+  vars:
+    stack_path: /opt/homelab/servers/mcow
+    repo_root: "{{ playbook_dir }}/../.."
+
+  tasks:
+
+    # ── Disable cockpit.socket (conflicts with prometheus host-network :9090)
+    - name: Disable cockpit.socket (port 9090 conflict with prometheus)
+      ansible.builtin.systemd:
+        name: cockpit.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure stack dir exists
+      ansible.builtin.file:
+        path: "{{ stack_path }}"
+        state: directory
+        mode: '0755'
+
+    # ── Sync compose + monitoring tree from controller ──────────────────────
+    - name: Sync monitoring compose file
+      ansible.builtin.copy:
+        src: "{{ repo_root }}/servers/mcow/docker-compose.monitoring.yml"
+        dest: "{{ stack_path }}/docker-compose.monitoring.yml"
+        mode: '0644'
+      register: compose_sync
+
+    - name: Sync monitoring config tree (prometheus + grafana + alertmanager)
+      ansible.posix.synchronize:
+        src: "{{ repo_root }}/servers/mcow/monitoring/"
+        dest: "{{ stack_path }}/monitoring/"
+        delete: false
+        rsync_opts:
+          - "--exclude=*.swp"
+      register: tree_sync
+
+    # ── Compose up ──────────────────────────────────────────────────────────
+    - name: Bring monitoring stack up
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
+        chdir: "{{ stack_path }}"
+      register: monitoring_up
+      changed_when: "'Started' in monitoring_up.stderr or 'Recreated' in monitoring_up.stderr or 'Created' in monitoring_up.stderr"
+
+    # ── Hot-reload Prometheus when config tree changed ──────────────────────
+    - name: Reload Prometheus config
+      ansible.builtin.uri:
+        url: http://localhost:9090/-/reload
+        method: POST
+        status_code: 200
+      when: tree_sync.changed or compose_sync.changed
+
+    # ── Smoke checks ────────────────────────────────────────────────────────
+    - name: Probe Prometheus ready
+      ansible.builtin.uri:
+        url: http://localhost:9090/-/ready
+        status_code: 200
+      register: prom_ready
+      retries: 5
+      delay: 3
+      until: prom_ready.status == 200
+
+    - name: Probe Grafana health
+      ansible.builtin.uri:
+        url: http://100.101.0.9:3000/api/health
+        status_code: 200
