@@ -217,6 +217,10 @@ services:
     restart: unless-stopped
     env_file:
       - {{ void_stack_dir }}/void-keys/.env
+    # HMB-21 — loopback bind for Prometheus on mcow host to scrape /metrics.
+    # Not externally exposed (Caddy still routes via the void network).
+    ports:
+      - "127.0.0.1:{{ void_keys_port }}:{{ void_keys_port }}"
     expose:
       - "{{ void_keys_port }}"
     volumes:
