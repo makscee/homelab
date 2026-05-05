@@ -12,25 +12,10 @@
 
 services:
 
-  # ── Prometheus — Metrics Collection ─────────────────────────────────────────
-  prometheus:
-    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702  # prom/prometheus:latest, pinned 2026-04-14
-    container_name: prometheus
-    restart: unless-stopped
-    network_mode: host
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
-      - ./monitoring/prometheus/targets:/etc/prometheus/targets:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=720h'
-      - '--web.enable-lifecycle'
-      - '--web.enable-admin-api'
+  # ── Prometheus — DECOMMISSIONED 2026-05-05 (HMB-21) ─────────────────────────
+  # Migrated to mcow (100.101.0.9:9090). See servers/mcow/docker-compose.monitoring.yml.
+  # TSDB rsync'd to mcow at cutover; volume `prometheus-data` retained until
+  # 2026-05-12 for rollback. After that date: docker volume rm prometheus-data.
 
   # ── Grafana — DECOMMISSIONED 2026-04-15 ─────────────────────────────────────
   # Migrated to mcow (100.101.0.9:3000). See servers/mcow/docker-compose.monitoring.yml.
@@ -107,6 +92,6 @@ networks:
     external: true
 
 volumes:
-  prometheus-data:
+  prometheus-data:    # retained until 2026-05-12 for HMB-21 rollback; remove after
   grafana-data:
   alertmanager-data:
