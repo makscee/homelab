@@ -11,12 +11,6 @@
     hostname: docker-tower
 
 - targets:
-    - '100.99.133.9:9100'
-  labels:
-    job: node
-    hostname: cc-worker
-
-- targets:
     - '100.101.0.9:9100'
   labels:
     job: node
@@ -27,9 +21,3 @@
   labels:
     job: node
     hostname: nether
-
-- targets:
-    - '100.119.15.122:9100'
-  labels:
-    job: node
-    hostname: animaya-dev
