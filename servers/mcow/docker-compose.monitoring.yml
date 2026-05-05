@@ -60,6 +60,29 @@ services:
     networks:
       - monitoring
 
+  # HMB-21 — Prometheus migrated from docker-tower 2026-05-05.
+  # network_mode: host overrides the `monitoring` network — required so file_sd
+  # targets at Tailscale IPs and the localhost void-keys/claude-usage scrapes
+  # are reachable. Matches the docker-tower service pattern verbatim.
+  prometheus:
+    image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702
+    container_name: prometheus
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
+      - ./monitoring/prometheus/targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=720h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+
 networks:
   monitoring:
     name: monitoring
@@ -68,3 +91,4 @@ networks:
 volumes:
   grafana-data:
   alertmanager-data:
+  prometheus-data:    # HMB-21 — TSDB rsync'd from docker-tower at cutover
