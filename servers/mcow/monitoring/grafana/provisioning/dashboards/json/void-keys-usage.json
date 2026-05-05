@@ -1,0 +1,180 @@
+{
+  "uid": "void-keys-usage",
+  "title": "void-keys Usage",
+  "tags": [
+    "void-keys",
+    "usage",
+    "homelab"
+  ],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "editable": false,
+  "graphTooltip": 0,
+  "style": "dark",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "user",
+        "label": "User",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "query": { "query": "label_values(voidkeys_usage_input_tokens_total, userId)", "refId": "user" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": false, "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+        "query": { "query": "label_values(voidkeys_usage_input_tokens_total, model)", "refId": "model" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": false, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total tokens over time",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "Input",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum(clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "Input"
+        },
+        {
+          "refId": "Output",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum(clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "Output"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Per-user breakdown",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "stacking": { "mode": "normal", "group": "A" } }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum by (userId) (clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0) + clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "{{userId}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Per-model breakdown",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "stacking": { "mode": "normal", "group": "A" } }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum by (model) (clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0) + clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Cache tokens over time",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "refId": "CacheCreation",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum(clamp_min(delta(voidkeys_usage_cache_creation_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "Cache creation"
+        },
+        {
+          "refId": "CacheRead",
+          "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+          "expr": "sum(clamp_min(delta(voidkeys_usage_cache_read_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "legendFormat": "Cache read"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Current totals — by user",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "targets": [
+        { "refId": "Input",         "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (userId) (voidkeys_usage_input_tokens_total)" },
+        { "refId": "Output",        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (userId) (voidkeys_usage_output_tokens_total)" },
+        { "refId": "CacheRead",     "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (userId) (voidkeys_usage_cache_read_tokens_total)" },
+        { "refId": "CacheCreation", "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (userId) (voidkeys_usage_cache_creation_tokens_total)" }
+      ],
+      "transformations": [
+        { "id": "merge" },
+        { "id": "organize", "options": { "renameByName": { "Value #Input": "input", "Value #Output": "output", "Value #CacheRead": "cache_read", "Value #CacheCreation": "cache_creation" } } }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Current totals — by model",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
+      "targets": [
+        { "refId": "Input",         "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (model) (voidkeys_usage_input_tokens_total)" },
+        { "refId": "Output",        "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (model) (voidkeys_usage_output_tokens_total)" },
+        { "refId": "CacheRead",     "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (model) (voidkeys_usage_cache_read_tokens_total)" },
+        { "refId": "CacheCreation", "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (model) (voidkeys_usage_cache_creation_tokens_total)" }
+      ],
+      "transformations": [
+        { "id": "merge" },
+        { "id": "organize", "options": { "renameByName": { "Value #Input": "input", "Value #Output": "output", "Value #CacheRead": "cache_read", "Value #CacheCreation": "cache_creation" } } }
+      ]
+    }
+  ]
+}
