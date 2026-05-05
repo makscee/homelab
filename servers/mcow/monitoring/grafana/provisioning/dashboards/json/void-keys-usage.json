@@ -117,10 +117,20 @@
       ]
     },
     {
+      "id": 7,
+      "title": "Per-key breakdown — N/A",
+      "type": "text",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 18 },
+      "options": {
+        "mode": "markdown",
+        "content": "void-keys metrics expose `userId` only; key identity collapses into user. Per-key drill-down requires VKE-side counter relabeling — out of HMB-21 scope."
+      }
+    },
+    {
       "id": 4,
       "title": "Cache tokens over time",
       "type": "timeseries",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 18 },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 22 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "fieldConfig": {
         "defaults": {
@@ -146,7 +156,7 @@
       "id": 5,
       "title": "Current totals — by user",
       "type": "table",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "targets": [
         { "refId": "Input",         "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (userId) (voidkeys_usage_input_tokens_total)" },
@@ -163,7 +173,7 @@
       "id": 6,
       "title": "Current totals — by model",
       "type": "table",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
       "datasource": { "type": "prometheus", "uid": "prometheus-homelab" },
       "targets": [
         { "refId": "Input",         "datasource": { "type": "prometheus", "uid": "prometheus-homelab" }, "format": "table", "instant": true, "expr": "sum by (model) (voidkeys_usage_input_tokens_total)" },

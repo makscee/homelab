@@ -22,12 +22,15 @@
   tasks:
 
     # ── Disable cockpit.socket (conflicts with prometheus host-network :9090)
-    - name: Disable cockpit.socket (port 9090 conflict with prometheus)
+    - name: Disable cockpit.socket (conflicts with prometheus host-network bind on :9090)
       ansible.builtin.systemd:
         name: cockpit.socket
         enabled: false
         state: stopped
-      failed_when: false
+      register: cockpit_disable
+      failed_when:
+        - cockpit_disable is failed
+        - "'Could not find the requested service' not in (cockpit_disable.msg | default(''))"
 
     - name: Ensure stack dir exists
       ansible.builtin.file:
@@ -78,6 +81,9 @@
       delay: 3
       until: prom_ready.status == 200
 
+    # Grafana binds to the Tailscale IP (100.101.0.9) only, not 0.0.0.0,
+    # so the probe URL must match that bind address even though this task
+    # runs on mcow itself (localhost:3000 would not resolve).
     - name: Probe Grafana health
       ansible.builtin.uri:
         url: http://100.101.0.9:3000/api/health
