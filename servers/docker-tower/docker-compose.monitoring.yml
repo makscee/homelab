@@ -92,7 +92,9 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
     ports:
-      - "127.0.0.1:8080:8080"
+      # Bind to Tailscale IP so prometheus on mcow (100.101.0.9) can scrape (HMB-21).
+      # Was 127.0.0.1:8080 when prometheus ran on docker-tower itself.
+      - "100.101.0.8:8080:8080"
     command:
       - '--docker_only=true'
       - '--store_container_labels=true'

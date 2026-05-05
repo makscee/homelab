@@ -18,9 +18,11 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   # Alertmanager scrape (moved to mcow 2026-04-15; satisfies AlertmanagerDown rule)
+  # Container publishes 100.101.0.9:9093 (Tailscale iface only) — Prometheus runs
+  # in a container so localhost:9093 is unreachable. Use mcow's tailscale IP.
   - job_name: 'alertmanager'
     static_configs:
-      - targets: ['localhost:9093']
+      - targets: ['100.101.0.9:9093']
 
   # Node exporters on all 6 Tailnet hosts
   - job_name: 'node'
@@ -37,10 +39,12 @@ scrape_configs:
         refresh_interval: 5m
 
   # Claude Code usage exporter on mcow
+  # Container publishes 100.101.0.9:9101 (Tailscale iface only) — Prometheus runs
+  # in a container so localhost:9101 is unreachable. Use mcow's tailscale IP.
   - job_name: 'claude-usage'
     scrape_interval: 60s
     static_configs:
-      - targets: ['localhost:9101']
+      - targets: ['100.101.0.9:9101']
 
   # void-keys metrics exporter on mcow (HMB-21)
   - job_name: 'void-keys'

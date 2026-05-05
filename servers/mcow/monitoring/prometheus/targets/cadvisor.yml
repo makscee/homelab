@@ -1,5 +1,5 @@
 - targets:
-    - 'localhost:8080'
+    - '100.101.0.8:8080'
   labels:
     job: cadvisor
     hostname: docker-tower
