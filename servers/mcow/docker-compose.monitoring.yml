@@ -91,4 +91,5 @@ networks:
 volumes:
   grafana-data:
   alertmanager-data:
-  prometheus-data:    # HMB-21 — TSDB rsync'd from docker-tower at cutover
+  prometheus-data:
+    name: prometheus-data    # HMB-21 — TSDB rsync'd from docker-tower at cutover; pinned unprefixed to match rsync target
