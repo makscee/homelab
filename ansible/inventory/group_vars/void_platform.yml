@@ -104,7 +104,7 @@ void_keys_sops_tokens_file: "/secrets/pool_tokens.yaml"
 # 32-byte binary file mounted read-only from {{ void_stack_dir }}/void-keys/encryption.key.
 void_keys_encryption_key_file: "/secrets/encryption.key"
 
-void_keys_exporter_url: "http://host.docker.internal:9101/metrics"
+void_keys_exporter_url: "http://100.101.0.9:9101/metrics"
 
 # ── VAD-1 — void-admin panel ─────────────────────────────────────────────
 # Admin Next.js panel. Tailnet-only via Caddy ACL (admin.makscee.ru requires
