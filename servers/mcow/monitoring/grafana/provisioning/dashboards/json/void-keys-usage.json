@@ -407,7 +407,17 @@
               "group": "A"
             }
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "5244b268-0fc5-4e96-ad3e-cb00a4c34aef"},
+            "properties": [{"id": "displayName", "value": "makscee"}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "c0d09703-3bb0-48a3-b05b-bfb6e3bd8cb4"},
+            "properties": [{"id": "displayName", "value": "reelsulya"}]
+          }
+        ]
       },
       "targets": [
         {
@@ -584,7 +594,29 @@
             }
           }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "userId"},
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "5244b268-0fc5-4e96-ad3e-cb00a4c34aef": {"text": "makscee", "index": 0},
+                      "c0d09703-3bb0-48a3-b05b-bfb6e3bd8cb4": {"text": "reelsulya", "index": 1}
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 6,
