@@ -370,7 +370,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Input"
         },
         {
@@ -379,7 +379,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Output"
         }
       ]
@@ -426,7 +426,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum by (userId) (clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0) + clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum by (userId) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "{{userId}}"
         }
       ]
@@ -463,7 +463,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum by (model) (clamp_min(delta(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0) + clamp_min(delta(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum by (model) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "{{model}}"
         }
       ]
@@ -509,7 +509,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(clamp_min(delta(voidkeys_usage_cache_creation_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum(voidkeys_usage_cache_creation_tokens_total{userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Cache creation"
         },
         {
@@ -518,7 +518,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(clamp_min(delta(voidkeys_usage_cache_read_tokens_total{userId=~\"$user\", model=~\"$model\"}[$__rate_interval]), 0))",
+          "expr": "sum(voidkeys_usage_cache_read_tokens_total{userId=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Cache read"
         }
       ]
