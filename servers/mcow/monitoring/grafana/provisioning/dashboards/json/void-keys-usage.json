@@ -403,8 +403,7 @@
           "unit": "short",
           "custom": {
             "stacking": {
-              "mode": "normal",
-              "group": "A"
+              "mode": "none"
             }
           }
         },
@@ -450,8 +449,7 @@
           "unit": "short",
           "custom": {
             "stacking": {
-              "mode": "normal",
-              "group": "A"
+              "mode": "none"
             }
           }
         }
