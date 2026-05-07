@@ -279,6 +279,72 @@
       }
     },
     {
+      "id": 103,
+      "title": "Per-key 5h utilization over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-homelab"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-homelab"
+          },
+          "expr": "claude_usage_5h_utilization{name=~\"$name\"}",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "title": "Per-key 7d utilization over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-homelab"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-homelab"
+          },
+          "expr": "claude_usage_7d_utilization{name=~\"$name\"}",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
       "id": 1,
       "title": "Total tokens over time",
       "type": "timeseries",
@@ -286,7 +352,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 17
       },
       "datasource": {
         "type": "prometheus",
@@ -326,7 +392,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 26
       },
       "datasource": {
         "type": "prometheus",
@@ -363,7 +429,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 26
       },
       "datasource": {
         "type": "prometheus",
@@ -400,7 +466,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 35
       },
       "options": {
         "mode": "markdown",
@@ -415,7 +481,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 39
       },
       "datasource": {
         "type": "prometheus",
@@ -455,7 +521,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 46
       },
       "datasource": {
         "type": "prometheus",
@@ -528,7 +594,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 37
+        "y": 46
       },
       "datasource": {
         "type": "prometheus",
