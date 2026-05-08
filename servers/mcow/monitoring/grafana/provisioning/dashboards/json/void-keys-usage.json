@@ -345,6 +345,82 @@
       ]
     },
     {
+      "id": 105,
+      "title": "Per-key 5h pace deviation",
+      "type": "timeseries",
+      "description": "utilization − time-elapsed fraction. 0 = on pace, negative = behind (can catch up), positive = ahead (slow down).",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-homelab"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "thresholdsStyle": {"mode": "line"}
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "claude_usage_5h_utilization{name=~\"$name\"} - on(name) clamp_max(clamp_min(1 - (claude_usage_5h_reset_timestamp{name=~\"$name\"} - time())/18000, 0), 1)",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "title": "Per-key 7d pace deviation",
+      "type": "timeseries",
+      "description": "utilization − time-elapsed fraction over 7d window. 0 = on pace, negative = behind, positive = ahead.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-homelab"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "thresholdsStyle": {"mode": "line"}
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "claude_usage_7d_utilization{name=~\"$name\"} - on(name) clamp_max(clamp_min(1 - (claude_usage_7d_reset_timestamp{name=~\"$name\"} - time())/604800, 0), 1)",
+          "legendFormat": "{{name}}"
+        }
+      ]
+    },
+    {
       "id": 1,
       "title": "Total tokens over time",
       "type": "timeseries",
@@ -352,7 +428,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 26
       },
       "datasource": {
         "type": "prometheus",
@@ -392,7 +468,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -438,7 +514,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -474,7 +550,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 44
       },
       "options": {
         "mode": "markdown",
@@ -489,7 +565,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 48
       },
       "datasource": {
         "type": "prometheus",
@@ -529,7 +605,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 55
       },
       "datasource": {
         "type": "prometheus",
@@ -624,7 +700,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 55
       },
       "datasource": {
         "type": "prometheus",
