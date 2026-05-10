@@ -12,17 +12,16 @@ Type=oneshot
 EnvironmentFile=/etc/restic/env
 Environment=HOME=/root
 # Pause running void-* containers for SQLite consistency.
-ExecStartPre=/bin/sh -c 'docker ps --filter "name=void-" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker pause'
+# Filter status=running so retries after a partial failure don't fail on already-paused containers.
+ExecStartPre=/bin/sh -c 'docker ps --filter "name=void-" --filter "status=running" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker pause'
 # Backup. /bin/sh -c required so the void-* glob expands.
 ExecStart=/bin/sh -c '/usr/bin/restic backup --tag daily {% for p in restic_exclude_patterns %}--exclude "{{ p }}" {% endfor %}{{ restic_backup_paths | join(" ") }}'
-# Unpause containers regardless of backup outcome (separate ExecStartPost).
-ExecStartPost=/bin/sh -c 'docker ps -a --filter "name=void-" --filter "status=paused" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker unpause'
-# Retention.
+# Retention + integrity. ExecStartPost only runs on ExecStart success.
 ExecStartPost=/usr/bin/restic forget --keep-daily 7 --keep-weekly 4 --prune
-# Bounded-cost integrity check.
 ExecStartPost=/usr/bin/restic check --read-data-subset=5%
-# Repo size signal to journald.
 ExecStartPost=/usr/bin/restic stats --mode raw-data
+# Unpause MUST run regardless of backup outcome — ExecStopPost fires on success AND failure.
+ExecStopPost=/bin/sh -c 'docker ps -a --filter "name=void-" --filter "status=paused" --format "{{ '{{' }}.Names{{ '}}' }}" | xargs -r docker unpause'
 # Survive transient nether outages.
 Restart=on-failure
 RestartSec=300
