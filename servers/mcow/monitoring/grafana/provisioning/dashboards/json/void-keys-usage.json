@@ -88,193 +88,168 @@
   "panels": [
     {
       "id": 100,
-      "type": "gauge",
-      "title": "Per-key 5h utilization",
+      "type": "table",
+      "title": "Per-key utilization",
+      "description": "Mirrors statusline `5h:N%±Δ/left  7d:N%±Δ/left`. Δ = used% − elapsed%. Negative Δ = behind pace (can spend more), positive = ahead (slow down).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus-homelab"
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 24,
         "x": 0,
         "y": 0
       },
       "targets": [
         {
           "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-homelab"
-          },
-          "expr": "claude_usage_5h_utilization{name=~\"$name\"}",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.6
-              },
-              {
-                "color": "red",
-                "value": 0.8
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 101,
-      "type": "gauge",
-      "title": "Per-key 7d utilization",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus-homelab"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-homelab"
-          },
-          "expr": "claude_usage_7d_utilization{name=~\"$name\"}",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.6
-              },
-              {
-                "color": "red",
-                "value": 0.8
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 102,
-      "type": "table",
-      "title": "Hot keys",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus-homelab"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 0
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-homelab"
-          },
-          "expr": "claude_usage_5h_utilization{name=~\"$name\"}",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "claude_usage_5h_utilization{name=~\"$name\"} * 100",
           "format": "table",
           "instant": true
         },
         {
           "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-homelab"
-          },
-          "expr": "claude_usage_7d_utilization{name=~\"$name\"}",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "(claude_usage_5h_utilization{name=~\"$name\"} - on(name) clamp_max(clamp_min(1 - (claude_usage_5h_reset_timestamp{name=~\"$name\"} - time())/18000, 0), 1)) * 100",
           "format": "table",
           "instant": true
         },
         {
           "refId": "C",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus-homelab"
-          },
-          "expr": "claude_usage_5h_reset_timestamp{name=~\"$name\"}",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "clamp_min(claude_usage_5h_reset_timestamp{name=~\"$name\"} - time(), 0)",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "claude_usage_7d_utilization{name=~\"$name\"} * 100",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "E",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "(claude_usage_7d_utilization{name=~\"$name\"} - on(name) clamp_max(clamp_min(1 - (claude_usage_7d_reset_timestamp{name=~\"$name\"} - time())/604800, 0), 1)) * 100",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "F",
+          "datasource": {"type": "prometheus", "uid": "prometheus-homelab"},
+          "expr": "clamp_min(claude_usage_7d_reset_timestamp{name=~\"$name\"} - time(), 0)",
           "format": "table",
           "instant": true
         }
       ],
       "transformations": [
-        {
-          "id": "merge"
-        },
+        {"id": "merge"},
         {
           "id": "organize",
           "options": {
-            "indexByName": {},
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            },
+            "indexByName": {
+              "name": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4,
+              "Value #E": 5,
+              "Value #F": 6
+            },
             "renameByName": {
-              "Value #A": "5h util",
-              "Value #B": "7d util",
-              "Value #C": "5h reset (epoch)"
+              "name": "key",
+              "Value #A": "5h %",
+              "Value #B": "5h Δ",
+              "Value #C": "5h left",
+              "Value #D": "7d %",
+              "Value #E": "7d Δ",
+              "Value #F": "7d left"
             }
           }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percent",
+          "decimals": 0
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "5h reset (epoch)"
-            },
+            "matcher": {"id": "byName", "options": "5h left"},
             "properties": [
-              {
-                "id": "unit",
-                "value": "dateTimeAsIso"
-              }
+              {"id": "unit", "value": "s"},
+              {"id": "decimals", "value": 0}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "7d left"},
+            "properties": [
+              {"id": "unit", "value": "s"},
+              {"id": "decimals", "value": 0}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "5h %"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background", "mode": "gradient"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "red", "value": 80}
+              ]}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "7d %"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background", "mode": "gradient"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 60},
+                {"color": "red", "value": 80}
+              ]}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "5h Δ"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [
+                {"color": "super-light-green", "value": null},
+                {"color": "green", "value": -15},
+                {"color": "yellow", "value": -5},
+                {"color": "orange", "value": 5},
+                {"color": "red", "value": 15}
+              ]}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "7d Δ"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [
+                {"color": "super-light-green", "value": null},
+                {"color": "green", "value": -15},
+                {"color": "yellow", "value": -5},
+                {"color": "orange", "value": 5},
+                {"color": "red", "value": 15}
+              ]}}
             ]
           }
         ]
       },
       "options": {
         "sortBy": [
-          {
-            "displayName": "5h util",
-            "desc": true
-          }
+          {"displayName": "5h %", "desc": true}
         ]
       }
     },
