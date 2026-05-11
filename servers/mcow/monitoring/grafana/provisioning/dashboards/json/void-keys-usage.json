@@ -186,15 +186,13 @@
           {
             "matcher": {"id": "byName", "options": "5h left"},
             "properties": [
-              {"id": "unit", "value": "s"},
-              {"id": "decimals", "value": 0}
+              {"id": "unit", "value": "dtdhms"}
             ]
           },
           {
             "matcher": {"id": "byName", "options": "7d left"},
             "properties": [
-              {"id": "unit", "value": "s"},
-              {"id": "decimals", "value": 0}
+              {"id": "unit", "value": "dtdhms"}
             ]
           },
           {
