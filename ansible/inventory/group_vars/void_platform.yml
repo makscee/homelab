@@ -41,7 +41,7 @@ void_mail_smtp_from_email: "noreply@voidnet.makscee.ru"
 # its own tag var (separate from ghcr_image_tag) so each void-* service can be
 # rolled independently. Override per-deploy:
 #     ansible-playbook ... -e void_auth_image_tag=<sha-or-tag>
-void_auth_image_tag: "sha-96a8996-fix"
+void_auth_image_tag: "sha-d04b6f8"
 void_auth_image: "ghcr.io/makscee/void-auth:{{ void_auth_image_tag }}"
 
 # void-auth listens on PORT (default 3000). Internal-only on the void network;
@@ -77,6 +77,12 @@ void_keys_port: 3000
 # Reachable inside the compose `void` network by container name; Caddy is not
 # in the path. (VAU-4b: discovered missing `/v1/auth` caused 404 on chain.)
 void_keys_auth_base_url: "http://void-auth:{{ void_auth_port }}/v1/auth"
+
+# AUTH_ADMIN_BASE_URL — void-auth /v1/admin endpoint void-keys polls for the
+# user_id -> displayName map (Prometheus userName label resolution). No app
+# auth in v1; the compose `void` network is the trust boundary.
+void_keys_auth_admin_base_url: "http://void-auth:{{ void_auth_port }}/v1/admin"
+void_keys_user_names_refresh_sec: 300
 
 # Postgres for void-keys (drizzle-orm/postgres-js). HMB-9c provisions a
 # dedicated `void-keys-db` postgres:16-alpine sidecar in the same compose

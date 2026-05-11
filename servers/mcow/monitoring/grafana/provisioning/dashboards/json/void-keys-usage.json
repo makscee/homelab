@@ -30,7 +30,7 @@
           "uid": "prometheus-homelab"
         },
         "query": {
-          "query": "label_values(voidkeys_usage_input_tokens_total, userId)",
+          "query": "label_values(voidkeys_usage_input_tokens_total, userName)",
           "refId": "user"
         },
         "refresh": 2,
@@ -446,7 +446,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(voidkeys_usage_input_tokens_total{userId=~\"$user\", model=~\"$model\"})",
+          "expr": "sum(voidkeys_usage_input_tokens_total{userName=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Input"
         },
         {
@@ -455,7 +455,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(voidkeys_usage_output_tokens_total{userId=~\"$user\", model=~\"$model\"})",
+          "expr": "sum(voidkeys_usage_output_tokens_total{userName=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Output"
         }
       ]
@@ -483,16 +483,7 @@
             }
           }
         },
-        "overrides": [
-          {
-            "matcher": {"id": "byName", "options": "5244b268-0fc5-4e96-ad3e-cb00a4c34aef"},
-            "properties": [{"id": "displayName", "value": "makscee"}]
-          },
-          {
-            "matcher": {"id": "byName", "options": "c0d09703-3bb0-48a3-b05b-bfb6e3bd8cb4"},
-            "properties": [{"id": "displayName", "value": "reelsulya"}]
-          }
-        ]
+        "overrides": []
       },
       "targets": [
         {
@@ -501,8 +492,8 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum by (userId) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userId=~\"$user\", model=~\"$model\"})",
-          "legendFormat": "{{userId}}"
+          "expr": "sum by (userName) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userName=~\"$user\", model=~\"$model\"})",
+          "legendFormat": "{{userName}}"
         }
       ]
     },
@@ -537,7 +528,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum by (model) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userId=~\"$user\", model=~\"$model\"})",
+          "expr": "sum by (model) ({__name__=~\"voidkeys_usage_(input|output)_tokens_total\", userName=~\"$user\", model=~\"$model\"})",
           "legendFormat": "{{model}}"
         }
       ]
@@ -583,7 +574,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(voidkeys_usage_cache_creation_tokens_total{userId=~\"$user\", model=~\"$model\"})",
+          "expr": "sum(voidkeys_usage_cache_creation_tokens_total{userName=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Cache creation"
         },
         {
@@ -592,7 +583,7 @@
             "type": "prometheus",
             "uid": "prometheus-homelab"
           },
-          "expr": "sum(voidkeys_usage_cache_read_tokens_total{userId=~\"$user\", model=~\"$model\"})",
+          "expr": "sum(voidkeys_usage_cache_read_tokens_total{userName=~\"$user\", model=~\"$model\"})",
           "legendFormat": "Cache read"
         }
       ]
@@ -620,7 +611,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (userId) (voidkeys_usage_input_tokens_total)"
+          "expr": "sum by (userName) (voidkeys_usage_input_tokens_total)"
         },
         {
           "refId": "Output",
@@ -630,7 +621,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (userId) (voidkeys_usage_output_tokens_total)"
+          "expr": "sum by (userName) (voidkeys_usage_output_tokens_total)"
         },
         {
           "refId": "CacheRead",
@@ -640,7 +631,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (userId) (voidkeys_usage_cache_read_tokens_total)"
+          "expr": "sum by (userName) (voidkeys_usage_cache_read_tokens_total)"
         },
         {
           "refId": "CacheCreation",
@@ -650,7 +641,7 @@
           },
           "format": "table",
           "instant": true,
-          "expr": "sum by (userId) (voidkeys_usage_cache_creation_tokens_total)"
+          "expr": "sum by (userName) (voidkeys_usage_cache_creation_tokens_total)"
         }
       ],
       "transformations": [
@@ -671,25 +662,7 @@
       ],
       "fieldConfig": {
         "defaults": {},
-        "overrides": [
-          {
-            "matcher": {"id": "byName", "options": "userId"},
-            "properties": [
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "5244b268-0fc5-4e96-ad3e-cb00a4c34aef": {"text": "makscee", "index": 0},
-                      "c0d09703-3bb0-48a3-b05b-bfb6e3bd8cb4": {"text": "reelsulya", "index": 1}
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+        "overrides": []
       }
     },
     {
