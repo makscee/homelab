@@ -64,7 +64,7 @@ void_auth_seed_admin_email: ""
 # ---- void-keys (HMB-9c) ----
 # Image pinned by SHA for deterministic deploy + easy rollback. Override
 # per-deploy: ansible-playbook ... -e void_keys_image_tag=<sha-or-tag>
-void_keys_image_tag: "c2ea5362f7436074f5b9c936457884212732fcbf"
+void_keys_image_tag: "f539e799e3c2b1aa653bb07bb06f195d51045116"
 void_keys_image: "ghcr.io/makscee/void-keys:{{ void_keys_image_tag }}"
 
 # void-keys listens on PORT (default 3000 from src/config.ts). Internal-only on
